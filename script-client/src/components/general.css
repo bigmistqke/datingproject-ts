@@ -1,0 +1,81 @@
+header{
+    position:sticky;
+    top:0px;
+}
+
+.row{
+    width:100%;
+    flex-direction: row;
+    font-size: 18pt;
+    line-height:50px;
+    border-bottom:1px solid black;
+    font-size: 18pt;
+	line-height:50px;
+}
+.row *{
+    font-size: 18pt;
+    line-height:50px;
+    padding-left:25px;
+}
+
+.row > *:not(:first-child){
+    border-left:1px solid black
+}
+
+*{
+    box-sizing:content-box;
+}
+
+.center{
+    text-align:center;
+}
+header{
+    width:100vw;
+}
+button{
+    outline:none;
+    border:none;
+    cursor:pointer;
+    padding: 0px !important;
+    color:inherit;
+}
+button:hover{
+    background:black;
+    color:white;
+}
+.flex{
+    display:flex;
+    flex-direction:row;
+}
+
+.flex > *:not(.flexing){
+    flex: 0 0 120px;
+}
+.flex > .flexing{
+    flex:1;
+    min-width:0;
+}
+
+.flex:not(header) > .tiny{
+    font-size:10pt;
+}
+
+.flex > .tiny{
+    flex: 0 0 50px;
+    padding-left:0px;
+    text-align:center;
+}
+
+select, input, button{
+    outline:none;
+    border:none;
+    background:inherit;
+}
+
+.type_b{
+    background:#f0f0f0;
+}
+
+::placeholder{
+    color:lightgrey;
+}

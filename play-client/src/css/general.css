@@ -1,0 +1,63 @@
+body{
+    background: white;
+    padding:0px;
+    margin:0px;
+    overflow:hidden;
+}
+img{
+    width:100vw;
+    height:100vh;
+    position:absolute;
+    top:0px;
+    left:0px;
+    filter: invert(1);
+    z-index:0;
+}
+
+.instruction{
+    background:black;
+    box-shadow:0px 0px 25px black;
+    border-radius:15vh;
+}
+
+.instruction .text{
+    transform: translate(-50%, -50%);
+    left:50vw;
+    top:50vh;
+    font-size:5vh;
+    width:75vw;
+    max-height:75vh;
+    position:absolute;
+    text-align: center;
+    z-index:1;
+    color:white;
+    mix-blend-mode: difference;
+}
+
+.next{
+    position: absolute;
+    bottom: 2.5vh;
+    padding:5pt;
+    padding-left:20pt;
+    padding-right:20pt;
+    font-size: 40pt;
+    line-height: 40pt;
+    left: 50vw;
+    transform: translateX(-50%);
+    text-align: 18pt;
+    background: lightgrey;
+    border: 0px;
+    color: white;
+    border-radius: 50px; 
+    cursor:pointer;
+    
+}
+.next:hover{
+    color: black;
+
+}
+
+#paper-canvas{
+    height:100vh;
+    width:100vw;
+}
