@@ -29,7 +29,7 @@ const ScriptMap = (props) => {
         const navUp = (e) => {
             document.releaseCapture();
             e.target.removeEventListener("mousemove", navMove);
-            e.target.removeEventListener("mousemove", navUp);
+            e.target.removeEventListener("mouseup", navUp);
         }
         e.target.addEventListener("mousemove", navMove);
         e.target.addEventListener("mouseup", navUp);

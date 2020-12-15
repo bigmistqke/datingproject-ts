@@ -15,16 +15,45 @@ const ENDPOINT = "localhost:4001";
 
 
 function Script() {
+    const history = useHistory();
+    let { script_id, pair_id } = useParams();
+
+    let { instructions, setInstructions } = useParams();
+
+    var socket = useRef();
+
+    async function initInstructions(role_id) {
+        return await getData(`https://fetch.datingproject.net/play/${script_id}/${role_id}`).then(res => res.json());
+    }
+
+    async function initSocket() {
+
+        socket.current = socketIOClient(ENDPOINT, {
+            transports: ['websocket', 'polling']
+        });
+    }
+
+    let setNextCard = (instruction) => {
+    }
+
+    let init = () => {
+        initSocket();
+        initInstructions();
+    }
+
+
+    useEffect(() => {
+        setTimeout(() => {
+            init();
+        }, 1000);
+    }, []);
+
     return (
         <div className="Cards fill">
-            <Log logText={logText}></Log>
-            <IntroCards waiting={waiting}></IntroCards>
+            {/* <Log logText={""}></Log>
+            <IntroCards waiting={""}></IntroCards> */}
             <VisibleCards
-                canPlay={canPlay}
                 instructions={instructions}
-                index_instructions={index_instructions}
-                prev_instruction_ids={prev_instruction_ids}
-                role_id={role_id}
                 swipeAction={setNextCard}
             ></VisibleCards>
             <EndCards></EndCards>

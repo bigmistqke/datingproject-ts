@@ -6,13 +6,12 @@ function decodeSingleQuotes(text) {
     return text.replace(/&#039;/g, "'");
 }
 
-const VisibleCards = ({ instructions, index_instructions, prev_instruction_ids, swipeAction, canPlay }) => {
+const VisibleCards = ({ instructions, index_instructions }) => {
     const getCard = (instruction, visible) => {
         return <NormalCard /* key={data.card_id} */
             style={{ zIndex: instruction.instruction_order_role }}
             canSwipe={true} text={instruction.text}
             type={instruction.type}
-            canPlay={canPlay}
             flip={visible}
             swipeAction={() => { swipeAction(instruction) }}
         ></NormalCard>;
