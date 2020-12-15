@@ -10,9 +10,9 @@ import {
 
 let current = {};
 
-function decodeSingleQuotes(text){
+function decodeSingleQuotes(text) {
     return (text.replace(/&#039;/g, "'"));
-  }
+}
 
 const Script = forwardRef((props, ref) => {
     let { script_id } = useParams();
@@ -22,20 +22,21 @@ const Script = forwardRef((props, ref) => {
     useEffect(() => {
         // console.table({effect: rows});
     });
-    useEffect(()=>{
+    useEffect(() => {
         console.log("DOES THIS HAPPEN FOR SMOE ERASON?")
-        getData(`http://localhost:8080/script/${script_id}`)
-        .then(res=>res.json())
-        .then(res=>{
-            populateRows(res);
-        });
+        getData(`https://fetch.datingproject.net/script/${script_id}`)
+            .then(res => res.json())
+            .then(res => {
+                populateRows(res);
+            });
     }, [script_id]);
 
     const populateRows = (rows) => {
         console.log("hallo");
-        if(rows.length === 0){rows = [getDefaultRow()]};
-        rows = rows.map((row) => { 
-            return {instruction_id: row.instruction_id, script_id: row.script_id, role: row.role, type: row.type, text: decodeSingleQuotes(row.text) }
+        console.log(rows);
+        if (rows.length === 0) { rows = [getDefaultRow()] };
+        rows = rows.map((row) => {
+            return { instruction_id: row.instruction_id, script_id: row.script_id, role: row.role, type: row.type, text: decodeSingleQuotes(row.text) }
         })
         current.rows = rows;
         setRows(rows);
@@ -44,14 +45,14 @@ const Script = forwardRef((props, ref) => {
     useImperativeHandle(ref, () => ({
         save() {
             console.log(rows);
-            postData("http://localhost:8080/save", current.rows)
+            postData("https://fetch.datingproject.net/save", current.rows)
                 .then(res => res.json())
                 .then(res => console.log(res));
         }
     }));
 
-    let getIndex = (rowState) => { return current.rows.findIndex((el)=>{return el.instruction_id === rowState.instruction_id})}
-    let getDefaultRow = () =>{ return { instruction_id: uniqid(), script_id: parseInt(script_id), role: "a", type: "say", text: "" }}
+    let getIndex = (rowState) => { return current.rows.findIndex((el) => { return el.instruction_id === rowState.instruction_id }) }
+    let getDefaultRow = () => { return { instruction_id: uniqid(), script_id: parseInt(script_id), role: "a", type: "say", text: "" } }
     const addRow = (rowState) => {
         let newRows = [...current.rows];
         let index = getIndex(rowState);

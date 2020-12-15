@@ -1,9 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
+import './css/general.css';
 import ScriptEditor from './components/ScriptEditor';
 import ScriptList from './components/ScriptList';
-
 import * as serviceWorker from './serviceWorker';
 import {
   BrowserRouter as Router,
@@ -11,15 +10,19 @@ import {
   Route
 } from "react-router-dom";
 
+import { } from 'dotenv/config';
+
 ReactDOM.render(
   <React.StrictMode>
     <Router>
       <Switch>
-        <Route path="/script/:script_id">
+        <Route path="/:script_id">
           <ScriptEditor />
+          <div className="background"><div ></div></div>
         </Route>
-        <Route path="/scripts">
+        <Route path="/">
           <ScriptList />
+          <div className="background"><div ></div></div>
         </Route>
       </Switch>
 

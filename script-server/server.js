@@ -1,6 +1,6 @@
 const restify = require('restify');
 const corsMiddleware = require('restify-cors-middleware');
-const mysql = require('mysql');
+const mysql = require('promise-mysql');
 
 const server = restify.createServer({
   name: 'myapp',
@@ -10,33 +10,38 @@ server.use(restify.plugins.acceptParser(server.acceptable));
 server.use(restify.plugins.queryParser());
 server.use(restify.plugins.bodyParser());
 
-const cors = corsMiddleware({
-  preflightMaxAge: 5, //Optional
+
+var cors = corsMiddleware({
+  preflightMaxAge: 5,
   origins: ['*'],
-  // allowHeaders: ['X-App-Version'],
+  allowHeaders: ['Range'],
   exposeHeaders: []
-})
+});
 
 server.listen(8080, function () {
   console.log('%s listeni ng at %s', server.name, server.url);
 });
 
+// maybe you have to change according to local
 server.pre(cors.preflight);
-// server.use(cors.actual);
-server.use(
-  function crossOrigin(req,res,next){
+server.use(cors.actual);
+
+/* server.use(
+  function crossOrigin(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Headers", "X-Requested-With");
     return next();
   }
-);
-const createConnection = () =>{
-  var connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'datingproject'
+); */
+const createConnection = async () => {
+  var connection = await mysql.createConnection({
+    host: 's221.webhostingserver.nl',
+    port: '3306',
+    user: 'deb120261_datingproject',
+    password: 'Shitfuck1!',
+    database: 'deb120261_datingproject'
   });
+  await connection.connection;
   return connection;
 }
 
@@ -48,85 +53,186 @@ function escapeHtml(text) {
     '"': '&quot;',
     "'": '&#039;'
   };
-  
-  return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+
+  return text.replace(/[&<>"']/g, function (m) { return map[m]; });
 }
 
-server.post('/save', function (req, res, next) {
-  let data = req.body;
-  let sql = "INSERT INTO instructions (instruction_id, script_id, role, type, text, instruction_order) VALUES";
-  data.map((row, index) => {
-    console.log(row.instruction_id);
-    sql += ` ('${row.instruction_id}', '${row.script_id}', '${row.role}', '${row.type}', '${escapeHtml(row.text)}', '${index}'),`
-  })
-  sql = sql.slice(0, -1);
-  sql += ` ON DUPLICATE KEY UPDATE 
-    script_id = VALUES(script_id),
-    role = VALUES(role), 
-    type = VALUES(type), 
-    text = VALUES(text), 
-    instruction_order = VALUES(instruction_order)`;
+server.get("/", function (req, res, next) {
+  console.log("hallo");
+  res.send("hallo!");
+  return next();
+})
 
-  const connection = createConnection();
+const deleteAllTablesWithScriptId = async (connection, script_id) => {
+  let errors = [];
+  const attemptQuery = async (sql) => {
+    try { let query = await connection.query(sql) }
+    catch (err) { errors.push(err) };
+  }
+  // remove all instructions from database
+  let sql = `DELETE FROM instructions WHERE script_id=${script_id}`;
+  await attemptQuery(sql);
+  sql = `DELETE FROM nodes WHERE script_id=${script_id}`;
+  await attemptQuery(sql);
+  sql = `DELETE FROM connections WHERE script_id=${script_id}`;
+  await attemptQuery(sql);
+  sql = `DELETE FROM roles WHERE script_id=${script_id}`;
+  await attemptQuery(sql);
+  return errors;
+}
 
-  connection.connect(function (err) {
-    if (err) {
-      console.error('error connecting: ' + err.stack);
-      res.send(err.stack);
-      return;
-    }
-    connection.query(sql, function (error, results, fields) {
-      if (error) throw error;
-      let response;
-      if (error) {
-        response = JSON.stringify(error);
-      } else {
-        response = true;
-      }
-      res.send(response);
-      connection.end();
-    });
-  });
+server.post('/save', async function (req, res, next) {
+  const attemptQuery = async (sql, type) => {
+    try { let query = await connection.query(sql) }
+    catch (err) { errors[type] = err };
+  }
+
+  console.log("SAAAAAAAAAAAAAAAVE");
+
+  let data = JSON.parse(req.body);
+  let nodes = data.nodes;
+  let roles = data.roles;
+
+  let instructions = data.instructions;
+  let script_id = data.script_id;
+
+  let errors = {};
+
+
+
+  // connect
+  let connection = await createConnection();
+
+  // reset all
+  let delete_errors = await deleteAllTablesWithScriptId(connection, script_id);
+  if (delete_errors.length > 0) errors.deleting = delete_errors;
+
+  // insert instructions
+  let parameters = ['script_id', 'role_id', 'instruction_id', 'type', 'text', 'node_id', 'instruction_order_role', 'instruction_order_node', 'next_instruction_id', 'prev_instruction_id'];
+  let parameters_string = parameters.join(', ');
+
+  let sql = `INSERT INTO instructions (${parameters_string}) VALUES`;
+  sql += data.instructions.map((instruction, index) => `(${parameters.map(v => instruction[v]).map(v => v ? `'${v}'` : 'NULL').join(`, `)})`).join(`, 
+  `);
+  console.log(sql);
+  await attemptQuery(sql, 'instructions inserting');
+
+  // insert nodes
+  parameters_string = ['script_id', 'node_id', 'x', 'y'].join(', ');
+
+  sql = `INSERT INTO nodes (${parameters_string}) VALUES`;
+  sql += nodes.map(node => {
+    return `(${[script_id, node.node_id, node.position.x, node.position.y].map(v => v ? `'${v}'` : 'NULL').join(', ')})`;
+  }).join(', ');
+
+  await attemptQuery(sql, 'nodes inserting');
+
+
+  // insert connections
+  parameters_string = ['script_id', 'node_id', 'role_id', 'prev_node_id', 'next_node_id'].join(', ');
+
+  sql = `INSERT INTO connections (${parameters_string}) VALUES`;
+  sql += nodes.map(node => {
+    return node.connections.map(connection => {
+      return `(${[script_id, node.node_id, connection.role_id, connection.prev_node_id, connection.next_node_id]
+        .map(v => v ? `'${v}'` : 'NULL').join(', ')})`
+    }).join(', ');
+  }).join(', ');
+  console.log(sql);
+  await attemptQuery(sql, 'connections inserting');
+
+  // insert roles
+  parameters = ['script_id', 'role_id'];
+  parameters_string = parameters.join(', ');
+
+  sql = `INSERT INTO roles (${parameters_string}) VALUES`;
+  sql += roles.map(role => {
+    return `(${[script_id, role.role_id].map(v => `'${v}'`).join(', ')})`;
+  }).join(', ');
+  await attemptQuery(sql, 'roles inserting');
+
+
+  // delete all roles
+
+  res.send(errors);
+  connection.end();
+
+
   return next();
 });
 
-server.get('/script/:script_id', function (req, res, next) {
+server.get('/hashmap', async function (req, res, next) {
+  let connection = await createConnection();
+  let instructions = await connection.query(`SELECT role_id, instruction_id FROM instructions`);
+  let hashmap = {};
+  instructions.forEach(instruction => {
+    let script_id = instruction.script_id;
+    let role_id = instruction.role_id;
+
+    if (!(script_id in hashmap))
+      hashmap[script_id] = {};
+    /*     if (!(role_id in hashmap[script_id]))
+          hashmap[script_id][role_id] = []; */
+
+    hashmap[script_id][instruction.instruction_id] = role_id;
+
+  })
+  console.log(hashmap);
+  res.send({ hashmap });
+})
+
+server.get('/play/:script_id/:role_id', async function (req, res, next) {
+  const script_id = req.params.script_id
+  const role_id = req.params.role_id
+
+  let connection = await createConnection();
+  // let roles = await connection.query(`SELECT role_id FROM roles WHERE script_id='${script_id}' AND role_id='${role_id}'`);
+  // roles = roles.map(v => { return { role_id: v.role_id } });
+
+  // for (let role of roles) {
+  let instructions = await connection.query(`SELECT * FROM instructions WHERE script_id='${script_id}' AND role_id='${role_id}'`);
+  instructions = instructions.sort((a, b) => (a.instruction_order_role > b.instruction_order_role) ? 1 : -1);
+  // role.instructions = instructions;
+  // }
+
+  res.send({ instructions });
+
+  connection.end();
+
+  return next();
+})
+
+server.get('/script/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id
 
-  const connection = createConnection();
+  let connection = await createConnection();
+  let nodes = await connection.query(`SELECT node_id, x, y FROM nodes WHERE script_id='${script_id}'`);
+  nodes = nodes.map(v => { return { node_id: v.node_id, position: { x: v.x, y: v.y }, connections: [], instructions: [] } });
 
-  connection.connect(function (err) {
-    if (err) {
-      console.error('error connecting: ' + err.stack);
-      res.send(err.stack);
-      return;
-    }
-    connection.query(`SELECT * FROM instructions WHERE script_id='${script_id}'`, function (error, results, fields) {
-      if (error) throw error;
-      results.sort((a, b) => parseFloat(a.instruction_order) - parseFloat(b.instruction_order));
-      res.send(results);
+  for (let node of nodes) {
+    let instructions = await connection.query(`SELECT * FROM instructions WHERE script_id='${script_id}' AND node_id='${node.node_id}'`);
+    instructions = instructions.sort((a, b) => (a.instruction_order_node > b.instruction_order_node) ? 1 : -1);
+    node.instructions = instructions;
+    let connections = await connection.query(`SELECT role_id, node_id, prev_node_id, next_node_id, script_id FROM connections WHERE script_id='${script_id}' AND node_id='${node.node_id}'`);
+    node.connections = connections;
+  }
 
-      connection.end();
-    });
-  });
+  let role_infos = await connection.query(`SELECT role_id FROM roles WHERE script_id='${script_id}'`);
+
+  res.send({ roles: role_infos, nodes: nodes });
+
+  connection.end();
+
   return next();
 })
 
 server.get('/scripts', function (req, res, next) {
 
-  const connection = createConnection();
-
-  connection.connect(function (err) {
-    if (err) {
-      console.error('error connecting: ' + err.stack);
-      res.send(err.stack);
-      return;
-    }
-    connection.query(`SELECT DISTINCT script_id FROM instructions`, function (error, results, fields) {
-      if (error) throw error;
+  createConnection().then(connection => {
+    connection.query(`SELECT DISTINCT script_id FROM instructions`).then(result => {
       res.send(results);
       connection.end();
-    });
-  });
+    })
+  })
   return next();
 })

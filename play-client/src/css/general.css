@@ -1,10 +1,44 @@
+:root {
+    --bg-color: #aee9b1;
+    --txt-color: #0a4297;
+    --b-radius: 7.5vh;
+}
+
 body{
     background: white;
     padding:0px;
     margin:0px;
     overflow:hidden;
+    font-family: times;
+    font-style:italic;
+    /* background: linear-gradient(185deg, var(--bg-color)  25%, var(--txt-color) 100%); */
+
 }
-img{
+#root{
+    position:fixed;
+}
+.cards{
+    position:absolute;
+    z-index:1;
+    width:100%;
+    height:100%;
+}
+.background{
+    width:100vw;
+    height:100vh;
+}
+.background > div{
+    background: url(./clouds.jpg);
+    background-size: cover;
+    position:absolute;
+    top:-50px;
+    left:-50px;
+    filter:blur(50px);
+    width:calc(100% + 100px);
+    height:calc(100% + 100px);
+    opacity: 0.5;
+}
+/* img{
     width:100vw;
     height:100vh;
     position:absolute;
@@ -12,31 +46,169 @@ img{
     left:0px;
     filter: invert(1);
     z-index:0;
+} */
+.scriptCards{
+    position: absolute;
+    z-index: 1;
+    width: 100%;
+    height:100%;
+    top:0px;
+    left:0px;
+    perspective:800px;
+    perspective-origin: center;
 }
 
 .instruction{
-    background:black;
-    box-shadow:0px 0px 25px black;
-    border-radius:15vh;
+    /* border-radius:15vh; */
+    background:transparent;
+    height:95vh;
+    top:2.5vh;
+    left:2.5vh;
+    width:calc(100vw - 5vh);
+    position: absolute;
+    background-size: cover;
+
+    
+    /* overflow:hidden; */
+}
+.instruction > .border{
+    border-radius:var(--b-radius);
+    overflow:hidden;
+    height: 100%;
+    width:100%;
+    position: absolute;
+}
+.instruction .grass{
+    position:absolute;
+    min-width:100%;
+    max-height: 12.5%;
+    left:50%;
+    transform:translateX(-50%);
+    bottom: 0px;
+    z-index:2;
+}
+.swipe{
+    width:100%;
+    height:100%;
+
+}
+.swipe:last-child > div > div{
+    /* filter:drop-shadow(0px 0px 25px black); */
+    /* box-shadow:0px 0px 20px #003384; */
+}
+.instruction{
+    /* transform: rotateY(-180deg); */
+    transform-style:preserve-3d;
+    transition: transform 0.5s;
+    transition-timing-function: ease-in-out; 
+    transform: rotateY(0deg);
+    background:transparent;
+    overflow-wrap: break-word;
+}
+.instruction > div{
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transition: transform 1s;
+    background: url(clouds.jpg);
+    background-size: cover;
+    border-radius:var(--b-radius);
+    overflow: hidden;
+    
+}
+.instruction .front{
+    transform: translate3d(0,0,0);
+}
+.instruction .back{
+    transform: rotateY(-180deg);
+    font-size: 7.5vw;
+}
+.instruction .type{
+    font-size: 7.5vw;
+    color: #97aacd;
+    /* padding-bottom: 5vw; */
+}
+.instruction *{
+    pointer-events:none;
+    user-select: none;
 }
 
 .instruction .text{
     transform: translate(-50%, -50%);
-    left:50vw;
-    top:50vh;
-    font-size:5vh;
-    width:75vw;
+    left:50%;
+    top:50%;
+    letter-spacing:-0.05em;
+    line-height:9vw;
+    width:50%;
     max-height:75vh;
     position:absolute;
     text-align: center;
     z-index:1;
-    color:white;
-    mix-blend-mode: difference;
+    color: var(--txt-color);
+    font-family: times;
+    font-style: italic;
+    font-size:9vw;
+}
+
+.hide{
+    display:none;
+}
+
+@media only screen and (min-aspect-ratio: 1/1) {
+    .instruction .text{
+        font-size:9vh;
+        line-height:9vh;
+    }
+    .instruction .type{
+        font-size: 7.5vh;
+    }
+  }
+
+
+
+.log{
+    background: #e7ecf2;
+    height: 30px;
+    border-radius: 15px;
+    padding-left: 15px;
+    padding-right: 15px;
+    margin-bottom: 3.5vh;
+    z-index: 100;
+    line-height: 30px;
+    color: black;
+    font-family: arial;
+    font-style: normal;
+}
+
+.center-bottom{
+    position:absolute;
+    left:50%;
+    bottom: 0px;
+    transform:translateX(-50%);
+}
+
+.center{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+}
+.swipe.flip .instruction{
+    transform: rotateY(-180deg);
+}
+.instruction canvas{
+    width:calc(100% - 5vh);
+    height:calc(100% - 5vh);
+
 }
 
 .next{
     position: absolute;
-    bottom: 2.5vh;
+    bottom: 1.25vh;
     padding:5pt;
     padding-left:20pt;
     padding-right:20pt;
@@ -50,14 +222,33 @@ img{
     color: white;
     border-radius: 50px; 
     cursor:pointer;
+    z-index: 1;
     
 }
 .next:hover{
     color: black;
+}
 
+.the-end{
+    font-size: 20vw;
 }
 
 #paper-canvas{
-    height:100vh;
-    width:100vw;
+    height:90vh;
+    width:calc(100vw - 10vh);
+    position: absolute;
+    top:2.5vh;
+    left:2.5vh;
+}
+
+.swipe{
+    position:absolute;
+}
+.Cards{
+    position:absolute;
+    z-index: 2;
+}
+.fill{
+    width: 100%;
+    height: 100%;
 }

@@ -3,29 +3,31 @@ import getData from '../helpers/getData';
 import socketIOClient from "socket.io-client";
 import { useParams, useHistory } from "react-router-dom";
 import BubbleCanvas from "./BubbleCanvas";
-
 let current = {};
-const ENDPOINT = "http://127.0.0.1:4001";
+const ENDPOINT = "https://socket.datingproject.net";
 let socket = null;
 
 console.log("OK?");
 
 function escapeHtml(text) {
     var map = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;'
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
     };
-    
-    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-  }
-  function decodeSingleQuotes(text){
-      return text.replace(/&#039;/g, "'");
-  }
+
+    return text.replace(/[&<>"']/g, function (m) { return map[m]; });
+}
+function decodeSingleQuotes(text) {
+    return text.replace(/&#039;/g, "'");
+}
+
+
 
 const ScriptPlayer = () => {
+    current.swiping = false;
 
     let { script_id, pair_id } = useParams();
     let [role_id, setRole] = useState();
@@ -37,7 +39,7 @@ const ScriptPlayer = () => {
 
     useEffect(() => {
         async function getScript() {
-            return getData(`http://localhost:8080/script/${script_id}`)
+            return getData(`https://fetch.datingproject.net/script/${script_id}`)
                 .then(res => res.json())
                 .then(script => {
                     script.sort((a, b) => { return a.instruction_order - b.instruction_order })
@@ -85,12 +87,12 @@ const ScriptPlayer = () => {
             console.log("HALLO!");
             socket.emit("pairClient", [script_id, pair_id]);
         }
-        socket.on("initScript", ({role_id, script_index}) => {
+        socket.on("initScript", ({ role_id, script_index }) => {
             console.log("INIT SCRIPT ");
             socket.script_id = script_id;
             socket.pair_id = pair_id;
             socket.role_id = role_id;
-            console.log(role_id );
+            console.log(role_id);
             if (typeof role_id === 'string') {
                 setRole(role_id);
                 current.role_id = role_id;
@@ -100,7 +102,7 @@ const ScriptPlayer = () => {
                     // playScript(script, 0)
                 });
             } else {
-                console.log("THIS SHOUT HAPPEN?");
+                console.log("THIS SHOUT H APPEN?");
                 setRole("ROOM IS FULL!!! WANT TO CREATE NEW ROOM?")
             }
         })
@@ -115,15 +117,26 @@ const ScriptPlayer = () => {
             console.log(index);
             current.scriptReader.playAt(index);
         })
+        socket.on("waitForOther", () => {
+            setInstruction(`invite your date to join at \n ${window.location.href}`);
+            setType("wait");
+        })
         socket.on("isPaired", data => {
             console.log("role_id is " + data.role_id);
-            let pair_present = pair_id ? true : false;
+            let new_pair = pair_id != data.pair_id ? true : false;
             pair_id = data.pair_id;
             setRole(data.role_id);
-            if (!pair_present) {
-                history.push(`${script_id}/${pair_id}`);
+            console.log(data);
+            if (new_pair) {
+                history.push(`/${script_id}/${pair_id}`, { update: true });
+                console.log(`${script_id}/${pair_id}`);
             }
         });
+        socket.on("roomFull", () => {
+            console.log("ROOM IS FULL");
+            // const findOtherRoom = confirm("this play is full, find another play?");
+            socket.emit("findPair", script_id);
+        })
         socket.on("otherGone", data => {
             console.log("other dude left " + data);
         });
@@ -135,21 +148,15 @@ const ScriptPlayer = () => {
 
     })
 
-    const changeShape = (thisType) => {
-        switch (thisType) {
-            case "think":
-                return <img src="http://localhost/react-test/think.svg"></img>
-        }
-    }
 
-    return <div className="instruction">
-        <span className="text">{instruction}</span>
-        {isTurn ? <button className="next" onClick={() => { current.scriptReader.playNext() }}>NEXT</button> : false}
-        {/* {changeShape(type)} */}
-        {}
-        <canvas id="paper-canvas"></canvas>
-        <BubbleCanvas type={type}></BubbleCanvas>
-    </div>
+    return <div className="instruction" >
+            <span className="text">{instruction}</span>
+            {isTurn ? <button className="next" onClick={() => { current.scriptReader.playNext() }}>NEXT</button> : false}
+            {/* {changeShape(type)} */}
+            {}
+            <canvas id="paper-canvas"></canvas>
+            <BubbleCanvas type={type}></BubbleCanvas>
+        </div>
 }
 
 export default ScriptPlayer;
