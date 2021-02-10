@@ -15,32 +15,37 @@ const Connectors = (props) => {
 
     useEffect(() => {
         let t_connectors = [];
-        props.nodes.forEach((node) => {
-            node.connections.forEach((connection) => {
-                let next_node_id = connection.next_node_id;
-                let prev_node_id = connection.prev_node_id;
-                if (!next_node_id && !prev_node_id) return;
-                if (typeof prev_node_id === 'string') {
-                    let className = `in_${node.node_id}_${connection.role_id}`;
+        props.blocks.forEach((block) => {
+            block.connections.forEach((connection) => {
+                // console.log('connection', connection);
+
+                let next_block_id = connection.next_block_id;
+                let prev_block_id = connection.prev_block_id;
+                if (!next_block_id && !prev_block_id) return;
+                if (typeof prev_block_id === 'string') {
+                    let className = `in_${block.block_id}_${connection.role_id}`;
                     let start_pos = getCenterDOM(className);
-                    className = `out_${prev_node_id}_${connection.role_id}`;
+                    // console.log([start_pos], className);
+
+                    className = `out_${prev_block_id}_${connection.role_id}`;
                     let out_pos = getCenterDOM(className);
                     t_connectors.push([start_pos, out_pos]);
+                    // console.log([start_pos, out_pos], className);
                 }
-                if (prev_node_id && typeof prev_node_id === 'object') {
-                    let className = `in_${node.node_id}_${connection.role_id}`;
+                if (prev_block_id && typeof prev_block_id === 'object') {
+                    let className = `in_${block.block_id}_${connection.role_id}`;
                     let start_pos = getCenterDOM(className);
-                    t_connectors.push([start_pos, prev_node_id]);
+                    t_connectors.push([start_pos, prev_block_id]);
                 }
-                if (next_node_id && typeof next_node_id === 'object') {
-                    let className = `out_${node.node_id}_${connection.role_id}`;
+                if (next_block_id && typeof next_block_id === 'object') {
+                    let className = `out_${block.block_id}_${connection.role_id}`;
                     let start_pos = getCenterDOM(className);
-                    t_connectors.push([start_pos, next_node_id]);
+                    t_connectors.push([start_pos, next_block_id]);
                 }
             })
         })
         setConnectors(t_connectors);
-    }, [props.nodes])
+    }, [props.blocks])
 
     return (<div>
         {

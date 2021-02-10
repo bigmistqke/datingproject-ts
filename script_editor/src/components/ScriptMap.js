@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, forwardRef } from 'react';
-import ScriptNode from './ScriptNode';
+import ScriptBlock from './ScriptBlock';
 import Connectors from './Connectors';
 
 const ScriptMap = (props) => {
@@ -9,11 +9,11 @@ const ScriptMap = (props) => {
     let r_map = useRef();
 
 
-    const createNode = (e) => {
+    const createBlock = (e) => {
         e.preventDefault();
         const coords = { x: e.clientX - origin.x, y: e.clientY - origin.y };
         // setOrigin(coords);
-        props.nodeManager.add(coords);
+        props.blockManager.add(coords);
     }
 
     const navDown = (e) => {
@@ -52,24 +52,26 @@ const ScriptMap = (props) => {
         console.log(props.overlay);
     }, [props.overlay]);
 
-    return <div className="map-container" onPointerDown={navDown} onContextMenu={createNode}>
+    return <div className="map-container" onPointerDown={navDown} onContextMenu={createBlock}>
         <div className={`map${connecting ? ' connecting' : ''}`} >
             <div className="Map" ref={r_map}>
-                {props.r_nodes ? <Connectors nodes={props.r_nodes} origin={origin}></Connectors> : null}
+                {props.r_blocks ? <Connectors blocks={props.r_blocks} origin={origin}></Connectors> : null}
                 {
-                    props.r_nodes ? props.nodes.map((node, i) => {
+                    props.r_blocks ? props.blocks.map((block, i) => {
+                        console.log(block.block_id);
                         return <div
-                            className="absolute" key={i} style={{ transform: `translateX(${node.position.x}px) translateY(${node.position.y}px)` }}>
-                            <ScriptNode
-                                key={node.node_id}
-                                id={node.node_id}
+                            className="absolute" key={i} style={{ transform: `translateX(${block.position.x}px) translateY(${block.position.y}px)` }}>
+                            <ScriptBlock
+                                key={block.block_id}
+                                id={block.block_id}
                                 instructionManager={props.instructionManager}
-                                nodeManager={props.nodeManager}
-                                node={node}
+                                blockManager={props.blockManager}
+                                block={block}
+                                instructions={props.instructions}
                                 connecting={props.connecting}
                                 allRoles={props.allRoles}
                             >
-                            </ScriptNode>
+                            </ScriptBlock>
                         </div>
                     }) : null
                 }

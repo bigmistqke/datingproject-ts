@@ -4,15 +4,12 @@ import { useHistory, useParams } from 'react-router-dom';
 import getData from "../helpers/getData";
 import postData from "../helpers/postData";
 
-// import './ScriptEditor.css';
 import ScriptMap from './ScriptMap';
 
 import SaveManager from './SaveManager';
-import NodeManager from './NodeManager';
+import BlockManager from './BlockManager';
 import InstructionManager from './InstructionManager';
 
-/* import RoleOverlay from "./RoleOverlay"
-import ConfirmRoleOverlay from "./ConfirmRoleOverlay" */
 import { RoleOverlay, ConfirmOverlay } from "./Overlays"
 
 
@@ -25,12 +22,13 @@ let _base = 'http://localhost:8080'
 
 function ScriptEditor(props) {
   const history = useHistory();
-  let r_nodes = useRef();
+  let r_blocks = useRef();
   let r_roles = useRef();
+  let r_instructions = useRef();
 
   let r_saveManager = useRef();
   let r_instructionManager = useRef();
-  let r_nodeManager = useRef();
+  let r_blockManager = useRef();
 
   let [ctrl, setCtrl] = useState(false);
   let [shift, setShift] = useState(false);
@@ -40,8 +38,9 @@ function ScriptEditor(props) {
   document.body.addEventListener('mousemove', (e) => { r_cursor.current = { x: e.clientX, y: e.clientY } });
 
   let { script_id } = useParams();
-  let [nodes, setNodes] = useState([]);
+  let [blocks, setBlocks] = useState([]);
   let [roles, setRoles] = useState([]);
+  let [instructions, setInstructions] = useState([]);
 
   let [connecting, setConnecting] = useState(false);
   let [roleOverlay, setRoleOverlay] = useState(false);
@@ -52,6 +51,7 @@ function ScriptEditor(props) {
   let r_overlays = useRef();
 
   useEffect(() => {
+    console.log('hallo?');
     document.body.focus();
     // getData(`http://${process.env.REACT_APP_S_URL}/script/${script_id}`)
     getData(`${_base}/script/${script_id}`)
@@ -59,12 +59,14 @@ function ScriptEditor(props) {
       // getData(`https://fetch.datingproject.net/script/${script_id}`)
       .then(res => res.json())
       .then(res => {
-        console.log(res.nodes);
-        r_nodes.current = res.nodes;
-        r_roles.current = [{ role_id: 'a' }, { role_id: 'b' }]
-        setNodes(res.nodes);
+        console.log(res.blocks, res.instructions);
+        r_blocks.current = res.blocks;
+        r_roles.current = [{ role_id: 'a' }, { role_id: 'b' }];
+        r_instructions.current = res.instructions;
+        console.log(r_instructions.current);
+        setBlocks(res.blocks);
+        setInstructions(res.instructions);
         setRoles({ role_id: 'a' }, { role_id: 'b' });
-
       });
   }, [script_id]);
 
@@ -72,7 +74,7 @@ function ScriptEditor(props) {
   const save = async () => {
     let roles = r_roles.current;
 
-    r_saveManager.current.process(getNodes(), getRoles())
+    r_saveManager.current.process(getBlocks(), getInstructions(), getRoles())
 
       .then(data => { console.log(data); return data })
       .then(data => postData(`${_base}/save`, { script_id, roles, ...data }))
@@ -80,37 +82,48 @@ function ScriptEditor(props) {
       .then(res => console.log(res));
   }
 
-  const updateNodes = (_nodes) => {
-    // console.log('update those fucking nodes');
-    setNodes(_nodes);
-    r_nodes.current = _nodes;
+  const updateInstructions = (_instructions) => {
+    console.log(_instructions);
+    setInstructions(_instructions);
+    r_instructions.current = _instructions;
+    updateBlocks(getBlocks());
   }
 
-  const getNodes = () => { return [...r_nodes.current]; }
+  const updateBlocks = (_blocks) => {
+    setBlocks(_blocks);
+    r_blocks.current = _blocks;
+  }
+
+  const getInstructions = () => { return r_instructions.current; }
+  const getBlocks = () => { return [...r_blocks.current]; }
   const getRoles = () => { return [...r_roles.current]; }
 
   useEffect(() => {
     r_saveManager.current = new SaveManager();
     r_instructionManager.current = new InstructionManager({
-      getNodes,
+      getInstructions,
+      updateInstructions,
+      getBlocks,
       getRoles,
-      updateNodes,
+      updateBlocks,
       script_id
     });
-    r_nodeManager.current = new NodeManager(
+    r_blockManager.current = new BlockManager(
       {
         script_id,
-        getNodes,
+        getBlocks,
         getRoles,
-        updateNodes,
+        getInstructions,
+        updateInstructions,
+        updateBlocks,
         setConnecting,
         setRoleOverlay,
         setDeleteOverlay,
         setOverlay
       }
     );
-    console.log(r_nodeManager);
-    // r_nodeManager.current.addEventListener('update', (e) => { updateNodes(e.detail.nodes) })
+    console.log(r_blockManager);
+    // r_blockManager.current.addEventListener('update', (e) => { updateBlocks(e.detail.blocks) })
   }, [])
 
   const getOverlay = (overlay) => {
@@ -158,13 +171,15 @@ function ScriptEditor(props) {
 
       {overlay ? <div className="overlay-container" onMouseDown={() => { overlay.resolve(false) }}>{getOverlay(overlay)}</div> : null}
 
-      {/* {roleOverlay ? <RoleOverlay node={roleOverlay.node} position={roleOverlay.position} roles={roleOverlay.roles} nodeManager={r_nodeManager.current}></RoleOverlay> : null} */}
+      {/* {roleOverlay ? <RoleOverlay block={roleOverlay.block} position={roleOverlay.position} roles={roleOverlay.roles} blockManager={r_blockManager.current}></RoleOverlay> : null} */}
 
       <ScriptMap
         instructionManager={r_instructionManager.current}
-        nodeManager={r_nodeManager.current}
-        nodes={nodes}
-        r_nodes={r_nodes.current}
+        blockManager={r_blockManager.current}
+        blocks={blocks}
+        instructions={r_instructions.current}
+
+        r_blocks={r_blocks.current}
         script_id={script_id}
         connecting={connecting}
         allRoles={roles}

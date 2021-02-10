@@ -1,4 +1,3 @@
-import e from 'cors';
 import React, { useState, useEffect, useRef } from 'react';
 
 let _p = 10;
@@ -33,12 +32,13 @@ const Connector = (props) => {
     useEffect(() => {
         // connectorMove(props.pos);
         let poses = props.pos;
-        if (!poses[0] || !poses[1]) { console.log('errorrrr'); return; }
+        if (!poses[0] || !poses[1]) { console.error('errorrrr'); return; }
         let t_bounds = getBoundsFromPoses(poses[0], poses[1]);
         setBoundaries(t_bounds);
         let t_SVG = getSVGFromPoses(poses[0], poses[1]);
         setSVG(t_SVG);
-        setOrigin(props.origin);
+        if (props.origin)
+            setOrigin(props.origin);
     }, [props.pos[0], props.pos[1]]);
 
 

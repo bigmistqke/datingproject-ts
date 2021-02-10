@@ -2,7 +2,8 @@ const restify = require('restify');
 const corsMiddleware = require('restify-cors-middleware');
 const mysql = require('promise-mysql');
 const flat = require('flat');
-var unflatten = require('flat').unflatten
+var unflatten = require('flat').unflatten;
+const promisify = require('util').promisify;
 
 const server = restify.createServer({
   name: 'myapp',
@@ -19,6 +20,10 @@ _redis = jsonify(redis.createClient());
 _redis.on("error", function (error) {
   console.error(error);
 });
+const _get = promisify(_redis.get).bind(_redis);
+const _set = promisify(_redis.set).bind(_redis);
+
+
 
 
 var cors = corsMiddleware({
@@ -117,7 +122,7 @@ server.post('/save', async function (req, res, next) {
     _roles[r.role_id].instructions = _roles[r.role_id].instructions.map(v => v.instruction_id);
   })
 
-  _redis.set(`${script_id}_roles`, flat(_roles));
+  _set(`${script_id}_roles`, flat(_roles));
 
   instructions = instructions.map(v =>
     Object.fromEntries(
@@ -127,17 +132,9 @@ server.post('/save', async function (req, res, next) {
   console.log(instructions);
   instructions = convertArrayToObject(instructions, "instruction_id");
 
-  _redis.set(`${script_id}_instructions`, flat(instructions), () => {
-    _redis.get(`${script_id}_instructions`, (err, data) => {
-      // console.log('get that data', unflatten(data));
-    })
-  });
+  _set(`${script_id}_instructions`, flat(instructions));
 
-  _redis.set(`${script_id}_blocks`, flat(nodes), () => {
-    _redis.get(`${script_id}_blocks`, (err, data) => {
-      // console.log('get that data', unflatten(data));
-    })
-  });
+  _set(`${script_id}_blocks`, flat(nodes), { safe: true });
 
   // 
   /* _redis.rpush(`${script_id}_nodes`, nodes);
@@ -274,53 +271,26 @@ server.get('/script/:script_id/:role_id', async function (req, res, next) {
   const role_id = req.params.role_id
   console.log("THIS YES!!", script_id, role_id);
   res.send({ script_id, role_id })
-
-
-  /*   let connection = await createConnection();
-    let nodes = await connection.query(`SELECT node_id, x, y FROM nodes WHERE script_id='${script_id}'`);
-    nodes = nodes.map(v => { return { node_id: v.node_id, position: { x: v.x, y: v.y }, connections: [], instructions: [] } });
-  
-    for (let node of nodes) {
-      let instructions = await connection.query(`SELECT * FROM instructions WHERE script_id='${script_id}' AND node_id='${node.node_id}'`);
-      instructions = instructions.sort((a, b) => (a.instruction_order_node > b.instruction_order_node) ? 1 : -1);
-      node.instructions = instructions;
-      let connections = await connection.query(`SELECT role_id, node_id, prev_node_id, next_node_id, script_id FROM connections WHERE script_id='${script_id}' AND node_id='${node.node_id}'`);
-      node.connections = connections;
-    }
-  
-    let role_infos = await connection.query(`SELECT role_id FROM roles WHERE script_id='${script_id}'`);
-  
-    res.send({ roles: role_infos, nodes: nodes });
-  
-    connection.end(); */
-
   return next();
 })
 
+const nodeToBlock = (a) => Object.fromEntries(Object.entries(a).map(([k, v]) => [k.replace('node', 'block'), v]))
+
 server.get('/script/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id
-  console.log("NOT NONONONO!!");
+  let data = {}
+  let blocks = await _get(`${script_id}_blocks`);
+  blocks = nodeToBlock(blocks);
+  blocks = Object.values(unflatten(blocks));
+  let instructions = await _get(`${script_id}_instructions`);
+  instructions = nodeToBlock(instructions);
 
+  instructions = unflatten(instructions);
+  let roles = await _get(`${script_id}_roles`);
+  // roles.forEach(v => delete v.instructions);
+  roles = unflatten(roles);
 
-
-  let connection = await createConnection();
-  let nodes = await connection.query(`SELECT node_id, x, y FROM nodes WHERE script_id='${script_id}'`);
-  nodes = nodes.map(v => { return { node_id: v.node_id, position: { x: v.x, y: v.y }, connections: [], instructions: [] } });
-
-  for (let node of nodes) {
-    let instructions = await connection.query(`SELECT * FROM instructions WHERE script_id='${script_id}' AND node_id='${node.node_id}'`);
-    instructions = instructions.sort((a, b) => (a.instruction_order_node > b.instruction_order_node) ? 1 : -1);
-    node.instructions = instructions;
-    let connections = await connection.query(`SELECT role_id, node_id, prev_node_id, next_node_id, script_id FROM connections WHERE script_id='${script_id}' AND node_id='${node.node_id}'`);
-    node.connections = connections;
-  }
-
-  let role_infos = await connection.query(`SELECT role_id FROM roles WHERE script_id='${script_id}'`);
-
-  res.send({ roles: role_infos, nodes: nodes });
-
-  connection.end();
-
+  res.send({ roles, blocks, instructions });
   return next();
 })
 

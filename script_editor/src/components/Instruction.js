@@ -12,20 +12,20 @@ const Instruction = (props) => {
 
 
   const removeRow = () => {
-    props.instructionManager.remove(props.node_id, props.instruction_id);
+    props.instructionManager.remove(props.block_id, props.instruction_id);
   }
   const addRow = () => {
-    props.instructionManager.add({ node_id: props.node_id, instruction_id: props.instruction_id, role_id: props.role_id, });
+    props.instructionManager.add({ block_id: props.block_id, instruction_id: props.instruction_id, role_id: props.role_id, });
   }
 
   const change = (type, value) => {
     console.log(r_data.current);
     r_data.current[type] = value;
-    props.instructionManager.change(props.node_id, props.instruction_id, r_data.current);
+    props.instructionManager.change(props.id, r_data.current);
   }
 
   useEffect(() => {
-    r_data.current = { instruction_id: props.instruction_id, role_id: props.role_id, type: props.type };
+    r_data.current = { role_id: props.role_id, type: props.type };
   }, [props]);
 
   return (
