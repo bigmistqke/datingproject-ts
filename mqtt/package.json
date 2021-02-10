@@ -1,0 +1,17 @@
+{
+  "name": "play-server2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node broker"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aedes": "^0.44.2",
+    "aedes-server-factory": "^0.1.2",
+    "websocket-stream": "^5.5.2"
+  }
+}
