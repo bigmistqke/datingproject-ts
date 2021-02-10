@@ -13,6 +13,7 @@ const ScriptMap = (props) => {
         e.preventDefault();
         const coords = { x: e.clientX - origin.x, y: e.clientY - origin.y };
         // setOrigin(coords);
+        console.log(props);
         props.blockManager.add(coords);
     }
 
@@ -38,7 +39,7 @@ const ScriptMap = (props) => {
             }
             e.target.removeEventListener("pointermove", navMove);
             e.target.removeEventListener("pointerup", navUp);
-            setOrigin(newCoords);
+            if (newCoords) setOrigin(newCoords);
         }
         e.target.addEventListener("pointermove", navMove);
         e.target.addEventListener("pointerup", navUp);

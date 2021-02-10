@@ -20,7 +20,9 @@ class InstructionManager {
         let t_blocks = this.ext.getBlocks();
 
         let b_instr = t_blocks.find(v => v.block_id === block_id).instructions;
-        let b_instr_i = b_instr.findIndex((v) => v.instruction_id === prev_instruction_id);
+        let b_instr_i = b_instr.findIndex((v) => v === prev_instruction_id);
+        console.log(b_instr_i, b_instr, prev_instruction_id);
+
         b_instr.splice((b_instr_i + 1), 0, instruction_id);
         this.ext.updateBlocks(t_blocks);
     }

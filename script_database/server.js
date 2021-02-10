@@ -9,6 +9,7 @@ const server = restify.createServer({
   name: 'myapp',
   version: '1.0.0'
 });
+
 server.use(restify.plugins.acceptParser(server.acceptable));
 server.use(restify.plugins.queryParser());
 server.use(restify.plugins.bodyParser());
@@ -20,11 +21,9 @@ _redis = jsonify(redis.createClient());
 _redis.on("error", function (error) {
   console.error(error);
 });
+
 const _get = promisify(_redis.get).bind(_redis);
 const _set = promisify(_redis.set).bind(_redis);
-
-
-
 
 var cors = corsMiddleware({
   preflightMaxAge: 5,
@@ -110,36 +109,39 @@ const convertArrayToObject = (array, key) => {
 
 
 server.post('/save', async function (req, res, next) {
-  let { nodes, roles, instructions, script_id } = JSON.parse(req.body);
+  let { blocks, roles, instructions, script_id } = JSON.parse(req.body);
 
   // synthesize array of instruction_ids per role
 
   let _roles = {};
-  roles.forEach(r => {
-    _roles[r.role_id] = {}
-    _roles[r.role_id].instructions = instructions.filter(i => i.role_id === r.role_id);
-    _roles[r.role_id].instructions.sort((a, b) => a.instruction_order_role > b.instruction_order_role);
-    _roles[r.role_id].instructions = _roles[r.role_id].instructions.map(v => v.instruction_id);
-  })
+  console.log(blocks, roles, instructions, script_id);
 
-  _set(`${script_id}_roles`, flat(_roles));
+  //  /*  roles.forEach(r => {
+  //     _roles[r.role_id] = {}
+  //     _roles[r.role_id].instructions = instructions.filter(i => i.role_id === r.role_id);
+  //     _roles[r.role_id].instructions.sort((a, b) => a.instruction_order_role > b.instruction_order_role);
+  //     _roles[r.role_id].instructions = _roles[r.role_id].instructions.map(v => v.instruction_id);
+  //   }) */
 
-  instructions = instructions.map(v =>
+  await _set(`${script_id}_roles`, flat(roles, { safe: true }));
+  let test = await _get(`${script_id}_roles`);
+  /* instructions = instructions.map(v =>
     Object.fromEntries(
       Object.entries(v).filter(([k, v]) => ["script_id", "node_id", "instruction_order_node", "instruction_order_role", "index"].indexOf(k) === -1))
-  )
+  ) */
 
-  console.log(instructions);
-  instructions = convertArrayToObject(instructions, "instruction_id");
+  // console.log(flat(blocks));
+  // instructions = convertArrayToObject(instructions, "instruction_id");
 
   _set(`${script_id}_instructions`, flat(instructions));
 
-  _set(`${script_id}_blocks`, flat(nodes), { safe: true });
+  _set(`${script_id}_blocks`, flat(blocks));
+  _set(`${script_id}_roles`, flat(roles));
 
-  // 
-  /* _redis.rpush(`${script_id}_nodes`, nodes);
-  _redis.rpush(`${script_id}_roles`, roles); */
-  // 
+  // // 
+  // /* _redis.rpush(`${script_id}_nodes`, nodes);
+  // _redis.rpush(`${script_id}_roles`, roles); */
+  // // 
 
 })
 
@@ -280,6 +282,10 @@ server.get('/script/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id
   let data = {}
   let blocks = await _get(`${script_id}_blocks`);
+  if (!blocks) {
+    res.send(false);
+    return next();
+  }
   blocks = nodeToBlock(blocks);
   blocks = Object.values(unflatten(blocks));
   let instructions = await _get(`${script_id}_instructions`);

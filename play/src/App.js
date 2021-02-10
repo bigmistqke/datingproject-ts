@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 // import paper from "paper";
 
 import {
@@ -6,6 +6,7 @@ import {
   Route, Switch
 } from "react-router-dom";
 
+import uniqid from 'uniqid';
 
 import Mqtt from "./Mqtt.js"
 import Script from "./components/Script"
@@ -27,16 +28,16 @@ const _url = {
 
 function App() {
 
-  var socket = useRef();
-
+  // var socket = useRef();
+  let user_id = uniqid();
+  const [socket, setSocket] = useState();
 
   async function initSocket() {
     console.log('trying!');
 
-    socket.current = await new Mqtt(_url.mqtt, true);
-    console.log('connected!', socket.current);
-    socket.current.subscribe('/test', (msg) => { console.log(msg) });
-    socket.current.send('/test', 'hallo');
+    let _socket = await new Mqtt(_url.mqtt, true);
+    console.log(_socket);
+    setSocket(_socket);
     /* 
     socket.current.subscribe('wat', (msg) => { console.log(msg) });
   
@@ -54,9 +55,7 @@ function App() {
 
 
   useEffect(() => {
-    setTimeout(() => {
-      init();
-    }, 1000);
+    init();
   }, []);
   /* 
       window.onload = function () {
@@ -67,8 +66,8 @@ function App() {
   return (
     <Router>
       <Switch>
-        <Route path="/:script_id/:pair_id?">
-          <Script _url={_url}>
+        <Route path="/:script_id/:room_id?">
+          <Script _url={_url} socket={socket} user_id={user_id}>
 
           </Script>
           <div className="background"><div ></div></div>

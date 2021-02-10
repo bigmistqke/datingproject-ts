@@ -1,48 +1,93 @@
 class SaveManager {
+
+
+
     async process(_blocks, _instructions, _roles) {
         this.blocks = [..._blocks];
-        this.instructions = _instructions;
         this.roles = _roles;
-        // update instruction_order_block per block
 
-        /* this.blocks = this.blocks.map(block => {
-            block.instructions = this.updateInstructionOrder(block.instructions, 'block');
-            return block;
-        }) */
         let roles = {};
-
-        let errors = []
+        let errors = [];
+        this.instructions = _instructions;
 
         // process sequence of instructions per role
         for (let role of _roles) {
             let r_instructions = await this.processRole(role);
+            console.log(r_instructions);
             if (!r_instructions.success) errors.push(r_instructions);
-            roles[role] = r_instructions;
+            //console.log("r_instructions.instructions", r_instructions.instructions);
+            roles[role.role_id] = r_instructions.instructions;
+        }
+        console.log('errors', errors);
+        if (errors.length !== 0) return { success: false, errors: errors };
+
+        this.processInstructions();
+
+
+        return { success: true, roles: roles, instructions: this.instructions, blocks: this.blocks }
+    }
+
+    processInstructions() {
+        const processLastInstruction = ({ block, role, instruction, count }) => {
+            let connection = block.connections.find(v => v.role_id = role);
+            let next_block_id = connection.next_block_id;
+
+            if (!!next_block_id) {
+                let connected_block = this.blocks.find(v => v.block_id === next_block_id);
+                let first_instr_from_conn_block = connected_block.instructions[0];
+                this.instructions[instruction].next_instruction_id = first_instr_from_conn_block;
+            } else {
+                this.instructions.next_instruction_id = null;
+            }
+
+        }
+        const processFirstInstruction = ({ block, role, instruction, count }) => {
+            let connection = block.connections.find(v => v.role_id = role);
+            let prev_block_id = connection.prev_block_id;
+
+            if (!!prev_block_id) {
+                let connected_block = this.blocks.find(v => v.block_id === prev_block_id);
+                let last_instr_from_conn_block = connected_block.instructions[connected_block.instructions.length - 1];
+                this.instructions[instruction].prev_instruction_id = last_instr_from_conn_block;
+            } else {
+                this.instructions[instruction].prev_instruction_id = null;
+            }
+        }
+        const getNextInBlock = ({ block, role, instruction, count }) => {
+            this.instructions[instruction].next_instruction_id = block.instructions[count + 1]
         }
 
-        if (errors.length !== 0) return errors;
+        const getPrevInBlock = ({ block, role, instruction, count }) => {
+            this.instructions[instruction].prev_instruction_id = block.instructions[count - 1]
+        }
+        for (let block of this.blocks) {
+            // 2 edge cases: first and last
+            //console.log(block);
+            let count = 0;
 
-        instructions = instructions.flat();
-        instructions.sort((a, b) => a.role_id > b.role_id || a.instruction_order_role > b.instruction_order_role);
-        // remove instructions from blocks
-        //console.log(this.blocks);
-        let blocks = this.blocks.map(block => {
-            block = { ...block };
-            // block.instructions = block.instructions.map(v => v.instruction_id);
-            block.connections = block.connections.map(v => {
-                return {
-                    role_id: v.role_id,
-                    next_block_id: v.next_block_id,
-                    prev_block_id: v.prev_block_id
+            for (let instruction of block.instructions) {
+                let role = this.instructions[instruction].role_id;
+                //console.log(block, count);
+
+                if (count === 0) {
+                    processFirstInstruction({ block, role, instruction, count })
+                    if (1 !== block.instructions.length) {
+                        getNextInBlock({ block, role, instruction, count });
+                    }
                 }
-            });
-            //console.log(block, block.connections);
-
-            //console.log("block.instructions", block.instructions);
-            return block;
-        })
-
-        // return { instructions, blocks };
+                if (count === block.instructions.length - 1) {
+                    processLastInstruction({ block, role, instruction, count })
+                    if (1 !== block.instructions.length) {
+                        getPrevInBlock({ block, role, instruction, count });
+                    }
+                }
+                if (count !== 0 && count !== block.instructions.length - 1) {
+                    getPrevInBlock({ block, role, instruction, count });
+                    getNextInBlock({ block, role, instruction, count });
+                }
+                count++
+            }
+        }
     }
 
     orderBlocks = (data) => {
@@ -85,7 +130,7 @@ class SaveManager {
             // check if block has connection with this role_id
             let connection = block.connections.find(c => c.role_id === _role_id);
             if (!connection) return;
-            ////console.log(block);
+            //////console.log(block);
             let c_data = {
                 block: block,
                 prev_block_id: connection.prev_block_id,
@@ -109,7 +154,7 @@ class SaveManager {
                 let lastInstruction = i === (block.instructions.length - 1);
                 if (!lastInstruction) {
                     // add next instruction_id of block
-                    ////console.log()
+                    //////console.log()
                     if (block.instructions[i + 1].role_id != instruction.role_id) {
                         instruction.next_instruction_id = block.instructions[i + 1].instruction_id;
                     } else {
@@ -120,7 +165,7 @@ class SaveManager {
                     let next_instruction_ids = block.connections.filter(connection => {
                         if ('next_block_id' in connection && connection.next_block_id) {
                             // dont include them if they r from the same role_id
-                            ////console.log(connection.next_block_id, this.blocks);
+                            //////console.log(connection.next_block_id, this.blocks);
                             let next_role_id = this.blocks.find(v => v.block_id === connection.next_block_id).instructions[0].role_id;
                             return next_role_id && next_role_id !== instruction.role_id ? true : false;
                         }
@@ -144,7 +189,7 @@ class SaveManager {
     }
 
     updatePrevInstructionId(_blocks, allBlocks) {
-        //console.log(_blocks);
+        ////console.log(_blocks);
         return _blocks.map(block => {
             block.instructions.map((instruction, i) => {
                 let lastInstruction = i === 0;
@@ -159,7 +204,7 @@ class SaveManager {
                     }
 
                 } else {
-                    ////console.log(_blocks);
+                    //////console.log(_blocks);
                     // find to which blocks block is connected and push the first instruction
                     let prev_instruction_ids = block.connections.filter(connection => {
                         // 'prev_block_id' in connection && connection.prev_block_id && connection.prev_block_id != block.block_id
@@ -168,21 +213,21 @@ class SaveManager {
                             let prev_block = this.blocks.find(v => v.block_id === connection.prev_block_id);
                             if (!prev_block) { console.error('errrrrr', connection.prev_block_id); };
                             let prev_instructions = prev_block.instructions
-                            ////console.log(prev_instructions, connection);
+                            //////console.log(prev_instructions, connection);
                             if (prev_instructions.length > 0) {
                                 if (!instruction.role_id) {
-                                    ////console.log('NO ROLE ID', instruction.role_id, instruction);
+                                    //////console.log('NO ROLE ID', instruction.role_id, instruction);
                                 }
                                 let prev_role_id = prev_instructions[(prev_instructions.length - 1)].role_id;
                                 return prev_role_id !== instruction.role_id ? true : false;
                                 // return true;
                             } else {
-                                ////console.log('empty box', prev_block);
+                                //////console.log('empty box', prev_block);
                                 return false;
                             }
 
                         }
-                        //console.log("THIS HAPPENS?");
+                        ////console.log("THIS HAPPENS?");
                         return false;
                     }).map((connection) => {
                         let prev_block_id = connection.prev_block_id;
@@ -207,14 +252,14 @@ class SaveManager {
             return instructions;
         });
         // flatten array of array
-        // r_instructions = r_instructions.flat();
-        ////console.log('getAllInstructionsRole', r_blocks, r_instructions)
+        r_instructions = r_instructions.flat();
+        //////console.log('getAllInstructionsRole', r_blocks, r_instructions)
 
         return r_instructions;
     }
 
     updateInstructionOrder = (instructions, type) => {
-        ////console.log(instructions, type);
+        //////console.log(instructions, type);
 
         return instructions.map((instruction, i) => {
             instruction[`instruction_order_${type}`] = i;

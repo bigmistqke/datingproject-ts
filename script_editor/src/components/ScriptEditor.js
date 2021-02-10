@@ -53,19 +53,31 @@ function ScriptEditor(props) {
   useEffect(() => {
     console.log('hallo?');
     document.body.focus();
+
+
     // getData(`http://${process.env.REACT_APP_S_URL}/script/${script_id}`)
     getData(`${_base}/script/${script_id}`)
-
+      // .then(res => console.log(res))
       // getData(`https://fetch.datingproject.net/script/${script_id}`)
       .then(res => res.json())
       .then(res => {
+        if (!res) return Promise.reject('errrr');
         console.log(res.blocks, res.instructions);
-        r_blocks.current = res.blocks;
-        r_roles.current = [{ role_id: 'a' }, { role_id: 'b' }];
+
         r_instructions.current = res.instructions;
-        console.log(r_instructions.current);
-        setBlocks(res.blocks);
         setInstructions(res.instructions);
+        r_blocks.current = res.blocks;
+        setBlocks(res.blocks);
+        r_roles.current = [{ role_id: 'a' }, { role_id: 'b' }];
+        setRoles({ role_id: 'a' }, { role_id: 'b' });
+      })
+      .catch(err => {
+
+        r_instructions.current = {};
+        setInstructions({});
+        r_blocks.current = [];
+        setBlocks([]);
+        r_roles.current = [{ role_id: 'a' }, { role_id: 'b' }];
         setRoles({ role_id: 'a' }, { role_id: 'b' });
       });
   }, [script_id]);
@@ -76,10 +88,19 @@ function ScriptEditor(props) {
 
     r_saveManager.current.process(getBlocks(), getInstructions(), getRoles())
 
-      .then(data => { console.log(data); return data })
-      .then(data => postData(`${_base}/save`, { script_id, roles, ...data }))
+      .then(data => {
+        console.log(data);
+        if (!data.success) {
+          return Promise.reject()
+        }
+        return data
+      })
+      .then(data => postData(`${_base}/save`, { script_id, ...data }))
       .then(res => res.json())
-      .then(res => console.log(res));
+      .then(res => console.log(res))
+      .catch(err => {
+        alert('error!')
+      })
   }
 
   const updateInstructions = (_instructions) => {
@@ -122,7 +143,7 @@ function ScriptEditor(props) {
         setOverlay
       }
     );
-    console.log(r_blockManager);
+    updateBlocks([...blocks]);
     // r_blockManager.current.addEventListener('update', (e) => { updateBlocks(e.detail.blocks) })
   }, [])
 
