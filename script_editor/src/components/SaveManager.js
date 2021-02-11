@@ -42,23 +42,24 @@ class SaveManager {
 
         }
         const processFirstInstruction = ({ block, role, instruction, count }) => {
-            let connection = block.connections.find(v => v.role_id = role);
-            let prev_block_id = connection.prev_block_id;
-
-            if (!!prev_block_id) {
-                let connected_block = this.blocks.find(v => v.block_id === prev_block_id);
-                let last_instr_from_conn_block = connected_block.instructions[connected_block.instructions.length - 1];
-                this.instructions[instruction].prev_instruction_id = last_instr_from_conn_block;
-            } else {
-                this.instructions[instruction].prev_instruction_id = null;
-            }
+            this.instructions[instruction].prev_instruction_id = [];
+            block.connections.forEach((connection) => {
+                let prev_block_id = connection.prev_block_id;
+                console.log(connection, block.block_id);
+                if (!!prev_block_id) {
+                    let connected_block = this.blocks.find(v => v.block_id === prev_block_id);
+                    let last_instr_from_conn_block = connected_block.instructions[connected_block.instructions.length - 1];
+                    this.instructions[instruction].prev_instruction_id.push(last_instr_from_conn_block);
+                }
+                console.log(this.instructions[instruction].prev_instruction_id, instruction);
+            })
         }
         const getNextInBlock = ({ block, role, instruction, count }) => {
             this.instructions[instruction].next_instruction_id = block.instructions[count + 1]
         }
 
         const getPrevInBlock = ({ block, role, instruction, count }) => {
-            this.instructions[instruction].prev_instruction_id = block.instructions[count - 1]
+            this.instructions[instruction].prev_instruction_id = [block.instructions[count - 1]]
         }
         for (let block of this.blocks) {
             // 2 edge cases: first and last

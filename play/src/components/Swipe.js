@@ -47,7 +47,6 @@ const Swipe = (props) => {
             posStart = coords;
             current.swiping = true;
         }
-        console.log(props.canPlay);
         window.addEventListener('mousemove', onSwipe);
         window.addEventListener('mouseup', onSwipeEnd);
     }

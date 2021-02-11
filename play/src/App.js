@@ -17,10 +17,10 @@ import "./css/general.css";
 // const ENDPOINT = "https://socket.datingproject.net";
 const isDev = true;
 
-const _url = {
+window._url = {
   mqtt: isDev ? "localhost" : "https://mqtt.datingproject.net",
   socket: isDev ? "http://localhost:4001" : "https://play.datingproject.net",
-  fetch_url: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net"
+  fetch: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net"
 }
 
 
@@ -35,7 +35,7 @@ function App() {
   async function initSocket() {
     console.log('trying!');
 
-    let _socket = await new Mqtt(_url.mqtt, true);
+    let _socket = await new Mqtt(window._url.mqtt, true);
     console.log(_socket);
     setSocket(_socket);
     /* 
@@ -67,7 +67,7 @@ function App() {
     <Router>
       <Switch>
         <Route path="/:script_id/:room_id?">
-          <Script _url={_url} socket={socket} user_id={user_id}>
+          <Script socket={socket} user_id={user_id}>
 
           </Script>
           <div className="background"><div ></div></div>

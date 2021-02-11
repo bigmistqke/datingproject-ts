@@ -144,10 +144,8 @@ class BlockManager {
     updateBlock(block_id, data) {
         let t_blocks = this.ext.getBlocks();
         Object.keys(data).forEach((key) => {
-            console.log(block_id);
             let t_block = t_blocks.find(v => v.block_id === block_id);
             if (!t_block) return;
-            console.log('change this dude!');
             t_block[key] = data[key];
         })
         this.ext.updateBlocks(t_blocks);
@@ -209,7 +207,6 @@ class ConnectionManager extends EventTarget {
     }
 
     end = async (e) => {
-        console.log('this???');
 
         document.body.removeEventListener("pointermove", this.move);
         document.body.removeEventListener("pointerup", this.end);
@@ -219,8 +216,6 @@ class ConnectionManager extends EventTarget {
         if (e.target.classList.contains("block")) {
             let this_id = this.updating.block.block_id;
             let connecting_id = e.target.id.replace('block_', '');
-            console.log(this_id);
-            console.log(connecting_id, e.target.id);
 
             if (this_id !== connecting_id) {
                 this.dispatchUpdate(this.updating.block, this.updating.direction, connecting_id);
@@ -234,7 +229,6 @@ class ConnectionManager extends EventTarget {
     }
 
     start = (block, role_id, direction) => {
-        console.log(block);
         this.updating = {
             block: block,
             role_id: role_id,
@@ -252,11 +246,11 @@ class PositionManager extends EventTarget {
         this.coords = {};
         this.block = '';
         this.position = {};
+        this.lastTick = performance.now();
     }
 
     start = (e, block) => {
         if (!e.target.classList.contains("block")) return;
-        console.log(block);
         this.block = block;
         this.coords = { x: e.clientX, y: e.clientY };
         this.position = block.position;
@@ -272,7 +266,9 @@ class PositionManager extends EventTarget {
     }
 
     move = (e) => {
-        let coords_delta = {
+        if (performance.now() - this.lastTick < 1000 / 60) return;
+        this.lastTick = performance.now();
+        const coords_delta = {
             x: (this.coords.x - e.clientX) * -1,
             y: (this.coords.y - e.clientY) * -1
         };
@@ -281,7 +277,7 @@ class PositionManager extends EventTarget {
             x: this.position.x + coords_delta.x,
             y: this.position.y + coords_delta.y
         };
-        let event = new CustomEvent('update', { detail: { block_id: this.block.block_id, position: this.position } });
+        const event = new CustomEvent('update', { detail: { block_id: this.block.block_id, position: this.position } });
         this.dispatchEvent(event);
         this.coords = { x: e.clientX, y: e.clientY };
     }

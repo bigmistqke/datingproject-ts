@@ -9,7 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "init": "concurrently \"npm install\" \"cd play-server && npm cache clean --force && npm rebuild && npm install\" \"cd play-client && npm cache clean --force && npm rebuild && npm install\" \"cd script-server && npm cache clean --force && npm rebuild && npm install\"  \"cd script-client && npm cache clean --force && npm rebuild && npm install\" ",
-    "start": "concurrently \"cd mqtt && npm run start\" \"cd play && npm run backend\" \"cd play && npm run start\" \"cd script_database && npm run start\"  \"cd script_editor && npm run start\" "
+    "start": "concurrently \"cd mqtt && npm run start\" \"cd play-server && npm run backend\" \"cd play && npm run start\" \"cd script_database && npm run start\"  \"cd script_editor && npm run start\" "
   },
   "repository": {
     "type": "git",

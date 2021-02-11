@@ -20,13 +20,10 @@ const express = require('express');
 const fileUpload = require('express-fileupload');
 const http = require('http');
 var cors = require('cors')
-var bodyParser = require('body-parser')
-
-var serveStatic = require('serve-static')
 
 var app = express();
 app.use(cors())
-
+app.use(fileUpload());
 
 const redis = require("redis");
 const jsonify = require('redis-jsonify')
@@ -41,8 +38,8 @@ const _set = promisify(_redis.set).bind(_redis);
 
 
 app.listen(8080);
-app.use('/api/uploads', express.static('uploads'))
-// app.use(serveStatic('uploads', {}))
+
+
 
 function escapeHtml(text) {
   var map = {
@@ -71,9 +68,9 @@ const convertArrayToObject = (array, key) => {
   }, initialValue);
 };
 
-app.use(bodyParser.json())
-app.post('/api/save', async function (req, res, next) {
-  let { blocks, roles, instructions, script_id } = req.body;
+
+app.post('/save', async function (req, res, next) {
+  let { blocks, roles, instructions, script_id } = JSON.parse(req.body);
   let _roles = {};
   await _set(`${script_id}_roles`, flat(roles, { safe: true }));
   _set(`${script_id}_instructions`, flat(instructions));
@@ -131,21 +128,18 @@ var storage = multer.diskStorage({
 });
 var upload = multer({ storage: storage }).single();
 
-
-app.use(fileUpload());
-app.post('/api/uploadVideo', function (req, res) {
+app.post('/saveImage', function (req, res) {
   console.log(req.body); // the uploaded file object
 
-  let script_path = `./uploads/${req.body.script_id}`
+  let script_path = `/uploads/${req.body.script_id}`
 
   if (!fs.existsSync(script_path)) {
     fs.mkdirSync(script_path);
   }
 
   let new_path = `${script_path}/${req.body.instruction_id}${path.extname(req.files.file.name)}`;
-  console.log(new_path);
   fs.writeFile(new_path, req.files.file.data, (err) => {
     console.log(err);
-    if (!err) res.send(JSON.stringify(new_path));
+    if (!err) res.send(JSON.stringify(resolve(new_path)));
   })
 })

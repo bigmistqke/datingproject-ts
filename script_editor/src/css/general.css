@@ -134,12 +134,16 @@ header {
     /* border-bottom: 0px !important; */
 }
 
+video {
+    height: 250px;
+}
+
 .row {
     flex-direction: row;
     font-size: 18pt;
     font-size: 18pt;
     line-height: var(--r-height);
-    height: var(--r-height);
+    min-height: var(--r-height);
     margin: auto;
     overflow: hidden;
     /* border-bottom: var(--border); */

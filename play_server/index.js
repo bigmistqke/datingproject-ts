@@ -81,6 +81,7 @@ const addToRoom = async ({ script_id, room_id, user_id }) => {
 
 }
 
+
 const connect = async (json) => {
     console.log("TRYING TO CONNECT YO");
     try {
@@ -91,7 +92,7 @@ const connect = async (json) => {
         let role_id = await addToRoom({ script_id, room_id, user_id });
         console.log('role is ', role_id);
         if (!role_id) {
-            _mqtt.send(`/${user_id}/connected`, JSON.stringify(
+            _mqtt.send(`/usr/${user_id}/connected`, JSON.stringify(
                 { success: false, error: 'no more roles available' }
             ));
             return;
@@ -106,16 +107,22 @@ const connect = async (json) => {
         allInstructions = unflatten(JSON.parse(allInstructions));
 
         r_instructions = r_instructions.map(v => {
-            console.log(allInstructions[v]);
-            return allInstructions[v]
+            // console.log(allInstructions[v]);
+            console.log(v);
+            let next_instruction_role = allInstructions[allInstructions[v].next_instruction_id];
+            next_instruction_role = next_instruction_role ? next_instruction_role.role_id : null;
+            return {
+                instruction_id: v,
+                next_instruction_role: next_instruction_role,
+                ...allInstructions[v]
+            }
         });
-        _mqtt.send(`/${user_id}/connected`, JSON.stringify(
+        _mqtt.send(`/usr/${user_id}/connected`, JSON.stringify(
             { success: true, role_id: role_id, instructions: r_instructions }
         ));
     } catch (e) {
         console.log('errrrrr', e);
     }
-
 }
 
 const init = async () => {

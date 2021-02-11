@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import Instruction from "./Instruction"
 import BlockRoles from "./BlockRoles"
 
-let ScriptBlock = (props) => {
+let Block = (props) => {
     let r_coords = useRef();
     let r_coords_start = useRef();
 
@@ -56,4 +56,4 @@ let ScriptBlock = (props) => {
         </div >
     )
 }
-export default ScriptBlock;
+export default Block;

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, forwardRef } from 'react';
-import ScriptBlock from './ScriptBlock';
+import Block from './Block';
 import Connectors from './Connectors';
 
-const ScriptMap = (props) => {
+const Map = (props) => {
 
     let [connecting, setConnecting] = useState(false);
     let [origin, setOrigin] = useState({ x: 0, y: 0 });
@@ -58,11 +58,10 @@ const ScriptMap = (props) => {
             <div className="Map" ref={r_map}>
                 {props.r_blocks ? <Connectors blocks={props.r_blocks} origin={origin}></Connectors> : null}
                 {
-                    props.r_blocks ? props.blocks.map((block, i) => {
-                        console.log(block.block_id);
+                    props.r_blocks ? props.r_blocks.map((block, i) => {
                         return <div
                             className="absolute" key={i} style={{ transform: `translateX(${block.position.x}px) translateY(${block.position.y}px)` }}>
-                            <ScriptBlock
+                            <Block
                                 key={block.block_id}
                                 id={block.block_id}
                                 instructionManager={props.instructionManager}
@@ -72,7 +71,7 @@ const ScriptMap = (props) => {
                                 connecting={props.connecting}
                                 allRoles={props.allRoles}
                             >
-                            </ScriptBlock>
+                            </Block>
                         </div>
                     }) : null
                 }
@@ -81,4 +80,4 @@ const ScriptMap = (props) => {
     </div>
 }
 
-export default ScriptMap
+export default Map

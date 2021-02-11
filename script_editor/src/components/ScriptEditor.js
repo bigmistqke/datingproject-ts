@@ -4,7 +4,7 @@ import { useHistory, useParams } from 'react-router-dom';
 import getData from "../helpers/getData";
 import postData from "../helpers/postData";
 
-import ScriptMap from './ScriptMap';
+import Map from './Map';
 
 import SaveManager from './SaveManager';
 import BlockManager from './BlockManager';
@@ -17,7 +17,7 @@ function decodeSingleQuotes(text) {
   return (text.replace(/&#039;/g, "'"));
 }
 
-let _base = 'http://localhost:8080'
+window._base = 'http://localhost:8080'
 // let _base = 'https://fetch.datingproject.net'
 
 function ScriptEditor(props) {
@@ -51,12 +51,37 @@ function ScriptEditor(props) {
   let r_overlays = useRef();
 
   useEffect(() => {
-    console.log('hallo?');
+    console.log('hallo?', script_id);
     document.body.focus();
+
+    r_saveManager.current = new SaveManager();
+    r_instructionManager.current = new InstructionManager({
+      getInstructions,
+      updateInstructions,
+      getBlocks,
+      getRoles,
+      updateBlocks,
+      script_id
+    });
+    r_blockManager.current = new BlockManager(
+      {
+        script_id,
+        getBlocks,
+        getRoles,
+        getInstructions,
+        updateInstructions,
+        updateBlocks,
+        setConnecting,
+        setRoleOverlay,
+        setDeleteOverlay,
+        setOverlay
+      }
+    );
+    updateBlocks([...blocks]);
 
 
     // getData(`http://${process.env.REACT_APP_S_URL}/script/${script_id}`)
-    getData(`${_base}/script/${script_id}`)
+    getData(`${window._base}/script/${script_id}`)
       // .then(res => console.log(res))
       // getData(`https://fetch.datingproject.net/script/${script_id}`)
       .then(res => res.json())
@@ -85,67 +110,38 @@ function ScriptEditor(props) {
 
   const save = async () => {
     let roles = r_roles.current;
-
     r_saveManager.current.process(getBlocks(), getInstructions(), getRoles())
-
       .then(data => {
-        console.log(data);
         if (!data.success) {
           return Promise.reject()
         }
+        console.log('SAVE', data);
         return data
       })
-      .then(data => postData(`${_base}/save`, { script_id, ...data }))
+      .then(data => postData(`${window._base}/api/save`, { script_id, ...data }))
       .then(res => res.json())
       .then(res => console.log(res))
       .catch(err => {
+        console.log(err);
         alert('error!')
       })
   }
 
   const updateInstructions = (_instructions) => {
-    console.log(_instructions);
     setInstructions(_instructions);
     r_instructions.current = _instructions;
     updateBlocks(getBlocks());
   }
 
   const updateBlocks = (_blocks) => {
-    setBlocks(_blocks);
     r_blocks.current = _blocks;
+    setBlocks(performance.now());
   }
 
   const getInstructions = () => { return r_instructions.current; }
   const getBlocks = () => { return [...r_blocks.current]; }
   const getRoles = () => { return [...r_roles.current]; }
 
-  useEffect(() => {
-    r_saveManager.current = new SaveManager();
-    r_instructionManager.current = new InstructionManager({
-      getInstructions,
-      updateInstructions,
-      getBlocks,
-      getRoles,
-      updateBlocks,
-      script_id
-    });
-    r_blockManager.current = new BlockManager(
-      {
-        script_id,
-        getBlocks,
-        getRoles,
-        getInstructions,
-        updateInstructions,
-        updateBlocks,
-        setConnecting,
-        setRoleOverlay,
-        setDeleteOverlay,
-        setOverlay
-      }
-    );
-    updateBlocks([...blocks]);
-    // r_blockManager.current.addEventListener('update', (e) => { updateBlocks(e.detail.blocks) })
-  }, [])
 
   const getOverlay = (overlay) => {
     console.log("THIS HAPPENS");
@@ -179,22 +175,16 @@ function ScriptEditor(props) {
     document.body.addEventListener("keyup", keyUp);
   }, [])
 
-
   return (
     <div className="App" >
-
       <header className="row fixed flex">
         <div className="flexing">editor for script {script_id}</div>
         <button onClick={() => history.push("/")} className="Instruction-button">all scripts</button>
         <button onClick={() => history.push("/")} className="Instruction-button">roles</button>
         <button onClick={() => save()} className="Instruction-button">save</button>
       </header>
-
       {overlay ? <div className="overlay-container" onMouseDown={() => { overlay.resolve(false) }}>{getOverlay(overlay)}</div> : null}
-
-      {/* {roleOverlay ? <RoleOverlay block={roleOverlay.block} position={roleOverlay.position} roles={roleOverlay.roles} blockManager={r_blockManager.current}></RoleOverlay> : null} */}
-
-      <ScriptMap
+      <Map
         instructionManager={r_instructionManager.current}
         blockManager={r_blockManager.current}
         blocks={blocks}
@@ -204,8 +194,7 @@ function ScriptEditor(props) {
         script_id={script_id}
         connecting={connecting}
         allRoles={roles}
-      ></ScriptMap>
-
+      ></Map>
     </div >
   );
 }

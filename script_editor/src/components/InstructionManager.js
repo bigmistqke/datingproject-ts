@@ -31,7 +31,10 @@ class InstructionManager {
         console.log(instruction_id);
 
         let t_blocks = this.ext.getBlocks();
-        delete t_blocks[instruction_id];
+
+        let b_instr = t_blocks.find(v => v.block_id === block_id).instructions;
+        let b_instr_i = b_instr.findIndex((v) => v === instruction_id);
+        b_instr.splice(b_instr_i, 1);
         this.ext.updateBlocks(t_blocks);
 
         let t_instructions = this.ext.getInstructions();
@@ -50,6 +53,32 @@ class InstructionManager {
 
         this.ext.updateInstructions(t_instructions);
     }
+
+    uploadVideo = async (file, instruction_id) => {
+        console.log(file, instruction_id);
+        return new Promise((resolve) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('instruction_id', instruction_id);
+            formData.append('script_id', this.ext.script_id);
+
+            fetch(`/api/uploadVideo`, {
+                method: 'POST',
+                body: formData,
+                processData: false,
+                contentType: false
+            }).then(response => response.json())
+                .then(url => {
+                    resolve({ success: true, url: url });
+                })
+                .catch(error => {
+                    resolve({ success: false, error: error });
+
+                })
+        })
+    }
+
+
 }
 
 export default InstructionManager
