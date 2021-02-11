@@ -15,11 +15,10 @@ import Home from "./routes/Home"
 import "./css/general.css";
 
 // const ENDPOINT = "https://socket.datingproject.net";
-const isDev = true;
+const isDev = window.location.href.indexOf('localhost') != -1;
 
 window._url = {
-  mqtt: isDev ? "localhost" : "https://mqtt.datingproject.net",
-  socket: isDev ? "http://localhost:4001" : "https://play.datingproject.net",
+  mqtt: isDev ? "localhost" : "socket.datingproject.net",
   fetch: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net"
 }
 

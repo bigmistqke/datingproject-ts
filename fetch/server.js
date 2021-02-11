@@ -1,28 +1,18 @@
-// const restify = require('restify');
-// const corsMiddleware = require('restify-cors-middleware');
 
-
-
-
-const mysql = require('promise-mysql');
 const flat = require('flat');
 var unflatten = require('flat').unflatten;
 const promisify = require('util').promisify;
 const multer = require('multer');
 /* 
 const upload = multer(); */
-var formidable = require('formidable');
 const fs = require('fs');
 const path = require('path');
 const resolve = path.resolve
 
 const express = require('express');
 const fileUpload = require('express-fileupload');
-const http = require('http');
 var cors = require('cors')
 var bodyParser = require('body-parser')
-
-var serveStatic = require('serve-static')
 
 var app = express();
 app.use(cors())

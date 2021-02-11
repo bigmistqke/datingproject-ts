@@ -1,0 +1,33 @@
+upstream fetch_upstream {
+    server 127.0.0.1:8080;
+    keepalive 64;
+}
+
+server {
+ listen [::]:443 ssl;
+ listen 443 ssl;
+
+
+ server_name fetch.datingproject.net; 
+
+ ssl_certificate /etc/letsencrypt/live/fetch.datingproject.net/fullchain.pem;
+ ssl_certificate_key /etc/letsencrypt/live/fetch.datingproject.net/privkey.pem;
+ include /etc/letsencrypt/options-ssl-nginx.conf;
+ ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+ access_log /var/log/nginx/krim.com.access.log;
+ error_log /var/log/nginx/krim.com.error.log;
+
+ location / {
+	proxy_set_header Origin "";
+	proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+	proxy_set_header Host $http_host;
+	proxy_set_header X-NginX-Proxy true;
+	proxy_http_version 1.1;
+	proxy_set_header Upgrade $http_upgrade;
+	proxy_set_header Connection "upgrade";
+	proxy_max_temp_file_size 0;
+	proxy_pass http://fetch_upstream/;
+	proxy_redirect off;
+	proxy_read_timeout 240s; 
+ }
+}

@@ -17,7 +17,11 @@ function decodeSingleQuotes(text) {
   return (text.replace(/&#039;/g, "'"));
 }
 
-window._base = 'http://localhost:8080'
+const isDev = window.location.href.indexOf('localhost') != -1;
+
+
+window._base = isDev ? "http://localhost:8080" : "https://fetch.datingproject.net";
+
 // let _base = 'https://fetch.datingproject.net'
 
 function ScriptEditor(props) {

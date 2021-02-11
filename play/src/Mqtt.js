@@ -5,7 +5,7 @@ export default class Mqtt {
     constructor(url, websocket = false) {
         let id = uuidv4();
         console.log(id);
-        this.client = new Paho.Client(url, websocket ? 8883 : 1883, id);
+        this.client = new Paho.Client(`wss://${url}`, id);
         this.subscriptions = {};
         this.base = "";
         return this.connect();
