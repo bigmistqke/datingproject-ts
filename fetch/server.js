@@ -100,15 +100,6 @@ app.get('/script/:script_id', async function (req, res, next) {
   return next();
 })
 
-app.get('/scripts', function (req, res, next) {
-  createConnection().then(connection => {
-    connection.query(`SELECT DISTINCT script_id FROM instructions`).then(result => {
-      res.send(results);
-      connection.end();
-    })
-  })
-  return next();
-})
 
 
 var storage = multer.diskStorage({

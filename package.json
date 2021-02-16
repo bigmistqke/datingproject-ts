@@ -12,7 +12,7 @@
     "build:play": "cd play && npm run build",
     "build:editor": "cd editor && npm run build",
     "init": "concurrently \"npm install\"  \"cd mqtt && npm cache clean --force && npm rebuild && npm install\" \"cd play_server && npm cache clean --force && npm rebuild && npm install\" \"cd play && npm cache clean --force && npm rebuild && npm install\" \"cd fetch && npm cache clean --force && npm rebuild && npm install\"  \"cd editor && npm cache clean --force && npm rebuild && npm install\" ",
-    "start": "concurrently \"cd mqtt && npm run start\" \"cd play-server && npm run backend\" \"cd play && npm run start\" \"cd script_database && npm run start\"  \"cd script_editor && npm run start\" "
+    "start": "concurrently \"cd mqtt && npm run start\" \"cd play_server && npm run start\" \"cd play && npm run start\" \"cd fetch && npm run start\"  \"cd editor && npm run start\" "
   },
   "repository": {
     "type": "git",

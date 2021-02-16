@@ -14,11 +14,10 @@ import Home from "./routes/Home"
 
 import "./css/general.css";
 
-// const ENDPOINT = "https://socket.datingproject.net";
 const isDev = window.location.href.indexOf('localhost') != -1;
 
 window._url = {
-  mqtt: isDev ? "localhost" : "socket.datingproject.net",
+  mqtt: isDev ? "localhost:8883" : "socket.datingproject.net/mqtt",
   fetch: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net"
 }
 
@@ -33,8 +32,8 @@ function App() {
 
   async function initSocket() {
     console.log('trying!');
-
-    let _socket = await new Mqtt(window._url.mqtt, true);
+    console.log(window.location.protocol);
+    let _socket = await new Mqtt(window._url.mqtt, true, window.location.protocol.indexOf('https') != -1);
     console.log(_socket);
     setSocket(_socket);
     /* 

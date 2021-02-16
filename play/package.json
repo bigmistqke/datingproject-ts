@@ -1,6 +1,5 @@
 {
   "name": "play-client",
-  "homepage": ".",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -8,6 +7,7 @@
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
     "@tweenjs/tween.js": "^18.6.4",
+    "mqtt": "^4.2.6",
     "paho-mqtt": "^1.1.0",
     "paper": "^0.12.8",
     "react": "^16.14.0",
