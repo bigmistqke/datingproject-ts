@@ -53,28 +53,9 @@ function ScriptEditor({ socket, user_id }) {
   const init = () => {
 
     r_saveManager.current = new SaveManager();
-    r_instructionManager.current = new InstructionManager({
-      getInstructions,
-      updateInstructions,
-      getBlocks,
-      getRoles,
-      updateBlocks,
-      script_id
-    });
-    r_blockManager.current = new BlockManager(
-      {
-        script_id,
-        getBlocks,
-        getRoles,
-        getInstructions,
-        updateInstructions,
-        updateBlocks,
-        setConnecting,
-        setRoleOverlay,
-        setDeleteOverlay,
-        setOverlay
-      }
-    );
+    r_instructionManager.current = new InstructionManager(this);
+    r_blockManager.current = new BlockManager(this);
+
     updateBlocks([...blocks]);
 
     // getData(`http://${process.env.REACT_APP_S_URL}/script/${script_id}`)
