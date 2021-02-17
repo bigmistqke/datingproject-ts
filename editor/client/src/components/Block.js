@@ -19,7 +19,7 @@ let Block = (props) => {
         <div
             id={`block_${props.id}`}
             className={`block ${props.connecting ? 'connecting' : ''}`}
-            onPointerDown={(e) => { props.blockManager.positioning.start(e, props.block) }}
+            onPointerDown={(e) => { props.blockManager.startPosition(e, props.block) }}
             onContextMenu={confirmDelete}
         >
             <div className="">
