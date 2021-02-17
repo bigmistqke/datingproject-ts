@@ -1,4 +1,4 @@
-class SaveManager {
+export default class DataProcessor {
 
 
 
@@ -282,4 +282,3 @@ class SaveManager {
     }
 }
 
-export default SaveManager

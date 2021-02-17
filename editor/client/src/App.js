@@ -9,6 +9,9 @@ import {
     Switch,
     Route
 } from "react-router-dom";
+import {
+    RecoilRoot
+} from 'recoil';
 import uniqid from 'uniqid';
 
 import Mqtt from "./Mqtt.js"
@@ -45,20 +48,21 @@ function App() {
     }, []);
 
     return (
-        <Router>
-            <Switch>
-                <Route path="/:script_id">
-                    <ScriptEditor socket={socket} user_id={user_id} />
-                    <div className="background"><div ></div></div>
-                </Route>
-                <Route path="/">
-                    <ScriptList />
-                    <div className="background"><div ></div></div>
-                </Route>
-            </Switch>
+        <RecoilRoot>
+            <Router>
+                <Switch>
+                    <Route path="/:script_id">
+                        <ScriptEditor socket={socket} user_id={user_id} />
+                        <div className="background"><div ></div></div>
+                    </Route>
+                    <Route path="/">
+                        <ScriptList />
+                        <div className="background"><div ></div></div>
+                    </Route>
+                </Switch>
 
-        </Router>
-
+            </Router>
+        </RecoilRoot>
     );
 }
 

@@ -2,57 +2,55 @@ import React, { useRef } from 'react';
 import { useEffect } from 'react';
 import Instruction from "./Instruction"
 import BlockRoles from "./BlockRoles"
+import {
+    atom,
+    useRecoilState
+} from 'recoil';
+
+const _blockManager = atom({ key: 'blockManager', default: '' });
 
 let Block = (props) => {
-    let r_coords = useRef();
-    let r_coords_start = useRef();
+    const [blockManager] = useRecoilState(_blockManager);
 
     useEffect(() => {
-        console.log('connecting?');
     }, [props.connecting])
 
     const confirmDelete = (e) => {
-        props.blockManager.confirmDelete(e, props.block);
+        blockManager.confirmDelete(e, props.block);
     }
 
     return (
         <div
             id={`block_${props.id}`}
             className={`block ${props.connecting ? 'connecting' : ''}`}
-            onPointerDown={(e) => { props.blockManager.startPosition(e, props.block) }}
+            onPointerDown={(e) => { blockManager.startPosition(e, props.block) }}
             onContextMenu={confirmDelete}
         >
             <div className="">
-                <BlockRoles block_id={props.id} block={props.block} connections={props.block.connections} direction="in" blockManager={props.blockManager} allRoles={props.allRoles}></BlockRoles>
+                <BlockRoles block_id={props.id} block={props.block} connections={props.block.connections} direction="in" allRoles={props.roles}></BlockRoles>
 
                 <div className="instructions">
                     {
-                        props.block.instructions.length > 0 ? props.block.instructions.map((_v, i) => {
-                            if (!(_v in props.instructions)) return;
-                            let v = props.instructions[_v];
+                        props.block.instructions.length > 0 ? props.block.instructions.map((id, i) => {
+                            if (!(id in props.instructions)) return;
+                            let v = props.instructions[id];
                             v.index = i;
-
                             return (<Instruction
-                                key={_v}
-                                id={_v}
-                                data={v}
+                                index={i}
+                                key={id}
+                                id={id}
                                 text={v.text}
                                 type={v.type}
                                 role_id={v.role_id}
-                                instruction_id={_v}
-                                index={i}
                                 block_id={props.id}
                                 connections={props.block.connections}
-                                instructionManager={props.instructionManager}
                             />
                             );
                         }) : null
                     }
                 </div>
-                <BlockRoles block_id={props.id} block={props.block} connections={props.block.connections} direction="out" blockManager={props.blockManager} allRoles={props.allRoles}></BlockRoles>
-
+                <BlockRoles block_id={props.id} block={props.block} connections={props.block.connections} direction="out" allRoles={props.roles}></BlockRoles>
             </div>
-
         </div >
     )
 }

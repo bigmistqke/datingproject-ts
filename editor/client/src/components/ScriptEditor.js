@@ -1,19 +1,26 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
+import {
+  atom,
+  useRecoilState
+} from 'recoil';
 
 import getData from "../helpers/getData";
 import postData from "../helpers/postData";
 
 import Map from './Map';
 
-import SaveManager from './SaveManager';
+import DataProcessor from './DataProcessor';
 import BlockManager from './BlockManager';
 import InstructionManager from './InstructionManager';
 
-import { RoleOverlay, ConfirmOverlay } from "./Overlays"
+import Overlays from "./Overlays"
 
-
-
+const _instructionManager = atom({ key: 'instructionManager', default: '' });
+const _blockManager = atom({ key: 'blockManager', default: '' });
+const _roles = atom({ key: 'roles', default: '' });
+const _blocks = atom({ key: 'blocks', default: '' });
+const _instructions = atom({ key: 'instructions', default: '' });
 
 function decodeSingleQuotes(text) {
   return (text.replace(/&#039;/g, "'"));
@@ -21,75 +28,103 @@ function decodeSingleQuotes(text) {
 
 function ScriptEditor({ socket, user_id }) {
   const history = useHistory();
-  let r_blocks = useRef();
-  let r_roles = useRef();
-  let r_instructions = useRef();
+  const r_blocks = useRef();
+  const r_roles = useRef();
+  const r_instructions = useRef();
 
-  let r_saveManager = useRef();
-  let r_instructionManager = useRef();
-  let r_blockManager = useRef();
+  const r_dataProcessor = useRef();
 
-  let [ctrl, setCtrl] = useState(false);
-  let [shift, setShift] = useState(false);
+  const [instructionManager, setInstructionManager] = useRecoilState(_instructionManager);
+  const [blockManager, setBlockManager] = useRecoilState(_blockManager);
 
-  let r_cursor = useRef();
+  const [roles, setRoles] = useRecoilState(_roles);
+  const [blocks, setBlocks] = useRecoilState(_blocks);
+  const [instructions, setInstructions] = useRecoilState(_instructions);
+
+
+  const r_blockManager = useRef();
+
+  const [ctrl, setCtrl] = useState(false);
+  const [shift, setShift] = useState(false);
+
+  const r_cursor = useRef();
 
   document.body.addEventListener('mousemove', (e) => { r_cursor.current = { x: e.clientX, y: e.clientY } });
 
-  let { script_id } = useParams();
-  let [blocks, setBlocks] = useState([]);
-  let [roles, setRoles] = useState([]);
-  let [instructions, setInstructions] = useState([]);
+  const { script_id } = useParams();
+  // const [blocks, setBlocks] = useState([]);
+  // let [roles, setRoles] = useState([]);
+  const [connecting, setConnecting] = useState(false);
+  const [render, setRender] = useState(performance.now());
 
-  let [connecting, setConnecting] = useState(false);
-  let [roleOverlay, setRoleOverlay] = useState(false);
-  let [deleteOverlay, setDeleteOverlay] = useState(false);
-  // let [confirmRoleOverlay, setConfi] = useState(false);
+  const [overlay, setOverlay] = useState(false);
 
-  let [overlay, setOverlay] = useState(false);
-  let r_overlays = useRef();
 
+
+  /*  const updateBlocks = (_blocks) => {
+     r_blocks.current = _blocks;
+     setBlocks(performance.now());
+   } */
+
+
+  const _get = {
+    instructions: () => { return { ...r_instructions.current } },
+    blocks: () => [...r_blocks.current],
+    roles: () => [...r_roles.current],
+    all: () => {
+      return {
+        instructions: _get.instructions(),
+        blocks: _get.blocks(),
+        roles: _get.roles()
+      }
+    }
+  }
+
+  const _set = {
+    blocks: (_blocks) => {
+      r_blocks.current = _blocks;
+      setRender(performance.now());
+    },
+    instructions: (_instructions) => {
+      r_instructions.current = _instructions;
+      setRender(performance.now());
+    },
+    roles: (_roles) => {
+      r_roles.current = _roles;
+      setRoles(_roles);
+    },
+    connecting: (bool) => setConnecting(bool),
+    overlay: (bool) => setOverlay(bool)
+  }
 
   const init = () => {
 
-    r_saveManager.current = new SaveManager();
-    r_instructionManager.current = new InstructionManager(this);
-    r_blockManager.current = new BlockManager(this);
+    r_dataProcessor.current = new DataProcessor();
 
-    updateBlocks([...blocks]);
+    setBlockManager(new BlockManager({ _get, _set, script_id }));
+    setInstructionManager(new InstructionManager({ _get, _set, script_id }));
 
-    // getData(`http://${process.env.REACT_APP_S_URL}/script/${script_id}`)
+    // updateBlocks([...blocks]);
+
     getData(`${window._url.fetch}/script/${script_id}`)
-      // .then(res => console.log(res))
-      // getData(`https://fetch.datingproject.net/script/${script_id}`)
       .then(res => res.json())
       .then(res => {
         if (!res) return Promise.reject('errrr');
-        console.log(res.blocks, res.instructions);
-
-        r_instructions.current = res.instructions;
-        setInstructions(res.instructions);
-        r_blocks.current = res.blocks;
-        setBlocks(res.blocks);
-        r_roles.current = [{ role_id: 'a' }, { role_id: 'b' }];
-        setRoles({ role_id: 'a' }, { role_id: 'b' });
+        console.log(res);
+        _set.instructions(res.instructions);
+        _set.blocks(res.blocks);
+        _set.roles([{ role_id: 'a' }, { role_id: 'b' }]);
       })
       .catch(err => {
-
         r_instructions.current = {};
-        setInstructions({});
         r_blocks.current = [];
-        setBlocks([]);
         r_roles.current = [{ role_id: 'a' }, { role_id: 'b' }];
-        setRoles({ role_id: 'a' }, { role_id: 'b' });
       });
   }
 
   const initMqtt = () => {
     if (!socket) return
-    console.log(socket);
     socket.subscribe(`/usr/${user_id}/connected`, () => {
-      console.log('connected');
       socket.subscribe(`/editor/${script_id}/update`, updateData);
     })
     socket.send('/connect', JSON.stringify({ user_id, script_id }));
@@ -98,6 +133,7 @@ function ScriptEditor({ socket, user_id }) {
     })
   }
 
+  // placeholder for update over mqtt
   const updateData = (data) => {
     try {
       let data = JSON.parse(data);
@@ -107,18 +143,42 @@ function ScriptEditor({ socket, user_id }) {
     }
   }
 
+  const error_checker = () => {
+
+  }
+
+  const test = async () => {
+    console.log(_get.all());
+    let data = await r_dataProcessor.current.process(_get.all());
+    if (!data.success) return
+    console.log('testing!0');
+    data = await postData(`${window._url.fetch}/api/save/test`, { script_id, ...data })
+    console.log(data);
+    /* data = postData(`${window._url.fetch}/api/save/test`, { script_id, ...data })
+      .then(data => {
+        if (!data.success) Promise.reject()
+        return data
+      })
+      .then(data => )
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) Promise.reject()
+        return postData(`${window._url.fetch}/api/createRoom/${script_id}`)
+      })
+      .catch(err => {
+        console.log(err);
+      }) */
+  }
 
   const save = async () => {
-    let roles = r_roles.current;
-    r_saveManager.current.process(getBlocks(), getInstructions(), getRoles())
+    r_dataProcessor.current.process(_get.all())
       .then(data => {
         if (!data.success) {
           return Promise.reject()
         }
-        console.log('SAVE', data);
         return data
       })
-      .then(data => postData(`${window._url.fetch}/api/save`, { script_id, ...data }))
+      .then(data => postData(`${window._url.fetch}/api/save/final`, { script_id, ...data }))
       .then(res => res.json())
       .then(res => console.log(res))
       .catch(err => {
@@ -127,35 +187,12 @@ function ScriptEditor({ socket, user_id }) {
       })
   }
 
-  const updateInstructions = (_instructions) => {
-    setInstructions(_instructions);
-    r_instructions.current = _instructions;
-    updateBlocks(getBlocks());
+  const publish = async () => {
+
   }
-
-  const updateBlocks = (_blocks) => {
-    r_blocks.current = _blocks;
-    setBlocks(performance.now());
-  }
-
-  const getInstructions = () => { return { ...r_instructions.current } }
-  const getBlocks = () => [...r_blocks.current]
-  const getRoles = () => [...r_roles.current]
-
 
   const getOverlay = (overlay) => {
-    console.log("THIS HAPPENS");
-    let data = overlay.data;
-    let type = overlay.type;
-    console.log(overlay);
-    switch (type) {
-      case 'role':
-        return <RoleOverlay position={r_cursor.current} data={data} resolve={overlay.resolve}></RoleOverlay>;
-      case 'confirm':
-        return <ConfirmOverlay position={r_cursor.current} data={data} resolve={overlay.resolve}></ConfirmOverlay>;
-      default:
-        break;
-    }
+    return Overlays[overlay.type](overlay);
   }
 
   const keyUp = (e) => {
@@ -184,21 +221,26 @@ function ScriptEditor({ socket, user_id }) {
     <div className="App" >
       <header className="row fixed flex">
         <div className="flexing">editor for script {script_id}</div>
-        <button onClick={() => history.push("/")} className="Instruction-button">all scripts</button>
-        <button onClick={() => history.push("/")} className="Instruction-button">roles</button>
+        <button onClick={() => test()} className="Instruction-button">test</button>
         <button onClick={() => save()} className="Instruction-button">save</button>
+        <button onClick={() => publish()} className="Instruction-button">publish</button>
       </header>
-      {overlay ? <div className="overlay-container" onMouseDown={() => { overlay.resolve(false) }}>{getOverlay(overlay)}</div> : null}
-      <Map
-        instructionManager={r_instructionManager.current}
-        blockManager={r_blockManager.current}
-        blocks={blocks}
-        instructions={r_instructions.current}
+      {
+        overlay ?
+          <div
+            className="overlay-container"
+            onMouseDown={() => { overlay.resolve(false) }}
+          >
+            {getOverlay(overlay)}
+          </div> : null
+      }
 
-        r_blocks={r_blocks.current}
+      <Map
+        instructions={r_instructions.current}
+        blocks={r_blocks.current}
+        roles={roles}
         script_id={script_id}
         connecting={connecting}
-        allRoles={roles}
       ></Map>
     </div >
   );

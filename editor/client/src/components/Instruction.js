@@ -2,28 +2,36 @@ import React, { useState, useEffect, useRef } from 'react';
 import './general.css';
 import "./FileInput"
 
+import {
+  atom,
+  useRecoilState
+} from 'recoil';
 
-//{ add, remove, change, data, connections }
+const _instructionManager = atom({
+  key: 'instructionManager', // unique ID (with respect to other atoms/selectors)
+  default: '', // default value (aka initial value)
+});
+
+
 const Instruction = (props) => {
-  const didMountRef = useRef(false);
-  let noConnections = useRef(false);
-  let r_data = useRef();
+  const r_data = useRef();
+  const r_text = useRef();
+
+  const [instructionManager] = useRecoilState(_instructionManager);
 
 
 
 
   const removeRow = () => {
-    props.instructionManager.remove(props.block_id, props.id);
+    instructionManager.remove(props.block_id, props.id);
   }
   const addRow = () => {
-    props.instructionManager.add({ block_id: props.block_id, prev_instruction_id: props.id, role_id: props.role_id, });
+    instructionManager.add({ block_id: props.block_id, prev_instruction_id: props.id, role_id: props.role_id, });
   }
 
   const change = (type, value) => {
-    console.log(type, value);
-    console.log(r_data.current);
     r_data.current[type] = value;
-    props.instructionManager.change(props.id, r_data.current);
+    instructionManager.change(props.id, r_data.current);
   }
 
   useEffect(() => {
@@ -37,7 +45,7 @@ const Instruction = (props) => {
     if (!types.test(file.type) || !types.test(file.name)) return;
 
     change('text', URL.createObjectURL(file));
-    let upload = await props.instructionManager.uploadVideo(file, props.id);
+    let upload = await instructionManager.uploadVideo(file, props.id);
     if (!upload.success) console.error(upload.error);
     change('text', `/api${upload.url.substring(1)}`);
   }
@@ -48,9 +56,15 @@ const Instruction = (props) => {
     change('type', type);
   }
 
+  useEffect(() => {
+    console.log('ole');
+    if (!r_text.current) return;
+    r_text.current.value = props.text.replace(/&#039;/g, "'")
+  }, [props.text])
+
   return (
     <div className={`row flex instruction ${props.role_id === "a" ? "type_a" : "type_b"}`}>
-      <div className="instruction-order tiny">{props.data.index}</div>
+      <div className="instruction-order tiny">{props.index}</div>
       <select value={props.role_id} name=""
         onChange={(e) => { change('role_id', e.target.value) }}
         className="instruction-role">
@@ -59,7 +73,7 @@ const Instruction = (props) => {
         })}
 
       </select>
-      <select value={props.data.type} name=""
+      <select value={props.type} name=""
         onChange={changeType}
         className="instruction-type">
         <option value="say">speech</option>
@@ -70,15 +84,18 @@ const Instruction = (props) => {
 
       </select>
       {
-        props.data.type === 'video' ?
-          props.data.text ?
-            <video src={`${window._url.fetch}${props.data.text}`} className="instruction-text flexing"></video> :
+        props.type === 'video' ?
+          props.text ?
+            <video src={`${window._url.fetch}${props.text}`} className="instruction-text flexing"></video> :
             <input type="file" onChange={(e) => { processVideo(e) }} className="instruction-text flexing"></input> :
-          <input value={props.data.text.replace(/&#039;/g, "'")}
+          <input
+            ref={r_text}
             type={"text"}
             placeholder="enter instruction here"
-            onChange={(e) => { change('text', e.target.value) }}
+            // onClick={onClickHandler}
+            onChange={(e) => { change('text', e.target.value); }}
             className="instruction-text flexing"></input>
+
       }
       <button className="instruction-button tiny" onClick={() => removeRow()}>-</button>
       <button className="instruction-button tiny" onClick={() => addRow()}>+</button>

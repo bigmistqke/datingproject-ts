@@ -62,13 +62,14 @@ const convertArrayToObject = (array, key) => {
 };
 
 app.use(bodyParser.json())
-app.post('/api/save', async function (req, res, next) {
+app.post('/api/save/:type', async function (req, res, next) {
   let { blocks, roles, instructions, script_id } = req.body;
-  let _roles = {};
-  await _set(`${script_id}_roles`, flat(roles, { safe: true }));
-  _set(`${script_id}_instructions`, flat(instructions));
-  _set(`${script_id}_blocks`, flat(blocks));
-  _set(`${script_id}_roles`, flat(roles));
+  const type = req.params.type;
+  let success = [];
+  success.push(await _set(`s_${script_id}_${type}_roles`, flat(roles, { safe: true })));
+  success.push(await _set(`s_${script_id}_${type}_instructions`, flat(instructions, { safe: true })));
+  success.push(await _set(`s_${script_id}_${type}_blocks`, flat(blocks, { safe: true })));
+  res.send(success.find(v => v !== "OK"));
 })
 
 
@@ -79,22 +80,22 @@ app.get('/script/:script_id/:role_id', async function (req, res, next) {
   return next();
 })
 
-const nodeToBlock = (a) => Object.fromEntries(Object.entries(a).map(([k, v]) => [k.replace('node', 'block'), v]))
+// const nodeToBlock = (a) => Object.fromEntries(Object.entries(a).map(([k, v]) => [k.replace('node', 'block'), v]))
 
 app.get('/script/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id
   let data = {}
-  let blocks = await _get(`${script_id}_blocks`);
+  let blocks = await _get(`s_${script_id}_temp_blocks`);
   if (!blocks) {
     res.send(false);
     return next();
   }
-  blocks = nodeToBlock(blocks);
+  // blocks = nodeToBlock(blocks);
   blocks = Object.values(unflatten(blocks));
-  let instructions = await _get(`${script_id}_instructions`);
-  instructions = nodeToBlock(instructions);
+  let instructions = await _get(`s_${script_id}_temp_instructions`);
+  // instructions = nodeToBlock(instructions);
   instructions = unflatten(instructions);
-  let roles = await _get(`${script_id}_roles`);
+  let roles = await _get(`s_${script_id}_temp_roles`);
   roles = unflatten(roles);
   res.send({ roles, blocks, instructions });
   return next();

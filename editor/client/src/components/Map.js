@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useRef, forwardRef } from 'react';
 import Block from './Block';
 import Connectors from './Connectors';
+import {
+    atom,
+    useRecoilState
+} from 'recoil';
+
+const _blockManager = atom({ key: 'blockManager', default: '' });
 
 const Map = (props) => {
+    let [blockManager] = useRecoilState(_blockManager);
 
     let [connecting, setConnecting] = useState(false);
     let [origin, setOrigin] = useState({ x: 0, y: 0 });
@@ -12,9 +19,7 @@ const Map = (props) => {
     const createBlock = (e) => {
         e.preventDefault();
         const coords = { x: e.clientX - origin.x, y: e.clientY - origin.y };
-        // setOrigin(coords);
-        console.log(props);
-        props.blockManager.add(coords);
+        blockManager.add(coords);
     }
 
     const navDown = (e) => {
@@ -56,20 +61,18 @@ const Map = (props) => {
     return <div className="map-container" onPointerDown={navDown} onContextMenu={createBlock}>
         <div className={`map${connecting ? ' connecting' : ''}`} >
             <div className="Map" ref={r_map}>
-                {props.r_blocks ? <Connectors blocks={props.r_blocks} origin={origin}></Connectors> : null}
+                {props.blocks ? <Connectors blocks={props.blocks} origin={origin}></Connectors> : null}
                 {
-                    props.r_blocks ? props.r_blocks.map((block, i) => {
+                    props.blocks ? props.blocks.map((block, i) => {
                         return <div
                             className="absolute" key={i} style={{ transform: `translateX(${block.position.x}px) translateY(${block.position.y}px)` }}>
                             <Block
                                 key={block.block_id}
                                 id={block.block_id}
-                                instructionManager={props.instructionManager}
-                                blockManager={props.blockManager}
                                 block={block}
                                 instructions={props.instructions}
                                 connecting={props.connecting}
-                                allRoles={props.allRoles}
+                                roles={props.roles}
                             >
                             </Block>
                         </div>
