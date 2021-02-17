@@ -72,7 +72,7 @@ const Instruction = (props) => {
       {
         props.data.type === 'video' ?
           props.data.text ?
-            <video src={`${window._base}${props.data.text}`} className="instruction-text flexing"></video> :
+            <video src={`${window._url.fetch}${props.data.text}`} className="instruction-text flexing"></video> :
             <input type="file" onChange={(e) => { processVideo(e) }} className="instruction-text flexing"></input> :
           <input value={props.data.text.replace(/&#039;/g, "'")}
             type={"text"}

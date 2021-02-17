@@ -13,18 +13,13 @@ import InstructionManager from './InstructionManager';
 import { RoleOverlay, ConfirmOverlay } from "./Overlays"
 
 
+
+
 function decodeSingleQuotes(text) {
   return (text.replace(/&#039;/g, "'"));
 }
 
-const isDev = window.location.href.indexOf('localhost') != -1;
-
-
-window._base = isDev ? "http://localhost:8080" : "https://fetch.datingproject.net";
-
-// let _base = 'https://fetch.datingproject.net'
-
-function ScriptEditor(props) {
+function ScriptEditor({ socket, user_id }) {
   const history = useHistory();
   let r_blocks = useRef();
   let r_roles = useRef();
@@ -54,9 +49,8 @@ function ScriptEditor(props) {
   let [overlay, setOverlay] = useState(false);
   let r_overlays = useRef();
 
-  useEffect(() => {
-    console.log('hallo?', script_id);
-    document.body.focus();
+
+  const init = () => {
 
     r_saveManager.current = new SaveManager();
     r_instructionManager.current = new InstructionManager({
@@ -83,9 +77,8 @@ function ScriptEditor(props) {
     );
     updateBlocks([...blocks]);
 
-
     // getData(`http://${process.env.REACT_APP_S_URL}/script/${script_id}`)
-    getData(`${window._base}/script/${script_id}`)
+    getData(`${window._url.fetch}/script/${script_id}`)
       // .then(res => console.log(res))
       // getData(`https://fetch.datingproject.net/script/${script_id}`)
       .then(res => res.json())
@@ -109,7 +102,29 @@ function ScriptEditor(props) {
         r_roles.current = [{ role_id: 'a' }, { role_id: 'b' }];
         setRoles({ role_id: 'a' }, { role_id: 'b' });
       });
-  }, [script_id]);
+  }
+
+  const initMqtt = () => {
+    if (!socket) return
+    console.log(socket);
+    socket.subscribe(`/usr/${user_id}/connected`, () => {
+      console.log('connected');
+      socket.subscribe(`/editor/${script_id}/update`, updateData);
+    })
+    socket.send('/connect', JSON.stringify({ user_id, script_id }));
+    window.addEventListener('beforeunload', () => {
+      socket.send('/disconnect', JSON.stringify({ user_id, script_id }));
+    })
+  }
+
+  const updateData = (data) => {
+    try {
+      let data = JSON.parse(data);
+      console.log(data);
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
 
   const save = async () => {
@@ -122,12 +137,12 @@ function ScriptEditor(props) {
         console.log('SAVE', data);
         return data
       })
-      .then(data => postData(`${window._base}/api/save`, { script_id, ...data }))
+      .then(data => postData(`${window._url.fetch}/api/save`, { script_id, ...data }))
       .then(res => res.json())
       .then(res => console.log(res))
       .catch(err => {
         console.log(err);
-        alert('error!')
+        // alert('error!')
       })
   }
 
@@ -142,9 +157,9 @@ function ScriptEditor(props) {
     setBlocks(performance.now());
   }
 
-  const getInstructions = () => { return r_instructions.current; }
-  const getBlocks = () => { return [...r_blocks.current]; }
-  const getRoles = () => { return [...r_roles.current]; }
+  const getInstructions = () => { return { ...r_instructions.current } }
+  const getBlocks = () => [...r_blocks.current]
+  const getRoles = () => [...r_roles.current]
 
 
   const getOverlay = (overlay) => {
@@ -178,6 +193,11 @@ function ScriptEditor(props) {
     document.body.addEventListener("keydown", keyDown);
     document.body.addEventListener("keyup", keyUp);
   }, [])
+
+
+  useEffect(init, [script_id]);
+
+  useEffect(initMqtt, [socket])
 
   return (
     <div className="App" >

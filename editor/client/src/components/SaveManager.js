@@ -3,7 +3,7 @@ class SaveManager {
 
 
     async process(_blocks, _instructions, _roles) {
-        this.blocks = [..._blocks];
+        this.blocks = _blocks;
         this.roles = _roles;
 
         let roles = {};
@@ -13,23 +13,27 @@ class SaveManager {
         // process sequence of instructions per role
         for (let role of _roles) {
             let r_instructions = await this.processRole(role);
-            console.log(r_instructions);
+
             if (!r_instructions.success) errors.push(r_instructions);
             //console.log("r_instructions.instructions", r_instructions.instructions);
             roles[role.role_id] = r_instructions.instructions;
         }
-        console.log('errors', errors);
-        if (errors.length !== 0) return { success: false, errors: errors };
 
-        this.processInstructions();
-
+        if (errors.length !== 0) {
+            let _confirm = window.confirm('there are multiple entry points. this script will not be playable. do you still want to save?');
+            if (!_confirm) {
+                return
+            };
+        } else {
+            this.processInstructions();
+        }
 
         return { success: true, roles: roles, instructions: this.instructions, blocks: this.blocks }
     }
 
     processInstructions() {
         const processLastInstruction = ({ block, role, instruction, count }) => {
-            let connection = block.connections.find(v => v.role_id = role);
+            let connection = block.connections.find(v => v.role_id === role);
             let next_block_id = connection.next_block_id;
 
             if (!!next_block_id) {
@@ -45,13 +49,13 @@ class SaveManager {
             this.instructions[instruction].prev_instruction_id = [];
             block.connections.forEach((connection) => {
                 let prev_block_id = connection.prev_block_id;
-                console.log(connection, block.block_id);
+                // console.log(connection, block.block_id);
                 if (!!prev_block_id) {
                     let connected_block = this.blocks.find(v => v.block_id === prev_block_id);
                     let last_instr_from_conn_block = connected_block.instructions[connected_block.instructions.length - 1];
                     this.instructions[instruction].prev_instruction_id.push(last_instr_from_conn_block);
                 }
-                console.log(this.instructions[instruction].prev_instruction_id, instruction);
+                // console.log(this.instructions[instruction].prev_instruction_id, instruction);
             })
         }
         const getNextInBlock = ({ block, role, instruction, count }) => {

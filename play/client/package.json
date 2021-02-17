@@ -1,6 +1,5 @@
 {
-  "name": "editor_client",
-  "homepage": ".",
+  "name": "play-client",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -8,22 +7,21 @@
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
     "@tweenjs/tween.js": "^18.6.4",
-    "cors": "^2.8.5",
-    "dotenv": "^8.2.0",
-    "femtotween": "^1.1.2",
     "mqtt": "^4.2.6",
-    "mysql": "^2.18.1",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
+    "paho-mqtt": "^1.1.0",
+    "paper": "^0.12.8",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0",
     "react-router-dom": "^5.2.0",
     "react-scripts": "3.4.3",
-    "recoil": "^0.1.2",
-    "tiny-tween-js": "^0.9.5",
+    "socket.io-client": "^2.3.1",
+    "styled-components": "^5.2.0",
     "uniqid": "^5.2.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build --development",
+    "backend": "",
+    "start": "set PORT=3001 && react-scripts start",
+    "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -41,6 +39,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "proxy": "http://localhost:8080"
+  }
 }

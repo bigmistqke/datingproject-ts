@@ -1,5 +1,6 @@
 import uniqid from 'uniqid';
 
+
 class BlockManager {
     constructor({ script_id, getBlocks, getInstructions, updateInstructions, getRoles, updateBlocks, setConnecting, setOverlay }) {
         this.ext = { getBlocks, updateBlocks, getRoles, getInstructions, updateInstructions, setConnecting, script_id, setOverlay }

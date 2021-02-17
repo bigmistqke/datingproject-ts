@@ -10,23 +10,18 @@ import {
   Route
 } from "react-router-dom";
 
+import App from "./App"
+
+import {
+  RecoilRoot,
+} from 'recoil';
+
 import { } from 'dotenv/config';
 
 ReactDOM.render(
-  <React.StrictMode>
-    <Router>
-      <Switch>
-        <Route path="/:script_id">
-          <ScriptEditor />
-          <div className="background"><div ></div></div>
-        </Route>
-        <Route path="/">
-          <ScriptList />
-          <div className="background"><div ></div></div>
-        </Route>
-      </Switch>
 
-    </Router>
+  <React.StrictMode>
+    <App />
   </React.StrictMode>,
   document.getElementById('root')
 );

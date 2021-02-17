@@ -62,7 +62,7 @@ class InstructionManager {
             formData.append('instruction_id', instruction_id);
             formData.append('script_id', this.ext.script_id);
 
-            fetch(`${window._base}/api/uploadVideo`, {
+            fetch(`${window._url.fetch}/api/uploadVideo`, {
                 method: 'POST',
                 body: formData,
                 processData: false,
