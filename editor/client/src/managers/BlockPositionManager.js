@@ -1,4 +1,4 @@
-import Emitter from '../Emitter'
+import Emitter from '../helpers/Emitter'
 
 export default function BlockPositionManager() {
     Emitter.call(this);

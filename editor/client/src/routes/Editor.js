@@ -9,6 +9,7 @@ import getData from "../helpers/getData";
 import postData from "../helpers/postData";
 
 import Map from '../components/Map';
+import ProgressBars from '../components/ProgressBars';
 
 import DataProcessor from '../managers/DataProcessor';
 import BlockManager from '../managers/BlockManager';
@@ -159,9 +160,9 @@ function Editor({ socket, user_id }) {
         console.log(data);
         if (!data.success) return
         data = await postData(`${window._url.fetch}/api/save/${script_id}/test`, data);
-        const room = await postData(`${window._url.fetch}/api/createRoom/${script_id}/test`);
+        let room = await postData(`${window._url.fetch}/api/createRoom/${script_id}/test`);
         room = await room.json();
-
+        console.log(room);
     }
 
     const save = async () => {
@@ -208,9 +209,9 @@ function Editor({ socket, user_id }) {
             <header className="row fixed flex">
                 <div className="flexing">editor for script {script_id}</div>
                 {/* <button onClick={() => visualizeErrors()} className="Instruction-button">debug</button> */}
-                {/* <button onClick={() => test()} className="Instruction-button">test</button> */}
+                <button onClick={() => test()} className="Instruction-button">test</button>
                 <button onClick={() => save()} className="Instruction-button">save</button>
-                {/* <button onClick={() => publish()} className="Instruction-button">publish</button> */}
+                <button onClick={() => publish()} className="Instruction-button">publish</button>
             </header>
             {
                 overlay ?
@@ -230,6 +231,7 @@ function Editor({ socket, user_id }) {
                 connecting={connecting}
                 errors={r_errors.current}
             ></Map>
+            <ProgressBars></ProgressBars>
         </div >
     );
 }

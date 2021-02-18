@@ -164,6 +164,15 @@ video {
     padding-left: 10px;
 }
 
+.instruction {
+    transition: background 0.5s;
+}
+
+.instruction.error {
+    border: none;
+    background: #ffc6c6;
+}
+
 .instruction>*:not(.instruction-text) {
     color: darkgrey;
 }
@@ -336,4 +345,48 @@ line, path {
 
 .map.connecting .block>* {
     pointer-events: none;
+}
+
+.progressBars {
+    position: absolute;
+    z-index: 10;
+    bottom: 0px;
+    width: 100%;
+    background: #e3e3e3;
+    line-height: 24pt;
+    height: 24pt;
+    white-space: nowrap;
+}
+
+.progressBar {
+    /* border-top: 1px solid white; */
+    display: inline-block;
+    background: white;
+    border-radius: 15px;
+    height: 16pt;
+    line-height: 16pt;
+    font-size: 8pt;
+    position: relative;
+    margin: 4px;
+    margin-right: 0px;
+    overflow: hidden;
+}
+
+.progressBar .progress {
+    background: #313131;
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    left: 0px;
+    width: 0%;
+    transition: width 0.5s;
+}
+
+.progressBar .text {
+    position: relative;
+    z-index: 1;
+    color: #a1a1a1;
+    margin-top: 1px;
+    padding-left: 15px;
+    padding-right: 15px;
 }

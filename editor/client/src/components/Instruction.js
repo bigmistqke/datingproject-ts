@@ -14,8 +14,12 @@ const Instruction = (props) => {
   const r_data = useRef();
   const r_text = useRef();
 
+  let r_error = useRef(false);
+
   const [instructionManager] = useRecoilState(_instructionManager);
   const [videoUploader] = useRecoilState(_videoUploader);
+
+  let [render, setRender] = useState();
 
 
 
@@ -41,10 +45,17 @@ const Instruction = (props) => {
     if (!e.target) return;
     const file = e.target.files[0];
     if (!types.test(file.type) || !types.test(file.name)) return;
-
+    r_error.current = true;
+    setRender(performance.now());
     change('text', URL.createObjectURL(file));
     let upload = await videoUploader.process(file, props.id);
     if (!upload.success) console.error(upload.error);
+    console.log(upload);
+    setTimeout(() => {
+      r_error.current = false;
+      setRender(performance.now());
+    }, 1000)
+
     change('text', `/api${upload.url.substring(1)}`);
   }
 
@@ -52,6 +63,7 @@ const Instruction = (props) => {
     let type = e.target.value;
     if (type === 'video') change('text', '');
     change('type', type);
+
   }
 
   useEffect(() => {
@@ -60,8 +72,11 @@ const Instruction = (props) => {
     r_text.current.value = props.text.replace(/&#039;/g, "'")
   }, [props.text])
 
+  const getClassByRole = () => props.role_id === "a" ? "type_a" : "type_b"
+  const getClassByError = () => r_error.current ? "error" : ""
+
   return (
-    <div className={`row flex instruction ${props.role_id === "a" ? "type_a" : "type_b"}`}>
+    <div className={`row flex instruction ${getClassByRole()} ${getClassByError()}`}>
       <div className="instruction-order tiny">{props.index}</div>
       <select value={props.role_id} name=""
         onChange={(e) => { change('role_id', e.target.value) }}

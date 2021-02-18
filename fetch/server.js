@@ -14,6 +14,7 @@ const fileUpload = require('express-fileupload');
 var cors = require('cors')
 var bodyParser = require('body-parser')
 var uniqid = require('uniqid');
+var crypto = require('crypto');
 
 var app = express();
 app.use(cors())
@@ -47,9 +48,6 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, function (m) { return map[m]; });
 }
 
-
-
-
 const convertArrayToObject = (array, key) => {
   const initialValue = {};
   return array.reduce((obj, item) => {
@@ -80,9 +78,9 @@ app.post('/api/createRoom/:script_id/:type', async function (req, res, next) {
   const script_id = req.params.script_id;
   const roles = await _get(`s_${script_id}_${type}_roles`);
   let _roles = {};
-  let room_id = uniqid.time();
+  let room_id = crypto.randomBytes(2).toString('hex');
   Object.keys(roles)
-    .forEach(role_id => _roles[role_id] = uniqid.time())
+    .forEach(role_id => _roles[role_id] = crypto.randomBytes(2).toString('hex'));
   await _set(`r_${script_id}_${type}_${room_id}`, flat(_roles, { safe: true }));
   res.json({ room_id, roles: _roles });
 })
@@ -129,19 +127,13 @@ var upload = multer({ storage: storage }).single();
 
 
 app.use(fileUpload());
-app.post('/api/uploadVideo', function (req, res) {
-  console.log(req.body); // the uploaded file object
-
-  let script_path = `./uploads/${req.body.script_id}`
-
+app.post('/api/uploadVideo/:script_id', function (req, res) {
+  let script_path = `./uploads/${req.params.script_id}`
   if (!fs.existsSync(script_path)) {
     fs.mkdirSync(script_path);
   }
-
   let new_path = `${script_path}/${req.body.instruction_id}${path.extname(req.files.file.name)}`;
-  console.log(new_path);
   fs.writeFile(new_path, req.files.file.data, (err) => {
-    console.log(err);
-    if (!err) res.send(JSON.stringify(new_path));
+    if (!err) res.send(new_path);
   })
 })

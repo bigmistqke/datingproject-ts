@@ -14,7 +14,7 @@ import {
 } from 'recoil';
 import uniqid from 'uniqid';
 
-import Mqtt from "./Mqtt.js"
+import Mqtt from "./helpers/Mqtt.js"
 
 const isDev = window.location.href.indexOf('localhost') != -1;
 
