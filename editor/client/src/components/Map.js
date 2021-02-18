@@ -73,6 +73,7 @@ const Map = (props) => {
                                 instructions={props.instructions}
                                 connecting={props.connecting}
                                 roles={props.roles}
+                                errors={props.errors[block.block_id]}
                             >
                             </Block>
                         </div>

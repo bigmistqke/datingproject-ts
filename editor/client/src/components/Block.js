@@ -19,6 +19,11 @@ let Block = (props) => {
         blockManager.confirmDelete(e, props.block);
     }
 
+    const getConnectionError = (direction) => {
+        return props.errors && direction in props.errors ?
+            props.errors[direction] : false
+    }
+
     return (
         <div
             id={`block_${props.id}`}
@@ -27,8 +32,14 @@ let Block = (props) => {
             onContextMenu={confirmDelete}
         >
             <div className="">
-                <BlockRoles block_id={props.id} block={props.block} connections={props.block.connections} direction="in" allRoles={props.roles}></BlockRoles>
-
+                <BlockRoles
+                    block_id={props.id}
+                    errors={getConnectionError('start')}
+                    block={props.block}
+                    connections={props.block.connections}
+                    direction="in"
+                    allRoles={props.roles}
+                ></BlockRoles>
                 <div className="instructions">
                     {
                         props.block.instructions.length > 0 ? props.block.instructions.map((id, i) => {
@@ -49,7 +60,14 @@ let Block = (props) => {
                         }) : null
                     }
                 </div>
-                <BlockRoles block_id={props.id} block={props.block} connections={props.block.connections} direction="out" allRoles={props.roles}></BlockRoles>
+                <BlockRoles
+                    block_id={props.id}
+                    errors={getConnectionError('end')}
+                    block={props.block}
+                    connections={props.block.connections}
+                    direction="out"
+                    allRoles={props.roles}
+                ></BlockRoles>
             </div>
         </div >
     )

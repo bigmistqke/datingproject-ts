@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './css/general.css';
-import ScriptEditor from './components/ScriptEditor';
-import ScriptList from './components/ScriptList';
+import ScriptEditor from './routes/Editor';
+import ScriptList from './routes/List';
 import * as serviceWorker from './serviceWorker';
 import {
   BrowserRouter as Router,

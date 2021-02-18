@@ -13,6 +13,7 @@ const express = require('express');
 const fileUpload = require('express-fileupload');
 var cors = require('cors')
 var bodyParser = require('body-parser')
+var uniqid = require('uniqid');
 
 var app = express();
 app.use(cors())
@@ -62,9 +63,11 @@ const convertArrayToObject = (array, key) => {
 };
 
 app.use(bodyParser.json())
-app.post('/api/save/:type', async function (req, res, next) {
-  let { blocks, roles, instructions, script_id } = req.body;
+app.post('/api/save/:script_id/:type', async function (req, res, next) {
+  let { blocks, roles, instructions } = req.body;
   const type = req.params.type;
+  const script_id = req.params.script_id;
+
   let success = [];
   success.push(await _set(`s_${script_id}_${type}_roles`, flat(roles, { safe: true })));
   success.push(await _set(`s_${script_id}_${type}_instructions`, flat(instructions, { safe: true })));
@@ -72,6 +75,17 @@ app.post('/api/save/:type', async function (req, res, next) {
   res.send(success.find(v => v !== "OK"));
 })
 
+app.post('/api/createRoom/:script_id/:type', async function (req, res, next) {
+  const type = req.params.type;
+  const script_id = req.params.script_id;
+  const roles = await _get(`s_${script_id}_${type}_roles`);
+  let _roles = {};
+  let room_id = uniqid.time();
+  Object.keys(roles)
+    .forEach(role_id => _roles[role_id] = uniqid.time())
+  await _set(`r_${script_id}_${type}_${room_id}`, flat(_roles, { safe: true }));
+  res.json({ room_id, roles: _roles });
+})
 
 app.get('/script/:script_id/:role_id', async function (req, res, next) {
   const script_id = req.params.script_id

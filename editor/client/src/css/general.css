@@ -114,6 +114,15 @@ header {
     box-shadow: var(--light-shadow);
 }
 
+::placeholder {
+    color: rgb(43, 43, 43) !important;
+}
+
+.error {
+    border: 1px solid red;
+    color: red;
+}
+
 .fixed {
     position: fixed;
     z-index: 1;

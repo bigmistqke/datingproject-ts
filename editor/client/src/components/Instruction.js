@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './general.css';
 import "./FileInput"
 
 import {
@@ -7,10 +6,8 @@ import {
   useRecoilState
 } from 'recoil';
 
-const _instructionManager = atom({
-  key: 'instructionManager', // unique ID (with respect to other atoms/selectors)
-  default: '', // default value (aka initial value)
-});
+const _instructionManager = atom({ key: 'instructionManager', default: '' });
+const _videoUploader = atom({ key: 'videoUploader', default: '' });
 
 
 const Instruction = (props) => {
@@ -18,6 +15,7 @@ const Instruction = (props) => {
   const r_text = useRef();
 
   const [instructionManager] = useRecoilState(_instructionManager);
+  const [videoUploader] = useRecoilState(_videoUploader);
 
 
 
@@ -45,7 +43,7 @@ const Instruction = (props) => {
     if (!types.test(file.type) || !types.test(file.name)) return;
 
     change('text', URL.createObjectURL(file));
-    let upload = await instructionManager.uploadVideo(file, props.id);
+    let upload = await videoUploader.process(file, props.id);
     if (!upload.success) console.error(upload.error);
     change('text', `/api${upload.url.substring(1)}`);
   }
@@ -94,7 +92,7 @@ const Instruction = (props) => {
             placeholder="enter instruction here"
             // onClick={onClickHandler}
             onChange={(e) => { change('text', e.target.value); }}
-            className="instruction-text flexing"></input>
+            className={`instruction-text flexing`}></input>
 
       }
       <button className="instruction-button tiny" onClick={() => removeRow()}>-</button>

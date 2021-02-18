@@ -23,6 +23,7 @@
     "node-fetch": "^2.6.1",
     "promise-mysql": "^5.0.1",
     "redis": "^3.0.2",
-    "redis-jsonify": "^1.2.0"
+    "redis-jsonify": "^1.2.0",
+    "uniqid": "^5.2.0"
   }
 }

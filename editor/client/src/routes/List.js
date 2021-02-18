@@ -7,7 +7,7 @@ import getData from "../helpers/getData";
 
 let current = {};
 
-function ScriptList() {
+function List() {
   let [scripts, setScripts] = useState([]);
   const history = useHistory();
   useEffect(() => {
@@ -38,4 +38,4 @@ function ScriptList() {
     </div>
   );
 }
-export default ScriptList;
+export default List;

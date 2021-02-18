@@ -2,13 +2,27 @@ import uniqid from 'uniqid';
 import BlockPositionManager from "./BlockPositionManager"
 import BlockConnectionManager from "./BlockConnectionManager"
 
-function BlockManager({ _get, _set, script_id }) {
+function BlockManager({ _get, _set, script_id, visualizeErrors }) {
 
     const _connection = new BlockConnectionManager(this);
-    _connection.addEventListener('update', (e) => { updateConnection(e.detail.block, e.detail.role_id, e.detail.direction, e.detail.data) })
-    _connection.addEventListener('start', (e) => { _set.connecting(true) })
-    _connection.addEventListener('end', (e) => { _set.connecting(false) })
-    _connection.addEventListener('add', (e) => { updateConnectionById(e.detail.block_id, e.detail.role_id, e.detail.direction, e.detail.data) })
+    _connection.addEventListener('update', (e) => {
+        updateConnection(e.detail.block, e.detail.role_id, e.detail.direction, e.detail.data)
+    })
+    _connection.addEventListener('start', (e) => {
+        _set.connecting(true)
+    })
+    _connection.addEventListener('end', (e) => {
+        _set.connecting(false);
+        setTimeout(() => {
+            visualizeErrors();
+        }, 10)
+    })
+    _connection.addEventListener('add', (e) => {
+        updateConnectionById(e.detail.block_id, e.detail.role_id, e.detail.direction, e.detail.data);
+        setTimeout(() => {
+            visualizeErrors();
+        }, 10)
+    })
 
     const _position = new BlockPositionManager();
     _position.addEventListener('update', (e) => {
@@ -30,6 +44,9 @@ function BlockManager({ _get, _set, script_id }) {
         newBlock.position = position;
         t_blocks.push(newBlock);
         _set.blocks(t_blocks);
+        setTimeout(() => {
+            visualizeErrors();
+        }, 10)
     }
 
     this.confirmDelete = async (e, block) => {
@@ -51,6 +68,9 @@ function BlockManager({ _get, _set, script_id }) {
         _set.overlay(false);
         if (!result) return;
         addRoleToConnections({ block: block, role_id: result });
+        setTimeout(() => {
+            visualizeErrors();
+        }, 10)
     }
 
     this.removeRole = async (e, role_id, block) => {

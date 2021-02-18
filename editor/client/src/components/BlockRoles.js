@@ -30,6 +30,17 @@ const BlockRoles = (props) => {
         blockManager.removeRole(e, role_id, props.block);
     }
 
+    const checkErrors = (role_id) => {
+        if (!!props.errors) {
+            if (props.errors.filter(e => e === role_id).length != 0) {
+                console.log('this happens!!!');
+                return 'error'
+
+            }
+        }
+        return ''
+    }
+
     return <div className="connections">
         <div className="row flex Instruction-container"><div className="flex flexing">
             {
@@ -39,7 +50,7 @@ const BlockRoles = (props) => {
                             <span
                                 onMouseDown={(e) => { startConnection(e, v.role_id) }}
                                 onContextMenu={(e) => { removeRole(e, v.role_id) }}
-                                className={`connection ${props.direction}_${props.block_id}_${v.role_id}`}
+                                className={`connection ${props.direction}_${props.block_id}_${v.role_id} ${checkErrors(v.role_id)}`}
                             >
                                 {v.role_id}
                             </span>
