@@ -65,7 +65,7 @@ const Map = (props) => {
                 {
                     props.blocks ? props.blocks.map((block, i) => {
                         return <div
-                            className="absolute" key={i} style={{ transform: `translateX(${block.position.x}px) translateY(${block.position.y}px)` }}>
+                            className="absolute block_container" key={i} style={{ transform: `translateX(${block.position.x}px) translateY(${block.position.y}px)` }}>
                             <Block
                                 key={block.block_id}
                                 id={block.block_id}

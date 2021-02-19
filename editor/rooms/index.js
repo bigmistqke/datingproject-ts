@@ -13,8 +13,8 @@ const _set = promisify(_redis.set).bind(_redis);
 
 
 const disconnect = async (json) => {
-    try {
-        const { room_id, user_id } = JSON.parse(json);
+    /* try {
+        const { script_id, user_id } = JSON.parse(json);
         console.log(room_id, user_id);
         let data = await _get(`room_${room_id}`);
 
@@ -39,12 +39,12 @@ const disconnect = async (json) => {
 
     } catch (e) {
         console.log(e);
-    }
+    } */
 }
 
 const addToRoom = async ({ script_id, room_id, user_id }) => {
 
-    let data = await _get(`room_${room_id}`)
+    /* let data = await _get(`room_${room_id}`)
 
     console.log(room_id, data);
     if (data === null) {
@@ -60,7 +60,6 @@ const addToRoom = async ({ script_id, room_id, user_id }) => {
         data.cast[role] = user_id;
         // data = flat(data, { safe: true });
         console.log(data);
-        _redis.set(`room_${room_id}`, JSON.stringify(data));
         return role;
     } else {
         data = JSON.parse(data);
@@ -77,52 +76,24 @@ const addToRoom = async ({ script_id, room_id, user_id }) => {
             return false;
         }
 
-    }
+    } */
 
 }
 
 
 const connect = async (json) => {
-    console.log("TRYING TO CONNECT YO");
-    try {
-        const { script_id, room_id, user_id } = JSON.parse(json);
-        console.log(script_id, room_id, user_id);
-        // _mqtt.send(`/${user_id}/connected`, 'what');
-        // add to room
-        let role_id = await addToRoom({ script_id, room_id, user_id });
-        console.log('role is ', role_id);
-        if (!role_id) {
-            _mqtt.send(`/usr/${user_id}/connected`, JSON.stringify(
-                { success: false, error: 'no more roles available' }
-            ));
-            return;
-        };
-        // get cards for role
-        let r_instructions = await _get(`${script_id}_roles`);
-        r_instructions = unflatten(JSON.parse(r_instructions));
-        r_instructions = r_instructions[role_id];
+    /* try {
+        const { script_id, user_id } = JSON.parse(json);
+        console.log(script_id, user_id);
 
-        // get info of those cards
-        let allInstructions = await _get(`${script_id}_instructions`);
-        allInstructions = unflatten(JSON.parse(allInstructions));
+        _redis.set(`editor_room_${script_id}`, JSON.stringify(data));
 
-        r_instructions = r_instructions.map(v => {
-            // console.log(allInstructions[v]);
-            console.log(v);
-            let next_instruction_role = allInstructions[allInstructions[v].next_instruction_id];
-            next_instruction_role = next_instruction_role ? next_instruction_role.role_id : null;
-            return {
-                instruction_id: v,
-                next_instruction_role: next_instruction_role,
-                ...allInstructions[v]
-            }
-        });
         _mqtt.send(`/usr/${user_id}/connected`, JSON.stringify(
             { success: true, role_id: role_id, instructions: r_instructions }
         ));
     } catch (e) {
         console.log('errrrrr', e);
-    }
+    } */
 }
 
 const init = async () => {

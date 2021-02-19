@@ -23,9 +23,6 @@ const Swipe = (props) => {
         card.current.classList.remove("flip");
 
     });
-    useEffect(() => {
-        console.log(props.canPlay);
-    }, [props.canPlay]);
 
     const getCoords = (e) => {
         let coords = {};

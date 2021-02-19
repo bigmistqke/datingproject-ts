@@ -5,6 +5,8 @@ import {
     useRecoilState
 } from 'recoil';
 
+import copy from 'copy-to-clipboard';
+
 import getData from "../helpers/getData";
 import postData from "../helpers/postData";
 
@@ -21,12 +23,16 @@ import Overlays from "../components/Overlays"
 const _instructionManager = atom({ key: 'instructionManager', default: '' });
 const _blockManager = atom({ key: 'blockManager', default: '' });
 const _videoUploader = atom({ key: 'videoUploader', default: '' });
+// const _overlayManager = atom({ key: 'overlayManager', default: '' });
 
 function decodeSingleQuotes(text) {
     return (text.replace(/&#039;/g, "'"));
 }
 
-
+window.cursorPosition = {};
+window.addEventListener('mousemove', e => {
+    window.cursorPosition = { x: e.clientX, y: e.clientY };
+})
 
 function Editor({ socket, user_id }) {
     const history = useHistory();
@@ -39,6 +45,7 @@ function Editor({ socket, user_id }) {
     const [instructionManager, setInstructionManager] = useRecoilState(_instructionManager);
     const [blockManager, setBlockManager] = useRecoilState(_blockManager);
     const [videoUploader, setVideoUploader] = useRecoilState(_videoUploader);
+    // const [overlayManager, setOverlayManager] = useRecoilState(_overlayManager);
 
     const r_errors = useRef({});
 
@@ -58,6 +65,21 @@ function Editor({ socket, user_id }) {
     const [render, setRender] = useState(performance.now());
 
     const [overlay, setOverlay] = useState(false);
+
+    const openOverlay = async function ({ type, data }) {
+        return new Promise((_resolve) => {
+            const resolve = (data) => {
+                _set.overlay(false);
+                _resolve(data);
+            }
+            _set.overlay({ type, data, resolve })
+        })
+    }
+
+    const getOverlay = (overlay) => {
+        // return OverlayManager.get(overlay.type, overlay);
+        return Overlays[overlay.type](overlay);
+    }
 
 
     const _get = {
@@ -91,7 +113,6 @@ function Editor({ socket, user_id }) {
             r_errors.current = _errors;
             setRender(performance.now());
         },
-
         connecting: (bool) => setConnecting(bool),
         overlay: (bool) => setOverlay(bool)
     }
@@ -100,13 +121,12 @@ function Editor({ socket, user_id }) {
 
         r_dataProcessor.current = new DataProcessor();
 
-        setBlockManager(new BlockManager({ _get, _set, script_id, visualizeErrors }));
+        setBlockManager(new BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }));
         setInstructionManager(new InstructionManager({ _get, _set, script_id }));
         setVideoUploader(new VideoUploader({ script_id }));
-
         // updateBlocks([...blocks]);
 
-        getData(`${window._url.fetch}/script/${script_id}`)
+        getData(`${window._url.fetch}/api/get/${script_id}/temp`)
             .then(res => res.json())
             .then(res => {
                 if (!res) return Promise.reject('errrr');
@@ -143,9 +163,6 @@ function Editor({ socket, user_id }) {
         }
     }
 
-
-    // }
-
     const visualizeErrors = async () => {
         let check = await r_dataProcessor.current.checkConnections({ ..._get.all() });
         let _errors = {};
@@ -156,13 +173,61 @@ function Editor({ socket, user_id }) {
     }
 
     const test = async () => {
-        let data = await r_dataProcessor.current.process({ safe: true, ..._get.all() });
-        console.log(data);
-        if (!data.success) return
-        data = await postData(`${window._url.fetch}/api/save/${script_id}/test`, data);
-        let room = await postData(`${window._url.fetch}/api/createRoom/${script_id}/test`);
-        room = await room.json();
-        console.log(room);
+        try {
+            const processed_data = await r_dataProcessor.current.process({ safe: true, ..._get.all() });
+            if (!processed_data.success) return
+            const response = await postData(`${window._url.fetch}/api/save/${script_id}/test`, processed_data);
+
+            let room = await postData(`${window._url.fetch}/api/createRoom/${script_id}/test`);
+            room = await room.json();
+            console.log(room);
+            const { role_data, room_id } = room;
+            let options = {};
+            for (let role_id in role_data) {
+                console.log(role_id, role_data[role_id]);
+                options[role_id] = ['open link', 'share link'];
+            }
+            console.log('options', options);
+            const callback = async (data) => {
+                if (!data) {
+                    console.log('delete room!');
+                    let data = await fetch(`${window._url.fetch}/api/deleteRoom/${room_id}`);
+                    setOverlay(false);
+                }
+                const { title: role_id, option } = data;
+                // let role_id = title;
+                console.log(role_id, option);
+
+                let url = `${window._url.play}/${role_data[role_id]}`;
+                console.log(option);
+                switch (option) {
+                    case 'open link':
+                        window.open(url)
+                        break;
+                    case 'share link':
+                        copy(url);
+                        console.log('copied to clipboard');
+
+
+                }
+            }
+            _set.overlay({
+                type: 'option_groups',
+                data: { title: 'open/share the test urls', options }
+                , resolve: callback
+            })
+
+
+
+
+            // console.log(result);
+
+
+            console.log(room);
+        } catch (e) {
+            console.error(e);
+        }
+
     }
 
     const save = async () => {
@@ -178,9 +243,6 @@ function Editor({ socket, user_id }) {
         if (!data.success) return
     }
 
-    const getOverlay = (overlay) => {
-        return Overlays[overlay.type](overlay);
-    }
 
     const keyUp = (e) => {
         setCtrl(false);
@@ -217,7 +279,7 @@ function Editor({ socket, user_id }) {
                 overlay ?
                     <div
                         className="overlay-container"
-                        onMouseDown={() => { overlay.resolve(false) }}
+                        onMouseDown={(e) => { if (Array.from(e.target.classList).indexOf('overlay-container') != -1) overlay.resolve(false) }}
                     >
                         {getOverlay(overlay)}
                     </div> : null

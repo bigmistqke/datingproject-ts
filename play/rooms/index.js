@@ -42,54 +42,29 @@ const disconnect = async (json) => {
     }
 }
 
-const addToRoom = async ({ script_id, room_id, user_id }) => {
+const createRoom = async (json) => {
+    console.log("TRYING TO CONNECT YO");
+    try {
+        const { script_id, user_id } = JSON.parse(json);
 
-    let data = await _get(`room_${room_id}`)
+        // get roles -> create link for every role
+        let roles = await _get(`s_${script_id}_temp_roles`);
 
-    console.log(room_id, data);
-    if (data === null) {
-        // get data of script / roles
-        console.log('script_id', script_id)
-        const roles = ['a', 'b'];
-        const role = 'a';
-        let data = {
-            'script_id': script_id,
-            'roles': roles,
-            'cast': {}
-        }
-        data.cast[role] = user_id;
-        // data = flat(data, { safe: true });
-        console.log(data);
-        _redis.set(`room_${room_id}`, JSON.stringify(data));
-        return role;
-    } else {
-        data = JSON.parse(data);
-        let taken_roles = Object.keys(data.cast);
-        let leftover_roles = data.roles.filter(v => taken_roles.indexOf(v) == -1);
-        if (leftover_roles.length != 0) {
-            let new_role = leftover_roles[Math.floor(Math.random() * leftover_roles.length)];
-            console.log(new_role);
-            data.cast[new_role] = user_id;
-            _redis.set(`room_${room_id}`, JSON.stringify(data));
-            return new_role;
-        } else {
-            console.log('no more roles available');
-            return false;
-        }
+        await _set(`r_${room_id}`, JSON.stringify(data));
 
+    } catch (e) {
+        console.log(e);
     }
-
 }
-
 
 const connect = async (json) => {
     console.log("TRYING TO CONNECT YO");
-    try {
+    /* try {
         const { script_id, room_id, user_id } = JSON.parse(json);
         console.log(script_id, room_id, user_id);
-        // _mqtt.send(`/${user_id}/connected`, 'what');
         // add to room
         let role_id = await addToRoom({ script_id, room_id, user_id });
+
         console.log('role is ', role_id);
         if (!role_id) {
             _mqtt.send(`/usr/${user_id}/connected`, JSON.stringify(
@@ -122,7 +97,7 @@ const connect = async (json) => {
         ));
     } catch (e) {
         console.log('errrrrr', e);
-    }
+    } */
 }
 
 const init = async () => {

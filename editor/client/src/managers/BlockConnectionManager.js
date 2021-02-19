@@ -48,20 +48,34 @@ export default function ConnectionManager(blockManager) {
         );
     }
 
+    // TODO: connection empty -> make connecting block
+    const dispatchBlock = (block_id, direction, instruction_id) => {
+        dispatch(
+            'block',
+            {
+                block_id: block_id,
+                role_id: _updating.role_id,
+                direction: direction,
+                data: instruction_id
+            }
+        );
+    }
+
 
     const move = (e) => {
         dispatchUpdate(_updating.block, _updating.direction, { x: e.clientX, y: e.clientY });
     }
 
     const end = async (e) => {
+        let this_id = _updating.block.block_id;
 
         document.body.removeEventListener("pointermove", move);
         document.body.removeEventListener("pointerup", end);
 
         dispatch('end');
+        console.log(e.target);
 
         if (e.target.classList.contains("block")) {
-            let this_id = _updating.block.block_id;
             let connecting_id = e.target.id.replace('block_', '');
 
             if (this_id !== connecting_id) {

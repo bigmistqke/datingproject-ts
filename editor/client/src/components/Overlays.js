@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
-let position = {};
-window.addEventListener('mousemove', e => {
-    position = { x: e.clientX, y: e.clientY };
-})
+
 
 const Overlays = {
     role: (props) => {
         return (
-            <div style={{ left: `${position.x}px`, top: `${position.y}px` }}
+            <div style={{ left: `${parseInt(window.cursorPosition.x)}px`, top: `${parseInt(window.cursorPosition.y)}px` }}
                 className="overlay flex">
                 {
                     props.data.roles.sort((a, b) => a.role_id > b.role_id)
@@ -24,9 +21,8 @@ const Overlays = {
         )
     },
     confirm: (props) => {
-        console.log(props);
         return (
-            <div style={{ left: `${position.x}px`, top: `${position.y}px` }}
+            <div style={{ left: `${parseInt(window.cursorPosition.x)}px`, top: `${parseInt(window.cursorPosition.y)}px` }}
                 className="overlay text_center">
                 <header>{props.data.text}</header>
                 <button onMouseDown={() => { props.resolve(true) }}>confirm</button>
@@ -34,9 +30,8 @@ const Overlays = {
         )
     },
     options: (props) => {
-        console.log(props);
         return (
-            <div style={{ left: `${position.x}px`, top: `${position.y}px` }}
+            <div style={{ left: `${parseInt(window.cursorPosition.x)}px`, top: `${parseInt(window.cursorPosition.y)}px` }}
                 className="overlay text_center">
                 <header>{props.data.text}</header>
                 {
@@ -46,7 +41,50 @@ const Overlays = {
                 }
             </div>
         )
+    },
+    option_groups: (props) => {
+        return (
+            <div style={{ left: `${parseInt(window.cursorPosition.x)}px`, top: `${parseInt(window.cursorPosition.y)}px` }}
+                className="overlay group_overlay text_center center">
+                <header>{props.data.title}</header>
+                <div className="group_container">
+                    {
+
+                        Object.entries(props.data.options)
+                            .map(([title, options]) =>
+                                <div
+                                    key={title}
+                                    className='group'>
+                                    <header className="group_title">{title}</header>
+                                    <div>
+                                        {
+                                            options.map(option =>
+                                                <button
+                                                    key={title + option}
+                                                    onMouseDown={() => {
+                                                        props.resolve({ title, option })
+                                                    }}>
+                                                    {option}
+                                                </button>
+
+                                            )
+                                        }
+                                    </div>
+
+                                </div>
+                            )
+
+
+                    }
+                </div>
+
+
+            </div>
+        )
     }
 }
+
+
+
 
 export default Overlays

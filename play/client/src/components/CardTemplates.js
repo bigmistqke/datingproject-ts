@@ -16,7 +16,6 @@ const VideoSide = ({ text }) => {
 const CardSide = ({ side, text, type }) => {
     return <div className={side}>
         <div className="text"><div className="type">{(type !== "empty" && type !== "back") ? type : null}</div><div>{text ? decodeSingleQuotes(text) : null}</div></div>
-        <img alt="" src={require('./grass.png')} className="grass"></img>
         <BubbleCanvas type={type}></BubbleCanvas>
     </div>
 }

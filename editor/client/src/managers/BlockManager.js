@@ -2,7 +2,7 @@ import uniqid from 'uniqid';
 import BlockPositionManager from "./BlockPositionManager"
 import BlockConnectionManager from "./BlockConnectionManager"
 
-function BlockManager({ _get, _set, script_id, visualizeErrors }) {
+function BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }) {
 
     const _connection = new BlockConnectionManager(this);
     _connection.addEventListener('update', (e) => {
@@ -15,13 +15,21 @@ function BlockManager({ _get, _set, script_id, visualizeErrors }) {
         _set.connecting(false);
         setTimeout(() => {
             visualizeErrors();
-        }, 10)
+        }, 125)
     })
     _connection.addEventListener('add', (e) => {
         updateConnectionById(e.detail.block_id, e.detail.role_id, e.detail.direction, e.detail.data);
         setTimeout(() => {
             visualizeErrors();
-        }, 10)
+        }, 250)
+        setTimeout(() => {
+            visualizeErrors();
+        }, 500)
+    })
+
+    _connection.addEventListener('block', ({ detail }) => {
+        console.log(detail);
+        this.add(detail.position);
     })
 
     const _position = new BlockPositionManager();
@@ -38,7 +46,10 @@ function BlockManager({ _get, _set, script_id, visualizeErrors }) {
         _connection.start(block, role_id, direction);
     }
 
-    this.add = (position) => {
+    this.add = async (position) => {
+        let result = await openOverlay({ type: 'confirm', data: { text: 'add new block' } });
+        //_set.overlay(false);
+        if (!result) return;
         let t_blocks = _get.blocks();
         let newBlock = getDefaultBlock();
         newBlock.position = position;
@@ -54,7 +65,7 @@ function BlockManager({ _get, _set, script_id, visualizeErrors }) {
         e.stopPropagation();
 
         let result = await openOverlay({ type: 'confirm', data: { text: 'delete this block' } });
-        _set.overlay(false);
+        // //_set.overlay(false);
         if (!result) return;
         remove(block);
     }
@@ -65,7 +76,7 @@ function BlockManager({ _get, _set, script_id, visualizeErrors }) {
 
         let roles = _get.roles().filter(r_role => !block.connections.find(connection => connection.role_id === r_role.role_id));
         let result = await openOverlay({ type: 'role', data: { block: block, roles: roles } });
-        _set.overlay(false);
+        //_set.overlay(false);
         if (!result) return;
         addRoleToConnections({ block: block, role_id: result });
         setTimeout(() => {
@@ -83,7 +94,7 @@ function BlockManager({ _get, _set, script_id, visualizeErrors }) {
                     position: position
                 }
             });
-        _set.overlay(false);
+        //_set.overlay(false);
         if (!result) return;
 
         let t_blocks = _get.blocks();
@@ -109,15 +120,17 @@ function BlockManager({ _get, _set, script_id, visualizeErrors }) {
                         options: ['convert', 'delete']
                     }
                 });
-            _set.overlay(false);
-            if (result === 'convert') {
+            //_set.overlay(false);
+            if (!result) {
+                return;
+            } else if (result === 'convert') {
                 let convertTo = t_block.connections[0];
                 t_block.instructions.forEach(v => {
                     if (_instructions[v].role_id === role_id) {
                         _instructions[v].role_id = convertTo.role_id
                     }
                 });
-            } else {
+            } else if (result === 'delete') {
                 t_block.instructions = t_block.instructions.filter(
                     v => _instructions[v].role_id !== role_id);
                 if (t_block.instructions.length == 0)
@@ -157,11 +170,11 @@ function BlockManager({ _get, _set, script_id, visualizeErrors }) {
         _set.blocks(t_blocks);
     }
 
-    const openOverlay = async ({ type, data }) => {
-        return new Promise((resolve) => {
-            _set.overlay({ type, data, resolve });
-        })
-    }
+    /*     const openOverlay = async ({ type, data }) => {
+            return new Promise((resolve) => {
+                //_set.overlay({ type, data, resolve });
+            })
+        } */
 
     const addDefaultInstruction = (block_id, role_id) => {
         let new_instr = getDefaultInstruction(block_id, role_id);
@@ -192,7 +205,7 @@ function BlockManager({ _get, _set, script_id, visualizeErrors }) {
         );
         block.connections.sort((a, b) => a.role_id > b.role_id);
         _set.blocks(t_blocks);
-        _set.overlay(false);
+        //_set.overlay(false);
     }
 
 
@@ -215,7 +228,7 @@ function BlockManager({ _get, _set, script_id, visualizeErrors }) {
         let startConnection = block.connections.find(v => v.role_id === role_id);
         if (!startConnection) {
             let result = await openOverlay({ type: 'confirm', data: { text: 'add role to block' } });
-            _set.overlay(false);
+            //_set.overlay(false);
             if (!result) return;
             addRoleToConnections({ block: block, role_id: role_id });
             startConnection = block.connections.find(v => v.role_id === role_id);

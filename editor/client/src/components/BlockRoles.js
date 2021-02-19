@@ -19,6 +19,7 @@ const BlockRoles = (props) => {
     }
 
     const startConnection = (e, role_id) => {
+        if (e.buttons != 1) return;
         e.preventDefault();
         e.stopPropagation();
         blockManager.startConnection(props.block, role_id, props.direction);

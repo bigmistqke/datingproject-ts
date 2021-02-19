@@ -37,7 +37,7 @@ video {
 }
 
 .background>div {
-    background: url(./clouds.jpg);
+    /* background: url(./clouds.jpg); */
     background-size: cover;
     position: absolute;
     top: -50px;
@@ -128,7 +128,8 @@ video {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     transition: transform 1s;
-    background: url(clouds.jpg);
+    /* background: url(clouds.jpg); */
+    background: yellow;
     background-size: cover;
     border-radius: var(--b-radius);
     overflow: hidden;
