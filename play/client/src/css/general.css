@@ -1,17 +1,33 @@
+@font-face {
+    font-family: 'serif';
+    src: url('acaslon.otf') format('opentype')
+}
+
+@font-face {
+    font-family: 'serif_italic';
+    src: url('acaslon_italic.otf') format('opentype')
+}
+
 :root {
-    --bg-color: #aee9b1;
+    --bg-color: #f8eeda;
     --txt-color: #0a4297;
-    --b-radius: 7.5vh;
+    --b-radius: 5vh;
+    --black: #212124;
+    --ratio: 0.5588507940957915
 }
 
 body {
-    background: white;
+    background: #fffefc;
     padding: 0px;
     margin: 0px;
     overflow: hidden;
-    font-family: times;
-    font-style: italic;
+    font-family: serif;
+    /* font-style: italic; */
     /* background: linear-gradient(185deg, var(--bg-color)  25%, var(--txt-color) 100%); */
+}
+
+* {
+    box-sizing: border-box;
 }
 
 video {
@@ -22,13 +38,6 @@ video {
 
 #root {
     position: fixed;
-}
-
-.cards {
-    position: absolute;
-    z-index: 1;
-    width: 100%;
-    height: 100%;
 }
 
 .background {
@@ -69,18 +78,6 @@ video {
     perspective-origin: center;
 }
 
-.instruction {
-    /* border-radius:15vh; */
-    background: transparent;
-    height: 95vh;
-    top: 2.5vh;
-    left: 2.5vh;
-    width: calc(100vw - 5vh);
-    position: absolute;
-    background-size: cover;
-    /* overflow:hidden; */
-}
-
 .instruction>.border {
     border-radius: var(--b-radius);
     overflow: hidden;
@@ -89,34 +86,64 @@ video {
     position: absolute;
 }
 
-.instruction .grass {
-    position: absolute;
-    min-width: 100%;
-    max-height: 12.5%;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 0px;
-    z-index: 2;
-}
-
 .swipe {
     width: 100%;
     height: 100%;
 }
 
-.swipe:last-child>div>div {
-    /* filter:drop-shadow(0px 0px 25px black); */
-    /* box-shadow:0px 0px 20px #003384; */
+.swipe.flip .instruction {
+    transform: rotateY(-180deg) translateY(-50%) translateX(50%);
 }
 
 .instruction {
-    /* transform: rotateY(-180deg); */
+    position: absolute;
+    width: calc(95vh * 0.5588507940957915);
+    height: 95vh;
+    top: 50%;
+    left: 50%;
+    transform: rotateY(0deg) translateX(-50%) translateY(-50%);
     transform-style: preserve-3d;
     transition: transform 0.5s;
     transition-timing-function: ease-in-out;
-    transform: rotateY(0deg);
-    background: transparent;
     overflow-wrap: break-word;
+    background-size: cover;
+    color: var(--bg-color);
+}
+
+.do .text {
+    font-family: serif_italic;
+}
+
+.do svg {
+    fill: #ff5242;
+}
+
+.say svg {
+    fill: #0000bf;
+}
+
+.think .text {
+    color: var(--bg-color);
+}
+
+.think svg {
+    fill: var(--black);
+}
+
+.back .text {
+    color: var(--bg-color);
+}
+
+.back svg {
+    fill: var(--black);
+}
+
+.idle .text {
+    color:
+}
+
+.idle svg {
+    fill: #ffc200;
 }
 
 .instruction>div {
@@ -129,10 +156,11 @@ video {
     -webkit-backface-visibility: hidden;
     transition: transform 1s;
     /* background: url(clouds.jpg); */
-    background: yellow;
+    background: var(--bg-color);
     background-size: cover;
     border-radius: var(--b-radius);
     overflow: hidden;
+    box-shadow: 0px 0px 10px #0000001c;
 }
 
 .instruction .front {
@@ -141,13 +169,17 @@ video {
 
 .instruction .back {
     transform: rotateY(-180deg);
-    font-size: 7.5vw;
 }
 
 .instruction .type {
-    font-size: 7.5vw;
-    color: #97aacd;
-    /* padding-bottom: 5vw; */
+    font-size: 4.5vh;
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    margin-top: 7.5vh;
+    font-family: serif_italic;
+    color: var(--bg-color);
+    opacity: 0.7;
 }
 
 .instruction * {
@@ -156,34 +188,23 @@ video {
 }
 
 .instruction .text {
+    position: absolute;
     transform: translate(-50%, -50%);
     left: 50%;
     top: 50%;
-    letter-spacing: -0.05em;
-    line-height: 9vw;
-    width: 50%;
-    max-height: 75vh;
-    position: absolute;
-    text-align: center;
+    width: 75%;
+    max-height: 75%;
+    margin-top: 2.25vh;
     z-index: 1;
-    color: var(--txt-color);
-    font-family: times;
-    font-style: italic;
-    font-size: 9vw;
+    font-family: serif;
+    font-size: 5vh;
+    line-height: 4.75vh;
+    letter-spacing: -0.025em;
+    text-align: center;
 }
 
 .hide {
     display: none;
-}
-
-@media only screen and (min-aspect-ratio: 1/1) {
-    .instruction .text {
-        font-size: 9vh;
-        line-height: 9vh;
-    }
-    .instruction .type {
-        font-size: 7.5vh;
-    }
 }
 
 .log {
@@ -212,10 +233,6 @@ video {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-}
-
-.swipe.flip .instruction {
-    transform: rotateY(-180deg);
 }
 
 .instruction canvas {
@@ -265,9 +282,21 @@ video {
 .Cards {
     position: absolute;
     z-index: 2;
+    height: 95vh;
+    margin: 2.5vh;
+    width: calc(100vw - 5vh);
 }
 
 .fill {
     width: 100%;
     height: 100%;
+}
+
+/* width = 95vh * 0.5588507940957915 + 5vh */
+
+@media only screen and (max-width:60.0908254391vh) {
+    .instruction {
+        height: calc((100vw - 5vh) / 0.5588507940957915);
+        width: calc(100vw - 5vh)
+    }
 }

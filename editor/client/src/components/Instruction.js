@@ -8,6 +8,7 @@ import {
 
 const _instructionManager = atom({ key: 'instructionManager', default: '' });
 const _videoUploader = atom({ key: 'videoUploader', default: '' });
+const _setRender = atom({ key: 'setRender', default: performance.now() });
 
 
 const Instruction = (props) => {
@@ -19,7 +20,7 @@ const Instruction = (props) => {
   const [instructionManager] = useRecoilState(_instructionManager);
   const [videoUploader] = useRecoilState(_videoUploader);
 
-  let [render, setRender] = useState();
+  let [render, setRender] = useRecoilState(_setRender);
 
 
 
@@ -47,7 +48,7 @@ const Instruction = (props) => {
     if (!types.test(file.type) || !types.test(file.name)) return;
     r_error.current = true;
     setRender(performance.now());
-    change('text', URL.createObjectURL(file));
+    // change('text', 'uploading');
     let upload = await videoUploader.process(file, props.id);
     if (!upload.success) console.error(upload.error);
     console.log(upload);
@@ -63,7 +64,6 @@ const Instruction = (props) => {
     let type = e.target.value;
     if (type === 'video') change('text', '');
     change('type', type);
-
   }
 
   useEffect(() => {
@@ -99,7 +99,7 @@ const Instruction = (props) => {
       {
         props.type === 'video' ?
           props.text ?
-            <video src={`${window._url.fetch}${props.text}`} className="instruction-text flexing"></video> :
+            <video onload={console.log('LOADED!!!')} controls src={`${window._url.fetch}${props.text}`} className="instruction-text flexing"></video> :
             <input type="file" onChange={(e) => { processVideo(e) }} className="instruction-text flexing"></input> :
           <input
             ref={r_text}

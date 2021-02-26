@@ -14,7 +14,6 @@ export default function ProgressBars() {
     useEffect(() => {
         if (!videoUploader) return
         videoUploader.addEventListener('update', ({ detail }) => {
-            console.log(detail)
             // setUploaders(detail);
             r_uploaders.current = detail;
             setUploaders(performance.now())
@@ -27,7 +26,6 @@ export default function ProgressBars() {
                 {
 
                     Object.entries(r_uploaders.current).map(([instruction_id, uploader]) => {
-                        console.log(instruction_id, uploader, uploader.percentage);
                         return (
                             <div key={instruction_id} className='progressBar'>
                                 <div className="progress" style={{ width: `${uploader.progress.percentage}%` }}>

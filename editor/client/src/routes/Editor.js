@@ -23,6 +23,8 @@ import Overlays from "../components/Overlays"
 const _instructionManager = atom({ key: 'instructionManager', default: '' });
 const _blockManager = atom({ key: 'blockManager', default: '' });
 const _videoUploader = atom({ key: 'videoUploader', default: '' });
+const _setRender = atom({ key: 'setRender', default: performance.now() });
+
 // const _overlayManager = atom({ key: 'overlayManager', default: '' });
 
 function decodeSingleQuotes(text) {
@@ -62,7 +64,8 @@ function Editor({ socket, user_id }) {
     // const [blocks, setBlocks] = useState([]);
     let [roles, setRoles] = useState([]);
     const [connecting, setConnecting] = useState(false);
-    const [render, setRender] = useState(performance.now());
+    // const [render, setRender] = useState(performance.now());
+    const [render, setRender] = useRecoilState(_setRender);
 
     const [overlay, setOverlay] = useState(false);
 

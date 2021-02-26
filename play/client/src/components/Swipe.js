@@ -1,14 +1,22 @@
-import React, { useEffect, useContext, useRef } from 'react';
-import Tweener from "../helpers/tweener.js"
+import React, { useEffect, useCallback, useRef } from 'react';
+import Tweener from "../helpers/tweener.js";
+import { throttle } from "lodash"
 
 const cTweener = React.createContext(new Tweener());
 
 const Swipe = (props) => {
-    const tweener = useContext(cTweener);
+    // const tweener = useContext(cTweener);
+    // const tweener = new Tweener();
+    const tweener = useRef(new Tweener());
     let card = useRef(null);
     let delta = useRef({ x: 0, y: 0 });
     let posStart = useRef({ x: 0, y: 0 });
     let transform = useRef({ x: 0, y: 0 });
+
+    const throttledMove = useCallback(
+        throttle(e => move(e), 1000),
+        [], // will be created only once initially
+    );
 
     let current = {
         delta: { x: 0, y: 0 },
@@ -44,16 +52,21 @@ const Swipe = (props) => {
             posStart = coords;
             current.swiping = true;
         }
-        window.addEventListener('mousemove', onSwipe);
+        window.addEventListener('mousemove', onSwipeMove);
         window.addEventListener('mouseup', onSwipeEnd);
     }
-    const onSwipe = (e) => {
+
+    const move = (e) => {
         if (!current.swiping) {
             return;
         }
         let coords = getCoords(e);
         delta.current = { x: coords.x - posStart.x, y: coords.y - posStart.y };
         card.current.style.transform = getTransform(delta.current, transform.current);
+    }
+    const onSwipeMove = (e) => {
+        // throttledMove(e);
+        move(e)
     }
 
     const getTransform = (delta, offset) => {
@@ -65,7 +78,7 @@ const Swipe = (props) => {
         let deltaSnap = { x: parseFloat(delta.current.x), y: parseFloat(delta.current.y) };
         let angle = Math.atan2(delta.current.y, delta.current.x);
         var newDist = { x: (window.innerWidth * 1.75 * Math.cos(angle)), y: (window.innerHeight * 1.25 * Math.sin(angle)) };
-        tweener.tweenTo(0, 1, 1000,
+        tweener.current.tweenTo(0, 1, 500,
             (alpha) => {
                 delta.current = {
                     x: deltaSnap.x + (newDist.x - deltaSnap.x) * alpha,
@@ -83,7 +96,8 @@ const Swipe = (props) => {
 
     const snapBack = () => {
         let deltaSnap = { x: parseFloat(delta.current.x), y: parseFloat(delta.current.y) };
-        tweener.tweenTo(1, 0, 500,
+        if (Math.abs(deltaSnap.x) === 0 && Math.abs(deltaSnap.y) === 0) return;
+        tweener.current.tweenTo(1, 0, 250,
             (alpha) => {
                 delta.current = {
                     x: deltaSnap.x * alpha,
@@ -110,14 +124,24 @@ const Swipe = (props) => {
             snapBack();
         }
 
-
         current.lastSwipe = false;
-        window.removeEventListener('mousemove', onSwipe);
+        window.removeEventListener('mousemove', onSwipeMove);
         window.removeEventListener('mouseup', onSwipeEnd);
     }
 
 
-    return <div ref={card} style={{ zIndex: props.zIndex }} className="swipe flip" onTouchStart={onSwipeStart} onTouchMove={onSwipe} onTouchEnd={onSwipeEnd} onMouseDown={onSwipeStart} /* onMouseMove={onSwipe}  *//* onMouseUp={onSwipeEnd} */>{props.children}</div>
+    return (
+        <div
+            ref={card}
+            style={{ zIndex: props.zIndex }}
+
+            className="swipe flip"
+            onTouchStart={onSwipeStart}
+            onTouchMove={onSwipeMove}
+            onTouchEnd={onSwipeEnd}
+            onMouseDown={onSwipeStart}
+        >{props.children}</div>
+    )
 }
 
 

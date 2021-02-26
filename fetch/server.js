@@ -7,7 +7,8 @@ const multer = require('multer');
 const upload = multer(); */
 const fs = require('fs');
 const path = require('path');
-const resolve = path.resolve
+const resolve = path.resolve;
+const fetch = require('node-fetch');
 
 const express = require('express');
 const fileUpload = require('express-fileupload');
@@ -40,66 +41,16 @@ const _del = promisify(_redis.del).bind(_redis);
 
 app.listen(8080);
 app.use('/api/uploads', express.static('uploads'))
-// app.use(serveStatic('uploads', {}))
-
-function escapeHtml(text) {
-  var map = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-
-  return text.replace(/[&<>"']/g, function (m) { return map[m]; });
-}
-
-
-function testCrypto() {
-  let strings = [];
-  let errors = 0;
-  let count = 0;
-
-
-  function test() {
-    let string, base;
-    // setInterval(() => { console.log(`${errors} errors so far`) }, 2000);
-    for (let i = 0; i < 1000; i++) {
-      string = crypto.randomBytes(4).toString('hex');
-      string += i;
-      if (strings.indexOf(string) != -1) errors++;
-      strings.push(string);
-      count++;
-    }
-    console.log(`completed with ${errors} errors in ${count} strings`);
-    setTimeout(test, 10)
-  }
-  test()
-}
-
-// testCrypto()
-
-const convertArrayToObject = (array, key) => {
-  const initialValue = {};
-  return array.reduce((obj, item) => {
-    let _item = Object.entries(item).filter((([k, v]) => k !== key));
-    _item = Object.fromEntries(_item);
-    return {
-      ...obj,
-      [item[key]]: _item,
-    };
-  }, initialValue);
-};
 
 app.use(bodyParser.json())
+
+// save script
 app.post('/api/save/:script_id/:type', async function (req, res, next) {
   let { blocks, roles, instructions } = req.body;
   const type = req.params.type;
   const script_id = req.params.script_id;
 
   let success = [];
-  // console.log(roles);
-  // await _hmset('role_urls', role_urls);
 
   success.push(await _set(`s_${script_id}_${type}_roles`, flat(roles)));
   success.push(await _set(`s_${script_id}_${type}_instructions`, flat(instructions, { safe: true })));
@@ -107,17 +58,7 @@ app.post('/api/save/:script_id/:type', async function (req, res, next) {
   res.send(success.find(v => v !== "OK"));
 })
 
-
-
-/* app.get('/script/:script_id/:role_id', async function (req, res, next) {
-  const script_id = req.params.script_id
-  const role_id = req.params.role_id
-  res.send({ script_id, role_id })
-  return next();
-}) */
-
-// const nodeToBlock = (a) => Object.fromEntries(Object.entries(a).map(([k, v]) => [k.replace('node', 'block'), v]))
-
+// get script
 app.get('/api/get/:script_id/:type', async function (req, res, next) {
   const script_id = req.params.script_id;
   const type = req.params.type
@@ -134,38 +75,35 @@ app.get('/api/get/:script_id/:type', async function (req, res, next) {
   let roles = await _get(`s_${script_id}_temp_roles`);
   roles = unflatten(roles);
   res.send({ roles, blocks, instructions });
-  // res.end();
   return next();
 })
-
-
-
-var storage = multer.diskStorage({
-  destination: function (req, file, callback) {
-    callback(null, './');
-  },
-  filename: function (req, file, callback) {
-    callback(null, file.fieldname + '-' + Date.now());
-  }
-});
-var upload = multer({ storage: storage }).single();
 
 
 app.use(fileUpload());
 
 // upload video
-app.post('/api/uploadVideo/:script_id', function (req, res) {
-  let script_path = `./uploads/${req.params.script_id}`
+app.post('/api/uploadVideo/:script_id/:type', async function (req, res) {
+  let script_path = `./uploads/${req.params.script_id}`;
+  let type = req.params.type;
+
   if (!fs.existsSync(script_path)) {
     fs.mkdirSync(script_path);
   }
-  let new_path = `${script_path}/${req.body.instruction_id}${path.extname(req.files.file.name)}`;
-  fs.writeFile(new_path, req.files.file.data, (err) => {
-    if (!err) res.send(new_path);
+  let new_filename = `${req.body.instruction_id}${path.extname(req.files.file.name)}`;
+  let new_path = `${script_path}/${new_filename}`;
+  fs.writeFile(new_path, req.files.file.data, async (err) => {
+    if (!err) {
+      // let addedToQueue = await fetch(`https://localhost:8088/video/convert/hls/${new_filename}`)
+      res.send(new_path);
+    }
   })
 })
 
-
+// access point to download video 
+app.get('/api/downloadVideo/:file_name', async (req, res, next) => {
+  let file_name = req.params.file_name;
+  res.attachment(`/api/uploads/${file_name}`);
+})
 
 // create room
 app.post('/api/createRoom/:script_id/:type', async function (req, res, next) {
@@ -175,9 +113,10 @@ app.post('/api/createRoom/:script_id/:type', async function (req, res, next) {
   roles = unflatten(roles);
   let room_id = crypto.randomBytes(4).toString('hex');
   let role_data = {};
+  // hashmap: urls of the actor/role of the room - role_id, script_id, room_id
   const role_urls = {};
+  // keeping track of where in the game the actor is
   const role_status = {};
-  const role_orders = {};
 
   Object.keys(roles)
     .forEach(role_id => {
@@ -185,14 +124,13 @@ app.post('/api/createRoom/:script_id/:type', async function (req, res, next) {
       role_urls[url] = { room_id, role_id, script_id };
       role_data[role_id] = url;
       role_status[role_id] = 'start';
-      role_orders[role_id] = 0;
+
     });
   console.log('role_urls are :', role_urls);
   await _hmset('role_urls', role_urls);
   await _hmset(`r_${room_id}`, {
     role_urls: role_data,
     role_status: role_status,
-    role_orders: role_orders,
     status: 'start',
     type: type,
     script_id: script_id
@@ -222,15 +160,15 @@ app.get('/api/joinRoom/:role_url', async function (req, res, next) {
   const role_url = req.params.role_url;
 
   try {
+
     let url_data = await _hget('role_urls', role_url);
-    if (!url_data) res.send(false);
+    if (!url_data || !(room_id in url_data)) res.send(false);
 
     let room_id = url_data.room_id;
     let role_id = url_data.role_id;
     let script_id = url_data.script_id;
 
     let type = await _hget(`r_${room_id}`, 'type');
-    // let script_id = await _hget(`r_${room_id}`, 'script_id');
 
     let base = `s_${script_id}_${type}`;
     let role_cards = unflatten(await _get(`${base}_roles`));
@@ -247,35 +185,6 @@ app.get('/api/joinRoom/:role_url', async function (req, res, next) {
     res.json({ instructions, room_id, role_id })
   } catch (e) {
     console.log(e);
-    // res.json({ success: false })
-
+    res.json({ success: false })
   }
-
-
-  /* 
-  
-    const script_id = req.params.script_id;
-    const roles = await _get(`s_${script_id}_${type}_roles`);
-    let room_id = crypto.randomBytes(4).toString('hex');
-    let role_data = {};
-    const role_urls = {};
-    const role_status = {};
-    const role_orders = {};
-  
-    Object.keys(roles)
-      .forEach(role_id => {
-        const url = crypto.randomBytes(4).toString('hex');
-        role_urls[url] = { room_id, role_id, script_id };
-        role_data[role_id] = url;
-        role_status[role_id] = 'start';
-        role_orders[role_id] = 0;
-      });
-    await _hmset('role_urls', role_urls);
-    await _hmset(`r_${room_id}`, {
-      role_urls: role_data,
-      role_status: role_status,
-      role_orders: role_orders,
-      status: 'start'
-    });
-    res.json({ room_id, roles: role_urls }); */
 })

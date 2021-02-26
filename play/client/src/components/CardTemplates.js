@@ -3,52 +3,85 @@ import Swipe from "./Swipe";
 import Card from "./Card";
 import BubbleCanvas from "./BubbleCanvas";
 
+import { ReactComponent as Do } from '../svg/do.svg';
+import { ReactComponent as Say } from '../svg/say.svg';
+import { ReactComponent as Think } from '../svg/think.svg';
+import { ReactComponent as Back } from '../svg/back.svg';
+import { ReactComponent as Idle } from '../svg/idle.svg';
+
 import decodeSingleQuotes from "../helpers/decodeSingleQuotes"
+
+const CardType = ({ type }) => {
+    switch (type) {
+        case 'do':
+            return <Do ></Do>
+        case 'say':
+            return <Say></Say>
+        case 'thought':
+            return <Think ></Think>
+        case 'back':
+            return <Back ></Back>
+        case 'idle':
+            return <Idle></Idle>
+        default:
+            return <div></div>
+    }
+}
 
 
 const VideoSide = ({ text }) => {
-    return <div className="front">
-
-        <video autoPlay={true} muted={true} src={`${window._url.fetch}${text}?time=${performance.now()}`}></video>
-    </div >
-}
-
-const CardSide = ({ side, text, type }) => {
-    return <div className={side}>
-        <div className="text"><div className="type">{(type !== "empty" && type !== "back") ? type : null}</div><div>{text ? decodeSingleQuotes(text) : null}</div></div>
-        <BubbleCanvas type={type}></BubbleCanvas>
-    </div>
-}
-
-const _NormalCard = ({ type, text }) => {
-    return <div className="instruction">
-        {type === 'video' ?
-            <VideoSide text={text}></VideoSide> :
-            <CardSide side="front" text={text} type={type}></CardSide>
-        }
-        <CardSide side="back" type="back"></CardSide>
-    </div>
-}
-
-const _DoubleSidedCard = ({ text_front, text_back }) => {
-    return <div className="instruction">
-        i
-        <CardSide side="front" text={text_front} type="say"></CardSide>
-        <CardSide side="back" text={text_back} type="say"></CardSide>
-    </div>
-}
-
-const NormalCard = ({ type, text, flip, canSwipe, canPlay, swipeAction }) => {
-    return <Swipe canPlay={canPlay} swipeAction={swipeAction} canSwipe={canSwipe} flip={flip} >
-        <_NormalCard type={type} text={text} ></_NormalCard>
-    </Swipe>;
+    return (
+        <div className="front">
+            {text != '' ?
+                <video
+                    autoPlay={true}
+                    muted={true}
+                    src={`${window._url.fetch}${text}?time=${performance.now()}`}
+                ></video> : null}
+        </div>
+    )
 }
 
 
-const DoubleSidedCard = ({ text_front, text_back, zIndex, flip, canSwipe, canPlay, swipeAction }) => {
-    return <Swipe canPlay={canPlay} swipeAction={() => { swipeAction(zIndex) }} zIndex={zIndex + 1} canSwipe={canSwipe} flip={flip} >
-        <_DoubleSidedCard text_front={text_front} text_back={text_back}></_DoubleSidedCard>
-    </Swipe>;
+const FrontSide = ({ text, type }) => {
+    return (
+        <div className="front">
+            <div className="type">
+                {type}
+            </div>
+            <div className="text">
+
+                <div>{text ? decodeSingleQuotes(text) : null}</div>
+            </div>
+            <CardType type={type}></CardType>
+        </div>
+    )
+}
+const BackSide = () => {
+    return (
+        <div className="back">
+            <CardType type="back"></CardType>
+        </div>
+    )
 }
 
-export { NormalCard, DoubleSidedCard }
+const NormalCard = ({ type, text, flip, canSwipe, canPlay, swipeAction, zIndex }) => {
+    return (
+        <Swipe
+            canPlay={canPlay}
+            swipeAction={swipeAction}
+            canSwipe={canSwipe}
+            flip={flip}
+            zIndex={zIndex}>
+            <div className={`instruction ${type}`}>
+                {type === 'video' ?
+                    <VideoSide text={text}></VideoSide> :
+                    <FrontSide text={text} type={type}></FrontSide>
+                }
+                <BackSide></BackSide>
+            </div>
+        </Swipe>);
+}
+
+
+export { NormalCard }
