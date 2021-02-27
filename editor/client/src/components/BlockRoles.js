@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { memo } from 'react';
 
 import {
     atom,
@@ -34,7 +34,7 @@ const BlockRoles = (props) => {
     const checkErrors = (role_id) => {
         if (!!props.errors) {
             if (props.errors.filter(e => e === role_id).length != 0) {
-                console.log('this happens!!!');
+                // console.log('this happens!!!', role_id, props.direction, props.block_id);
                 return 'error'
 
             }
@@ -69,4 +69,4 @@ const BlockRoles = (props) => {
     </div>
 }
 
-export default BlockRoles
+export default memo(BlockRoles)

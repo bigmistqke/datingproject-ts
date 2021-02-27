@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
+import NumericInput from 'react-numeric-input';
 import "./FileInput"
 
 import {
@@ -14,6 +15,7 @@ const _setRender = atom({ key: 'setRender', default: performance.now() });
 const Instruction = (props) => {
   const r_data = useRef();
   const r_text = useRef();
+  const r_timespan = useRef();
 
   let r_error = useRef(false);
 
@@ -21,9 +23,6 @@ const Instruction = (props) => {
   const [videoUploader] = useRecoilState(_videoUploader);
 
   let [render, setRender] = useRecoilState(_setRender);
-
-
-
 
   const removeRow = () => {
     instructionManager.remove(props.block_id, props.id);
@@ -41,39 +40,50 @@ const Instruction = (props) => {
     r_data.current = { role_id: props.role_id, type: props.type };
   }, [props]);
 
-  const processVideo = async (e) => {
+  useEffect(() => {
+    if (!r_timespan.current) return;
+    if (r_timespan.current.value == parseInt(props.timespan)) return
+    if (props.timespan != 0) console.log(r_timespan.current, props.timespan);
+    r_timespan.current.value = parseInt(props.timespan);
+  }, [props.timespan])
+
+  useEffect(() => {
+    if (!r_text.current) return;
+    r_text.current.value = props.text.replace(/&#039;/g, "'")
+  }, [props.text])
+
+  const changeTimespan = useCallback((e) => {
+    change('timespan', e);
+  }, [])
+
+  const changeType = useCallback((e) => {
+    let type = e.target.value;
+    if (type === 'video') change('text', '');
+    change('type', type);
+  }, [])
+
+  // useEffect(() => { change('timespan', 0) }, [])
+
+  const processVideo = useCallback(async (e) => {
     const types = /(\.|\/)(mp4)$/i;
     if (!e.target) return;
     const file = e.target.files[0];
     if (!types.test(file.type) || !types.test(file.name)) return;
     r_error.current = true;
     setRender(performance.now());
-    // change('text', 'uploading');
     let upload = await videoUploader.process(file, props.id);
     if (!upload.success) console.error(upload.error);
-    console.log(upload);
     setTimeout(() => {
       r_error.current = false;
       setRender(performance.now());
     }, 1000)
 
     change('text', `/api${upload.url.substring(1)}`);
-  }
+  }, [])
 
-  const changeType = (e) => {
-    let type = e.target.value;
-    if (type === 'video') change('text', '');
-    change('type', type);
-  }
-
-  useEffect(() => {
-    console.log('ole');
-    if (!r_text.current) return;
-    r_text.current.value = props.text.replace(/&#039;/g, "'")
-  }, [props.text])
-
-  const getClassByRole = () => props.role_id === "a" ? "type_a" : "type_b"
-  const getClassByError = () => r_error.current ? "error" : ""
+  const myFormat = useCallback((num) => num + ' sec', []);
+  const getClassByRole = useCallback(() => props.role_id === "a" ? "type_a" : "type_b", []);
+  const getClassByError = useCallback(() => r_error.current ? "error" : "", []);
 
   return (
     <div className={`row flex instruction ${getClassByRole()} ${getClassByError()}`}>
@@ -96,23 +106,36 @@ const Instruction = (props) => {
         <option value="video">video</option>
 
       </select>
+      <div className="timer-container">
+        <NumericInput
+          // ref={r_timespan}
+          type='number'
+          onChange={changeTimespan}
+          min={0}
+          step={15}
+          precision={0}
+          value={props.timespan ? props.timespan : 0}
+          format={myFormat}
+          className={!props.timespan ? 'gray' : null}
+        />
+      </div>
       {
         props.type === 'video' ?
           props.text ?
-            <video onload={console.log('LOADED!!!')} controls src={`${window._url.fetch}${props.text}`} className="instruction-text flexing"></video> :
+            <video controls src={`${window._url.fetch}${props.text}`} className="instruction-text flexing"></video> :
             <input type="file" onChange={(e) => { processVideo(e) }} className="instruction-text flexing"></input> :
           <input
             ref={r_text}
             type={"text"}
             placeholder="enter instruction here"
-            // onClick={onClickHandler}
             onChange={(e) => { change('text', e.target.value); }}
             className={`instruction-text flexing`}></input>
 
       }
+
       <button className="instruction-button tiny" onClick={() => removeRow()}>-</button>
       <button className="instruction-button tiny" onClick={() => addRow()}>+</button>
     </div >
   );
 }
-export default Instruction;
+export default memo(Instruction);

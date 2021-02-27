@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Swipe from "./Swipe";
 import Card from "./Card";
 import BubbleCanvas from "./BubbleCanvas";
@@ -11,21 +11,56 @@ import { ReactComponent as Idle } from '../svg/idle.svg';
 
 import decodeSingleQuotes from "../helpers/decodeSingleQuotes"
 
-const CardType = ({ type }) => {
+const CardMasks = () => {
+    return (
+        <div style={{ position: 'absolute', display: 'none' }}>
+            <Do id="do_mask"></Do>
+            <Say id="say_mask"></Say>
+            <Think id="think_mask"></Think>
+            <Idle id="idle_mask"></Idle>
+            <Back id="back_mask"></Back>
+        </div>
+    )
+}
+
+
+const CardType = ({ type, animate, timespan }) => {
+    let card = useRef(false);
+
+    useEffect(() => {
+        if (!animate) return
+        console.log('animate this dude!!!!', timespan, card.current);
+        card.current.style.transition = `clip-path ${timespan}s`;
+        card.current.setAttribute('class', 'animation start');
+        setTimeout(() => {
+            card.current.setAttribute('class', 'animation end');
+        }, 25);
+
+    }, [animate])
+
     switch (type) {
         case 'do':
-            return <Do ></Do>
+            return <Do ref={card}></Do>
         case 'say':
-            return <Say></Say>
-        case 'thought':
-            return <Think ></Think>
+            return <Say ref={card} ></Say>
+        case 'think':
+            return <Think ref={card} ></Think>
         case 'back':
-            return <Back ></Back>
+            return <Back ref={card}></Back>
         case 'idle':
-            return <Idle></Idle>
+            return <Idle ref={card}></Idle>
         default:
             return <div></div>
     }
+}
+
+const AnimatedCardType = ({ type, animate, timespan }) => {
+    return (
+        <div>
+            <CardType animate={animate} timespan={timespan} type={type}></CardType>
+            <CardType type={type}></CardType>
+        </div>
+    )
 }
 
 
@@ -43,17 +78,52 @@ const VideoSide = ({ text }) => {
 }
 
 
-const FrontSide = ({ text, type }) => {
+function FrontSide({ text, type, flip, timespan }) {
+
+    const [stopWatch, setStopwatch] = useState(0);
+
+    useEffect(() => {
+        if (!flip || !timespan) return;
+        let count = 0;
+        let stopwatch = () => {
+            let remaining_time = timespan - count;
+            if (remaining_time > 60) {
+                let minutes = Math.floor(remaining_time / 60);
+                let seconds = remaining_time % 60;
+                setStopwatch(`${minutes}m${seconds}`);
+            } else {
+                setStopwatch(remaining_time);
+            }
+            if (count == timespan) {
+                setStopwatch()
+                return;
+            };
+            count++;
+            setTimeout(stopwatch, 1000);
+        }
+        stopwatch();
+    }, [flip])
+
     return (
         <div className="front">
             <div className="type">
-                {type}
+                {type == 'do' ? '' : type}
             </div>
             <div className="text">
 
                 <div>{text ? decodeSingleQuotes(text) : null}</div>
             </div>
-            <CardType type={type}></CardType>
+            {
+                timespan == 0 ? null :
+                    <div className="stopwatch">
+                        {stopWatch}
+                    </div>
+            }
+            {timespan == 0 ?
+                <CardType type={type}></CardType> :
+                <AnimatedCardType type={type} animate={flip && timespan} timespan={timespan}></AnimatedCardType>
+            }
+
         </div>
     )
 }
@@ -65,18 +135,33 @@ const BackSide = () => {
     )
 }
 
-const NormalCard = ({ type, text, flip, canSwipe, canPlay, swipeAction, zIndex }) => {
+const NormalCard = ({ type, waitYourTurn, text, timespan, flip, canPlay, swipeAction, zIndex, order }) => {
+    const [spanCompleted, setSpanCompleted] = useState(false);
+
+    useEffect(() => {
+        if (!flip || !timespan) return;
+        setTimeout(() => {
+            setSpanCompleted(true);
+            window.navigator.vibrate(200);
+        }, timespan * 1000)
+    }, [flip])
+
+    useEffect(() => {
+        console.log(zIndex, order, flip);
+    }, [order])
+
     return (
         <Swipe
             canPlay={canPlay}
+            waitYourTurn={waitYourTurn}
             swipeAction={swipeAction}
-            canSwipe={canSwipe}
+            canSwipe={timespan == 0 ? flip : spanCompleted}
             flip={flip}
             zIndex={zIndex}>
             <div className={`instruction ${type}`}>
-                {type === 'video' ?
+                {flip ? type === 'video' ?
                     <VideoSide text={text}></VideoSide> :
-                    <FrontSide text={text} type={type}></FrontSide>
+                    <FrontSide text={text} type={type} timespan={timespan} flip={flip}></FrontSide> : null
                 }
                 <BackSide></BackSide>
             </div>
@@ -84,4 +169,4 @@ const NormalCard = ({ type, text, flip, canSwipe, canPlay, swipeAction, zIndex }
 }
 
 
-export { NormalCard }
+export { NormalCard, CardMasks }

@@ -7,14 +7,15 @@
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
     "@tweenjs/tween.js": "^18.6.4",
+    "is-mobile": "^2.2.2",
     "lodash": "^4.17.21",
     "mqtt": "^4.2.6",
     "paho-mqtt": "^1.1.0",
     "paper": "^0.12.8",
-    "react": "^16.14.0",
+    "react": "^17.0.1",
     "react-dom": "^16.14.0",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "3.4.3",
+    "react-scripts": "^4.0.3",
     "socket.io-client": "^2.3.1",
     "styled-components": "^5.2.0",
     "uniqid": "^5.2.0"
@@ -22,7 +23,7 @@
   "scripts": {
     "backend": "",
     "start": "set PORT=3001 && react-scripts start",
-    "build": "react-scripts build",
+    "build": "react-scripts build -- --profile",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

@@ -17,7 +17,7 @@
 }
 
 body {
-    background: #fffefc;
+    background: #f8f7f4;
     padding: 0px;
     margin: 0px;
     overflow: hidden;
@@ -28,12 +28,41 @@ body {
 
 * {
     box-sizing: border-box;
+    user-select: none;
 }
 
 video {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
+}
+
+.hidden {
+    display: none;
+}
+
+.overlay {
+    position: absolute;
+    top: 25vh;
+    left: 50vw;
+    transform: translate(-50%, -50%);
+    color: rgb(71, 70, 70);
+    box-shadow: 0px 0px 50px rgba(0, 0, 0, 0.096);
+    background: rgb(239, 240, 240);
+    font-family: serif_italic;
+    border-radius: 50px;
+    padding-left: 37.5px;
+    padding-right: 37.5px;
+    padding-top: 25px;
+    padding-bottom: 25px;
+    line-height: 21pt;
+    font-size: 16pt;
+    z-index: 10;
+    text-align: center;
+}
+
+.overlay span {
+    vertical-align: sub;
 }
 
 #root {
@@ -114,12 +143,25 @@ video {
     font-family: serif_italic;
 }
 
+svg {
+    height: 100%;
+    width: 100%;
+}
+
 .do svg {
     fill: #ff5242;
 }
 
+.do svg.animation {
+    fill: #b62222;
+}
+
 .say svg {
     fill: #0000bf;
+}
+
+.say svg.animation {
+    fill: #03034e;
 }
 
 .think .text {
@@ -128,6 +170,10 @@ video {
 
 .think svg {
     fill: var(--black);
+}
+
+.think svg {
+    fill: rgb(85, 83, 83);
 }
 
 .back .text {
@@ -160,7 +206,7 @@ video {
     background-size: cover;
     border-radius: var(--b-radius);
     overflow: hidden;
-    box-shadow: 0px 0px 10px #0000001c;
+    box-shadow: 1px 1px 2px rgb(0 0 0 / 3%), 2.5px 2.5px 8px rgb(0 0 0 / 5%), 5px 5px 20px rgb(0 0 0 / 4%)
 }
 
 .instruction .front {
@@ -169,6 +215,19 @@ video {
 
 .instruction .back {
     transform: rotateY(-180deg);
+}
+
+.instruction .stopwatch {
+    font-size: 4.5vh;
+    position: absolute;
+    bottom: 0px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 7.5vh;
+    font-family: serif_italic;
+    color: var(--bg-color);
+    opacity: 0.7;
+    z-index: 2
 }
 
 .instruction .type {
@@ -180,6 +239,7 @@ video {
     font-family: serif_italic;
     color: var(--bg-color);
     opacity: 0.7;
+    z-index: 2
 }
 
 .instruction * {
@@ -195,7 +255,7 @@ video {
     width: 75%;
     max-height: 75%;
     margin-top: 2.25vh;
-    z-index: 1;
+    z-index: 3;
     font-family: serif;
     font-size: 5vh;
     line-height: 4.75vh;
@@ -287,6 +347,24 @@ video {
     width: calc(100vw - 5vh);
 }
 
+.card-offset {
+    transition: margin-top 0.5s, margin-left 0.5s;
+}
+
+.animation {
+    position: absolute;
+    transition-timing-function: linear !important;
+    z-index: 1;
+}
+
+.animation.start {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.animation.end {
+    clip-path: polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%);
+}
+
 .fill {
     width: 100%;
     height: 100%;
@@ -298,5 +376,29 @@ video {
     .instruction {
         height: calc((100vw - 5vh) / 0.5588507940957915);
         width: calc(100vw - 5vh)
+    }
+}
+
+@media only screen and (orientation: landscape) {
+    html.isMobile {
+        transform: rotate(90deg);
+        transform-origin: center center;
+        width: 100vw;
+        overflow: hidden;
+        position: absolute;
+        height: 100vw;
+        left: 0;
+    }
+    .isMobile .Cards {
+        height: 95vw;
+        width: calc(100vh - 5vh);
+    }
+    .isMobile .instruction {
+        width: calc(95vw * 0.5588507940957915);
+        height: 95vw;
+    }
+    .isMobile .instruction .text {
+        font-size: 5vw;
+        line-height: 4.75vw;
     }
 }

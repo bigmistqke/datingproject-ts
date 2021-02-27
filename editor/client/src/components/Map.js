@@ -23,9 +23,7 @@ const Map = (props) => {
     }
 
     const navDown = (e) => {
-        console.log('this?')
         if (e.buttons === 2 || !e.target.classList.contains("map")) return;
-        console.log('that');
         let newCoords, origin_delta;
 
         const navMove = (e) => {

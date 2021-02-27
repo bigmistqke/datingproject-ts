@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import Connector from './Connector';
 
 
@@ -56,4 +56,4 @@ const Connectors = (props) => {
     </div>)
 }
 
-export default Connectors;
+export default memo(Connectors);

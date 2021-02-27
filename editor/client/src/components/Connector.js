@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 
 let _p = 10;
 
@@ -52,13 +52,7 @@ const Connector = (props) => {
             width: Math.abs(boundaries[1].x - boundaries[0].x) + _p * 2
         }}>
         <path d={`M${SVG[0].x},${SVG[0].y} C${SVG[0].x},${SVG[2].y} ${SVG[1].x},${SVG[2].y} ${SVG[1].x},${SVG[1].y}`}></path>
-        {/* <line
-            x1={SVG[0].x + _p}
-            y1={SVG[0].y + _p}
-            x2={SVG[1].x + _p}
-            y2={SVG[1].y + _p}
-        /> */}
     </svg> : null;
 }
 
-export default Connector
+export default memo(Connector)

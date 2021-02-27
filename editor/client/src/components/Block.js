@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useCallback, memo } from 'react';
 import { useEffect } from 'react';
 import Instruction from "./Instruction"
 import BlockRoles from "./BlockRoles"
@@ -15,26 +15,35 @@ let Block = (props) => {
     useEffect(() => {
     }, [props.connecting])
 
-    const confirmDelete = (e) => {
-        blockManager.confirmDelete(e, props.block);
-    }
+
 
     const getConnectionError = (direction) => {
         return props.errors && direction in props.errors ?
             props.errors[direction] : false
     }
 
+    const startPosition = useCallback((e) => {
+        blockManager.startPosition(e, props.block);
+    }, []);
+
+    const confirmDelete = useCallback((e) => {
+        blockManager.confirmDelete(e, props.block);
+    }, [])
+
+    // const _block = useMeme(()=>())
+
     return (
         <div
             id={`block_${props.id}`}
             className={`block ${props.connecting ? 'connecting' : ''}`}
-            onPointerDown={(e) => { blockManager.startPosition(e, props.block) }}
+            onPointerDown={startPosition}
             onContextMenu={confirmDelete}
         >
             <div className="">
                 <BlockRoles
                     block_id={props.id}
                     errors={getConnectionError('start')}
+
                     block={props.block}
                     connections={props.block.connections}
                     direction="in"
@@ -50,6 +59,7 @@ let Block = (props) => {
                                 index={i}
                                 key={id}
                                 id={id}
+                                timespan={v.timespan}
                                 text={v.text}
                                 type={v.type}
                                 role_id={v.role_id}
@@ -69,7 +79,8 @@ let Block = (props) => {
                     allRoles={props.roles}
                 ></BlockRoles>
             </div>
-        </div >
+        </div>
     )
 }
-export default Block;
+export default memo(Block);
+

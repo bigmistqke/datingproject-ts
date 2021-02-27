@@ -27,6 +27,8 @@ const jsonify = require('redis-jsonify')
 _redis = redis.createClient();
 j_redis = jsonify(_redis);
 
+console.log("START EXPRESS!!");
+
 _redis.on("error", function (error) {
   console.error(error);
 });
@@ -162,7 +164,8 @@ app.get('/api/joinRoom/:role_url', async function (req, res, next) {
   try {
 
     let url_data = await _hget('role_urls', role_url);
-    if (!url_data || !(room_id in url_data)) res.send(false);
+    console.log('testing');
+    if (!url_data || !('room_id' in url_data)) res.send(false);
 
     let room_id = url_data.room_id;
     let role_id = url_data.role_id;

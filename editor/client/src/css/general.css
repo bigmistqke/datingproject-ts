@@ -29,6 +29,24 @@ body {
     position: fixed;
 }
 
+.hidden {
+    display: none;
+}
+
+.overlay {
+    position: absolute;
+    top: 50vh;
+    left: 50vw;
+    transform: translate(-50%, -50%);
+    background: grey;
+    font-family: serif;
+    border-radius: 50px;
+    line-height: 100px;
+    padding-left: 25px;
+    padding-right: 25px;
+    font-size: 16pt;
+}
+
 .cards {
     position: absolute;
     z-index: 1;
@@ -134,7 +152,7 @@ header {
 }
 
 .block {
-    width: 800px;
+    width: 900px;
 }
 
 .border {
@@ -162,10 +180,10 @@ video {
     cursor: default;
 }
 
-.row div, .row input, .row select {
+.row>div, .row>input, .row>select {
     font-size: 10pt;
     line-height: var(--r-height);
-    padding-left: 10px;
+    /* padding-left: 10px; */
 }
 
 .instruction {
@@ -186,8 +204,18 @@ video {
     padding-left: 20px;
 }
 
-.row>*:not(:first-child) {
-    /* border-left:var(--border) */
+.instruction .timer-container {
+    display: flex;
+    align-items: baseline;
+}
+
+.instruction .timer-container .timespan, .instruction .timer-container>*, .instruction .timer-container>*>input {
+    height: 100%;
+    width: 100%
+}
+
+.gray {
+    color: gray !important;
 }
 
 * {
@@ -225,6 +253,10 @@ button:hover {
     min-width: 0;
 }
 
+.instruction-role {
+    flex: 0 0 40px !important;
+}
+
 .flex:not(header)>.tiny {
     font-size: 8pt;
 }
@@ -237,8 +269,16 @@ button:hover {
 
 select, input, button {
     outline: none;
-    border: none;
+    border: none !important;
     background: inherit;
+}
+
+/*  */
+
+i {
+    /* border: none !important; */
+    /* background: red */
+    /* border-color: transparent transparent rgba(0, 0, 0, 1) !important */
 }
 
 .type_b {

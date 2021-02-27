@@ -36,7 +36,9 @@ function BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }) {
     _position.addEventListener('update', (e) => {
         updateBlock(e.detail.block_id, { position: e.detail.position })
     })
-    _position.addEventListener('add', (e) => { updateBlock(e.detail.block_id, { position: e.detail.position }) })
+    _position.addEventListener('add', (e) => {
+        updateBlock(e.detail.block_id, { position: e.detail.position })
+    })
 
     this.startPosition = (e, block) => {
         _position.start(e, block);

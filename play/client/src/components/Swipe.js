@@ -1,6 +1,5 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import Tweener from "../helpers/tweener.js";
-import { throttle } from "lodash"
 
 const cTweener = React.createContext(new Tweener());
 
@@ -12,11 +11,6 @@ const Swipe = (props) => {
     let delta = useRef({ x: 0, y: 0 });
     let posStart = useRef({ x: 0, y: 0 });
     let transform = useRef({ x: 0, y: 0 });
-
-    const throttledMove = useCallback(
-        throttle(e => move(e), 1000),
-        [], // will be created only once initially
-    );
 
     let current = {
         delta: { x: 0, y: 0 },
@@ -47,11 +41,15 @@ const Swipe = (props) => {
 
     const onSwipeStart = (e) => {
         current.prevTime = new Date().getTime();
-        if (props.canSwipe) {
-            let coords = getCoords(e);
-            posStart = coords;
-            current.swiping = true;
+
+        let coords = getCoords(e);
+        posStart = coords;
+        current.swiping = true;
+
+        if (!props.canSwipe) {
+            props.waitYourTurn(!props.flip ? 'Wait For Your Turn' : 'Wait For Timespan To Be Completed')
         }
+
         window.addEventListener('mousemove', onSwipeMove);
         window.addEventListener('mouseup', onSwipeEnd);
     }
@@ -115,11 +113,12 @@ const Swipe = (props) => {
     const onSwipeEnd = (e) => {
         current.swiping = false;
         if (!props.canPlay) { snapBack() }
-
+        props.waitYourTurn(false);
         let dragThreshold = ((Math.abs(delta.current.x) > window.innerWidth / 5 || Math.abs(delta.current.y) > window.innerHeight / 5)) ? true : false;
-        if (dragThreshold) {
+        if (dragThreshold && props.canSwipe) {
             props.swipeAction(props.zIndex)
             swipeAway();
+
         } else {
             snapBack();
         }

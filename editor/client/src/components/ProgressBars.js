@@ -25,7 +25,7 @@ export default function ProgressBars() {
             <div className='progressBars'>
                 {
 
-                    Object.entries(r_uploaders.current).map(([instruction_id, uploader]) => {
+                    r_uploaders.current.map(({ instruction_id, uploader }) => {
                         return (
                             <div key={instruction_id} className='progressBar'>
                                 <div className="progress" style={{ width: `${uploader.progress.percentage}%` }}>

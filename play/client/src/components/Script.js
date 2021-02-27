@@ -1,8 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useHistory } from "react-router-dom";
 
-import { NormalCard } from "./CardTemplates";
+import { NormalCard, CardMasks } from "./CardTemplates";
 import getData from '../helpers/getData';
+
+import isMobile from "is-mobile";
 
 var uniqid = require('uniqid');
 let not_subscribed = true;
@@ -20,7 +22,11 @@ function Script({ socket, user_id }) {
     let r_room_id = useRef('');
     let r_role_id = useRef('');
 
+    let r_overlay = useRef();
+
     let init = async () => {
+        console.log();
+        if (isMobile()) document.getElementsByTagName('html')[0].classList.add('isMobile');
         if (!socket) return
         // get data via express
         const result = await fetch(`${window._url.fetch}/api/joinRoom/${role_url}`);
@@ -36,7 +42,7 @@ function Script({ socket, user_id }) {
         r_room_id.current = room_id;
         r_role_id.current = role_id;
 
-        socket.subscribe(`/${room_id}/${role_id}/swipe`, receiveSwipe)
+        socket.subscribe(`/${room_id}/${role_id}/swipe`, receiveExternalSwipe)
 
         window.addEventListener('beforeunload', () => {
             socket.send('/disconnect', JSON.stringify({ user_id, room_id }));
@@ -67,7 +73,7 @@ function Script({ socket, user_id }) {
         })
     }
 
-    let receiveSwipe = (json) => {
+    let receiveExternalSwipe = (json) => {
         try {
             let received_id = JSON.parse(json);
 
@@ -78,7 +84,6 @@ function Script({ socket, user_id }) {
 
             if (!_instruction) console.error('could not find card');
             if (typeof prev_instruction_ids === 'object') {
-                // _instruction.prev_instruction_id
                 _instruction.prev_instruction_ids.splice(
                     _instruction.prev_instruction_ids.indexOf(received_id), 1);
             } else {
@@ -94,37 +99,64 @@ function Script({ socket, user_id }) {
         }
     }
 
+    const waitYourTurn = (reason) => {
+        if (!reason) {
+            r_overlay.current.classList.add('hidden')
+            return;
+        }
+        window.navigator.vibrate(200);
+        r_overlay.current.children[0].innerHTML = reason;
+        r_overlay.current.classList.remove('hidden');
+    }
 
+    const hideOverlay = useCallback(() => {
+        r_overlay.current.classList.add('hidden');
+    }, [])
 
     return (
-        <div className="Cards">
-            {
-                r_instructions.current ? [...r_instructions.current].map(
-                    (instruction, i) => {
-                        if (i > r_swipes.current.length + 3 || i < r_swipes.current.length - 2) return
-                        i = r_swipes.current.length - i;
+        <div>
+            <div ref={r_overlay} onClick={hideOverlay} className='overlay hidden'><span>Wait Your Turn</span></div>
+            <div className="Cards">
+                {
+                    r_instructions.current ? [...r_instructions.current].map(
+                        (instruction, i) => {
+                            if (i > r_swipes.current.length + 5 || i < r_swipes.current.length - 2) return
 
-                        return (
-                            <NormalCard
-                                zIndex={i}
-                                key={instruction.instruction_id}
-                                text={instruction.text}
-                                type={instruction.type}
-                                canSwipe={instruction.prev_instruction_ids.length == 0}
-                                flip={instruction.prev_instruction_ids.length == 0}
-                                swipeAction={() => {
-                                    sendSwipe(instruction.instruction_id, instruction.next_role_ids);
-                                    setTimeout(() => {
-                                        addToSwipes(instruction.instruction_id)
-                                        removeFromSwipes(instruction.prev_instruction_ids)
-                                    }, 1000)
-                                }}
-                            ></NormalCard>
-                        )
-                    }
-                ) : null
-            }
-        </div >
+                            let zIndex = r_instructions.current.length - i + r_swipes.current.length;
+                            let margin = Math.max(0, (i - r_swipes.current.length));
+                            return (
+                                <div key={instruction.instruction_id}
+                                    className='card-offset'
+                                    style={{ marginLeft: margin * 10, marginTop: margin * 10 }}>
+                                    <NormalCard
+                                        offset={i}
+                                        zIndex={zIndex}
+                                        order={r_swipes.current.length}
+                                        text={instruction.text}
+                                        type={instruction.type}
+                                        timespan={instruction.timespan ? instruction.timespan : 0}
+                                        flip={instruction.prev_instruction_ids.length == 0}
+                                        waitYourTurn={waitYourTurn}
+                                        swipeAction={() => {
+                                            sendSwipe(instruction.instruction_id, instruction.next_role_ids);
+                                            setTimeout(() => {
+                                                addToSwipes(instruction.instruction_id)
+
+                                            }, 250)
+                                            setTimeout(() => {
+                                                removeFromSwipes(instruction.prev_instruction_ids)
+                                            }, 1000)
+                                        }}
+                                    ></NormalCard>
+                                </div>
+
+                            )
+                        }
+                    ) : null
+                }
+            </div>
+        </div>
+
     )
 
 }

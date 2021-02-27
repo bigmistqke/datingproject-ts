@@ -4,6 +4,8 @@ import {
     atom,
     useRecoilState
 } from 'recoil';
+// import { useBeforeunload } from 'react-beforeunload';
+
 
 import copy from 'copy-to-clipboard';
 
@@ -22,8 +24,9 @@ import Overlays from "../components/Overlays"
 
 const _instructionManager = atom({ key: 'instructionManager', default: '' });
 const _blockManager = atom({ key: 'blockManager', default: '' });
-const _videoUploader = atom({ key: 'videoUploader', default: '' });
+const _videoUploader = atom({ key: 'videoUploader', default: false });
 const _setRender = atom({ key: 'setRender', default: performance.now() });
+
 
 // const _overlayManager = atom({ key: 'overlayManager', default: '' });
 
@@ -36,38 +39,37 @@ window.addEventListener('mousemove', e => {
     window.cursorPosition = { x: e.clientX, y: e.clientY };
 })
 
+
+
 function Editor({ socket, user_id }) {
     const history = useHistory();
-    const r_blocks = useRef();
-    const r_roles = useRef();
-    const r_instructions = useRef();
 
-    const r_dataProcessor = useRef();
+    const { script_id } = useParams();
 
-    const [instructionManager, setInstructionManager] = useRecoilState(_instructionManager);
-    const [blockManager, setBlockManager] = useRecoilState(_blockManager);
-    const [videoUploader, setVideoUploader] = useRecoilState(_videoUploader);
-    // const [overlayManager, setOverlayManager] = useRecoilState(_overlayManager);
 
-    const r_errors = useRef({});
-
-    const r_blockManager = useRef();
 
     const [ctrl, setCtrl] = useState(false);
     const [shift, setShift] = useState(false);
-
-    const r_cursor = useRef();
-
-    document.body.addEventListener('mousemove', (e) => { r_cursor.current = { x: e.clientX, y: e.clientY } });
-
-    const { script_id } = useParams();
-    // const [blocks, setBlocks] = useState([]);
-    let [roles, setRoles] = useState([]);
+    const [roles, setRoles] = useState([]);
     const [connecting, setConnecting] = useState(false);
-    // const [render, setRender] = useState(performance.now());
-    const [render, setRender] = useRecoilState(_setRender);
-
     const [overlay, setOverlay] = useState(false);
+
+    const [render, setRender] = useRecoilState(_setRender);
+    const [instructionManager, setInstructionManager] = useRecoilState(_instructionManager);
+    const [blockManager, setBlockManager] = useRecoilState(_blockManager);
+    const [videoUploader, setVideoUploader] = useRecoilState(_videoUploader);
+
+    const [blocks, setBlocks] = useState([]);
+
+    const r_blocks = useRef();
+    const r_roles = useRef();
+    const r_instructions = useRef();
+    const r_dataProcessor = useRef();
+    const r_errors = useRef({});
+    const r_blockManager = useRef();
+    const r_cursor = useRef();
+    const hasChanges = useRef(false);
+
 
     const openOverlay = async function ({ type, data }) {
         return new Promise((_resolve) => {
@@ -82,6 +84,16 @@ function Editor({ socket, user_id }) {
     const getOverlay = (overlay) => {
         // return OverlayManager.get(overlay.type, overlay);
         return Overlays[overlay.type](overlay);
+    }
+    function throttle(func, timeFrame) {
+        var lastTime = 0;
+        return function () {
+            var now = new Date();
+            if (now - lastTime >= timeFrame) {
+                func();
+                lastTime = now;
+            }
+        };
     }
 
 
@@ -102,15 +114,19 @@ function Editor({ socket, user_id }) {
     const _set = {
         blocks: (_blocks) => {
             r_blocks.current = _blocks;
-            setRender(performance.now());
+            // setBlocks(_blocks);
+            throttle(setRender(performance.now()), 10);
+            hasChanges.current = true;
         },
         instructions: (_instructions) => {
             r_instructions.current = _instructions;
-            setRender(performance.now());
+            throttle(setRender(performance.now()), 10);
+            hasChanges.current = true;
         },
         roles: (_roles) => {
             r_roles.current = _roles;
-            setRender(performance.now());
+            throttle(setRender(performance.now()), 10);
+            hasChanges.current = true;
         },
         errors: (_errors) => {
             r_errors.current = _errors;
@@ -119,6 +135,22 @@ function Editor({ socket, user_id }) {
         connecting: (bool) => setConnecting(bool),
         overlay: (bool) => setOverlay(bool)
     }
+
+    // useBeforeunload((event) => 'ok?');
+
+
+    useEffect(() => {
+        if (!videoUploader) return
+        console.log("VIDEO UPLOADER JEEEE!!!");
+        console.log(videoUploader, videoUploader.isUploading());
+
+        window.addEventListener('beforeunload', (e) => {
+            if (!videoUploader.isUploading() && !hasChanges.current) return
+            e.preventDefault();
+            // if (!videoUploader.isUploading()) return
+            alert('please wait until all videos are uploaded');
+        })
+    }, [videoUploader])
 
     const init = () => {
 
@@ -129,6 +161,10 @@ function Editor({ socket, user_id }) {
         setVideoUploader(new VideoUploader({ script_id }));
         // updateBlocks([...blocks]);
 
+
+        document.body.addEventListener('mousemove', (e) => { r_cursor.current = { x: e.clientX, y: e.clientY } });
+
+
         getData(`${window._url.fetch}/api/get/${script_id}/temp`)
             .then(res => res.json())
             .then(res => {
@@ -137,6 +173,7 @@ function Editor({ socket, user_id }) {
                 _set.instructions(res.instructions);
                 _set.blocks(res.blocks);
                 _set.roles([{ role_id: 'a' }, { role_id: 'b' }]);
+                hasChanges.current = false;
             })
             .catch(err => {
                 r_instructions.current = {};
@@ -237,6 +274,7 @@ function Editor({ socket, user_id }) {
         let data = await r_dataProcessor.current.process({ safe: false, ..._get.all() });
         if (!data.success) return
         data = await postData(`${window._url.fetch}/api/save/${script_id}/temp`, { ...data });
+        hasChanges.current = false;
     }
 
     const publish = async () => {
@@ -291,6 +329,7 @@ function Editor({ socket, user_id }) {
             <Map
                 instructions={r_instructions.current}
                 blocks={r_blocks.current}
+                // blocks={blocks}
                 roles={r_roles.current}
                 script_id={script_id}
                 connecting={connecting}

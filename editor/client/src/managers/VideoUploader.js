@@ -6,20 +6,24 @@ export default function VideoUploader({ script_id }) {
 
     const dispatch = (type, detail) => this.dispatchEvent(new CustomEvent(type, { detail: detail }));
 
-    let uploaders = {};
+    let uploaders = [];
+    let queue = [];
 
-    const addUploader = (instruction_id, uploader) =>
-        uploaders[instruction_id] = uploader;
-    const deleteUploader = (instruction_id) =>
-        delete uploaders[instruction_id];
+    const addUploader = (instruction_id, uploader, resolve) => {
+        uploaders.push({ instruction_id, uploader, resolve });
+    }
+
+    const deleteUploader = (instruction_id) => {
+        uploaders = uploaders.filter(v => v.instruction_id != instruction_id);
+    }
 
     const update = ({ instruction_id, type }) => {
         if (type === 'complete') {
             dispatch('update', uploaders)
+            deleteUploader(instruction_id);
             setTimeout(() => {
-                deleteUploader(instruction_id);
                 dispatch('update', uploaders)
-            }, 2000)
+            }, 1000)
         }
         if (type === 'progress') {
             setTimeout(() => {
@@ -28,10 +32,12 @@ export default function VideoUploader({ script_id }) {
         }
     }
 
+    this.isUploading = () => uploaders.length !== 0
+
     this.process = async (file, instruction_id) => {
         return new Promise((resolve) => {
             const uploader = new Uploader();
-            addUploader(instruction_id, uploader);
+            addUploader(instruction_id, uploader, resolve);
             uploader.process(`${window._url.fetch}/api/uploadVideo/${script_id}/mp4`,
                 { file, instruction_id });
             uploader.addEventListener('progress', (e) => {
@@ -41,6 +47,7 @@ export default function VideoUploader({ script_id }) {
             uploader.addEventListener('complete', () => {
                 update({ instruction_id, type: 'complete' });
                 resolve({ success: true, url: uploader.response });
+                // if (uploaders.length != 0) processQueue();
             });
         })
     }
