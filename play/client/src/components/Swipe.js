@@ -1,9 +1,9 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import Tweener from "../helpers/tweener.js";
 
 const cTweener = React.createContext(new Tweener());
 
-const Swipe = (props) => {
+const Swipe = forwardRef((props, ref) => {
     // const tweener = useContext(cTweener);
     // const tweener = new Tweener();
     const tweener = useRef(new Tweener());
@@ -11,6 +11,7 @@ const Swipe = (props) => {
     let delta = useRef({ x: 0, y: 0 });
     let posStart = useRef({ x: 0, y: 0 });
     let transform = useRef({ x: 0, y: 0 });
+    let r_screen = useRef({ x: window.innerWidth, y: window.innerHeight })
 
     let current = {
         delta: { x: 0, y: 0 },
@@ -23,7 +24,6 @@ const Swipe = (props) => {
     useEffect(() => {
         if (!card.current || !props.flip) return;
         card.current.classList.remove("flip");
-
     });
 
     const getCoords = (e) => {
@@ -52,9 +52,15 @@ const Swipe = (props) => {
 
         window.addEventListener('mousemove', onSwipeMove);
         window.addEventListener('mouseup', onSwipeEnd);
+
+        window.addEventListener('touchmove', onSwipeMove);
+        window.addEventListener('touchend', onSwipeEnd);
+
     }
 
     const move = (e) => {
+        // e.preventDefault();
+        // e.stopPropagation();
         if (!current.swiping) {
             return;
         }
@@ -68,9 +74,36 @@ const Swipe = (props) => {
     }
 
     const getTransform = (delta, offset) => {
-        let position = { x: delta.x + offset.x, y: delta.y + offset.y };
-        return `translateX(${position.x}px) translateY(${position.y}px) rotateZ(${2 * (position.x) / window.innerWidth * 30}deg) /* rotateX(${2 * (position.y) / window.innerHeight * 30}deg)*/`;
+        const position = { x: delta.x + offset.x, y: delta.y + offset.y };
+        return `translateX(${position.x}px) translateY(${position.y}px) rotateZ(${2 * (position.x) / r_screen.current.x * 30}deg) /* rotateX(${2 * (position.y) / r_screen.current.y * 30}deg)*/`;
     }
+
+
+    useImperativeHandle(ref, () => ({
+        videoDone() {
+            delta.current = { x: Math.random() - 0.5, y: Math.random() - 0.5 };
+            let deltaSnap = { x: parseFloat(delta.current.x), y: parseFloat(delta.current.y) };
+            let angle = Math.atan2(delta.current.y, delta.current.x);
+            var newDist = { x: (window.innerWidth * 1.75 * Math.cos(angle)), y: (window.innerHeight * 1.25 * Math.sin(angle)) };
+
+            tweener.current.tweenTo(0, 1, 1000,
+                (alpha) => {
+                    delta.current = {
+                        x: deltaSnap.x + (newDist.x - deltaSnap.x) * alpha,
+                        y: deltaSnap.y + (newDist.y - deltaSnap.y) * alpha
+                    };
+                    if (!card.current) return;
+                    transform.current = delta.current;
+                    card.current.style.transform = `translateX(${transform.current.x}px) translateY(${transform.current.y}px) rotateZ(${2 * (transform.current.x) / r_screen.current.x * 30}deg)`;
+                },
+                () => {
+
+                }
+            );
+        }
+
+    }))
+
 
     const swipeAway = () => {
         let deltaSnap = { x: parseFloat(delta.current.x), y: parseFloat(delta.current.y) };
@@ -84,7 +117,7 @@ const Swipe = (props) => {
                 };
                 if (!card.current) return;
                 transform.current = delta.current;
-                card.current.style.transform = getTransform(delta.current, { x: 0, y: 0 });
+                card.current.style.transform = `translateX(${transform.current.x}px) translateY(${transform.current.y}px) rotateZ(${2 * (transform.current.x) / r_screen.current.x * 30}deg)`;
             },
             () => {
 
@@ -92,7 +125,9 @@ const Swipe = (props) => {
         );
     }
 
-    const snapBack = () => {
+
+
+    const snapBack = useCallback(() => {
         let deltaSnap = { x: parseFloat(delta.current.x), y: parseFloat(delta.current.y) };
         if (Math.abs(deltaSnap.x) === 0 && Math.abs(deltaSnap.y) === 0) return;
         tweener.current.tweenTo(1, 0, 250,
@@ -102,13 +137,14 @@ const Swipe = (props) => {
                     y: deltaSnap.y * alpha
                 };
                 transform.current = delta.current;
-                card.current.style.transform = getTransform(delta.current, { x: 0, y: 0 });
+                card.current.style.transform = `translateX(${delta.current.x}px) translateY(${delta.current.y}px) rotateZ(${2 * (delta.current.x) / r_screen.current.x * 30}deg) /* rotateX(${2 * (delta.current.y) / r_screen.current.y * 30}deg)*/`;
+                // card.current.style.transform = getTransform(delta.current, { x: 0, y: 0 });
             },
             () => {
 
             }
         );
-    }
+    }, [])
 
     const onSwipeEnd = (e) => {
         current.swiping = false;
@@ -116,8 +152,10 @@ const Swipe = (props) => {
         props.waitYourTurn(false);
         let dragThreshold = ((Math.abs(delta.current.x) > window.innerWidth / 5 || Math.abs(delta.current.y) > window.innerHeight / 5)) ? true : false;
         if (dragThreshold && props.canSwipe) {
-            props.swipeAction(props.zIndex)
             swipeAway();
+            setTimeout(() => {
+                props.swipeAction(props.zIndex)
+            }, 125)
 
         } else {
             snapBack();
@@ -126,22 +164,24 @@ const Swipe = (props) => {
         current.lastSwipe = false;
         window.removeEventListener('mousemove', onSwipeMove);
         window.removeEventListener('mouseup', onSwipeEnd);
+        window.removeEventListener('touchmove', onSwipeMove);
+        window.removeEventListener('touchend', onSwipeEnd);
     }
 
 
     return (
         <div
             ref={card}
-            style={{ zIndex: props.zIndex }}
+            style={{
+                zIndex: props.zIndex
+            }}
 
             className="swipe flip"
             onTouchStart={onSwipeStart}
-            onTouchMove={onSwipeMove}
-            onTouchEnd={onSwipeEnd}
             onMouseDown={onSwipeStart}
-        >{props.children}</div>
+        > { props.children}</div >
     )
-}
+})
 
 
 export default Swipe;

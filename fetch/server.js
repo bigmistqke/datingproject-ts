@@ -2,23 +2,21 @@
 const flat = require('flat');
 var unflatten = require('flat').unflatten;
 const promisify = require('util').promisify;
-const multer = require('multer');
-/* 
-const upload = multer(); */
 const fs = require('fs');
 const path = require('path');
-const resolve = path.resolve;
-const fetch = require('node-fetch');
 
 const express = require('express');
 const fileUpload = require('express-fileupload');
 var cors = require('cors')
 var bodyParser = require('body-parser')
-var uniqid = require('uniqid');
 var crypto = require('crypto');
-const { performance } = require('perf_hooks');
+
 var app = express();
 app.use(cors())
+app.listen(8080);
+app.use('/api/uploads', express.static('uploads'))
+app.use('/api/system', express.static('system'))
+
 
 
 const redis = require("redis");
@@ -41,8 +39,6 @@ const _hdel = promisify(_redis.hdel).bind(_redis);
 const _del = promisify(_redis.del).bind(_redis);
 
 
-app.listen(8080);
-app.use('/api/uploads', express.static('uploads'))
 
 app.use(bodyParser.json())
 
@@ -157,6 +153,20 @@ app.get('/api/deleteRoom/:room_id', async function (req, res, next) {
 
 })
 
+app.get('/api/getRolesRoom/:room_id', async function (req, res, next) {
+  const room_id = req.params.room_id;
+  console.log('getRolesRoom', room_id);
+  try {
+    let room_data = await _hget(`r_${room_id}`, 'role_urls');
+    if (!room_data) res.send(false);
+    console.log('room_data', room_data);
+
+    res.json(room_data);
+  } catch (e) {
+
+  }
+})
+
 // join room + fetch role
 app.get('/api/joinRoom/:role_url', async function (req, res, next) {
   const role_url = req.params.role_url;
@@ -164,7 +174,7 @@ app.get('/api/joinRoom/:role_url', async function (req, res, next) {
   try {
 
     let url_data = await _hget('role_urls', role_url);
-    console.log('testing');
+    console.log('testing', url_data);
     if (!url_data || !('room_id' in url_data)) res.send(false);
 
     let room_id = url_data.room_id;

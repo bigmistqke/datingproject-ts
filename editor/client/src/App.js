@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom';
 import './css/general.css';
 import Editor from './routes/Editor';
 import List from './routes/List';
+import Test from './routes/Test';
+
 import * as serviceWorker from './serviceWorker';
 import {
     BrowserRouter as Router,
@@ -47,6 +49,10 @@ function App() {
         <RecoilRoot>
             <Router>
                 <Switch>
+                    <Route path="/test/:room_id">
+                        <Test />
+                        <div className="background"><div ></div></div>
+                    </Route>
                     <Route path="/:script_id">
                         <Editor socket={socket} user_id={user_id} />
                         <div className="background"><div ></div></div>
@@ -55,6 +61,7 @@ function App() {
                         <List />
                         <div className="background"><div ></div></div>
                     </Route>
+
                 </Switch>
             </Router>
         </RecoilRoot>

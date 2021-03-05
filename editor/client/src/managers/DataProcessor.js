@@ -25,6 +25,13 @@ export default function DataProcessor() {
 
 
     this.process = async ({ roles, blocks, instructions, safe }) => {
+        for (let instruction_id in instructions) {
+            let isClean = blocks.find(block => block.instructions.indexOf(instruction_id) != -1);
+            if (!!!isClean) {
+                console.error('found an unstr')
+                delete instructions[instruction_id];
+            }
+        }
         var { roles, errors } = await processRoles({ roles, blocks, instructions });
         if (Object.values(errors).filter(e => e.length !== 0).length != 0) {
             if (safe) {
@@ -97,21 +104,26 @@ export default function DataProcessor() {
 
             for (let instruction of block.instructions) {
                 let role = instructions[instruction].role_id;
+                // console.log(instructions[instruction]);
+                delete instructions[instruction].prev_instruction_id;
+                delete instructions[instruction].next_instruction_id;
+                // console.log(instructions[instruction]);
+
                 if (count === 0) {
                     processFirstInstruction({ block, role, instruction, count })
                     if (1 !== block.instructions.length) {
-                        getNextInBlock({ block, role, instruction, count });
+                        getNextInBlock({ block, role, instruction, count: 0 });
                     }
                 }
                 if (count === block.instructions.length - 1) {
                     processLastInstruction({ block, role, instruction, count })
                     if (1 !== block.instructions.length) {
-                        getPrevInBlock({ block, role, instruction, count });
+                        getPrevInBlock({ block, role, instruction, count: count });
                     }
                 }
                 if (count !== 0 && count !== block.instructions.length - 1) {
-                    getPrevInBlock({ block, role, instruction, count });
-                    getNextInBlock({ block, role, instruction, count });
+                    getPrevInBlock({ block, role, instruction, count: count });
+                    getNextInBlock({ block, role, instruction, count: count });
                 }
                 count++
             }

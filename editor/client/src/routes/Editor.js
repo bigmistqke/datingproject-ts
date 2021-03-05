@@ -169,6 +169,21 @@ function Editor({ socket, user_id }) {
             .then(res => res.json())
             .then(res => {
                 if (!res) return Promise.reject('errrr');
+                // clean instructions 
+                // (delete all instructions which are not inside a block)
+                /* console.log('jajajaja');
+                console.log('before clean', Object.keys(res.instructions).length);
+                for (let instruction_id in res.instructions) {
+                    // console.log(instruction_id, res.instructions[instruction_id].text);
+                    let isClean = res.blocks.find(block => block.instructions.indexOf(instruction_id) != -1);
+                    // console.log(instruction_id, isClean);
+                    if (!!!isClean) {
+                        delete res.instructions[instruction_id];
+                    }
+                }
+                console.log('after clean', Object.keys(res.instructions).length); */
+
+
                 console.log(res);
                 _set.instructions(res.instructions);
                 _set.blocks(res.blocks);
@@ -227,6 +242,7 @@ function Editor({ socket, user_id }) {
                 console.log(role_id, role_data[role_id]);
                 options[role_id] = ['open link', 'share link'];
             }
+            options['combo'] = ['open link']
             console.log('options', options);
             const callback = async (data) => {
                 if (!data) {
@@ -234,22 +250,26 @@ function Editor({ socket, user_id }) {
                     let data = await fetch(`${window._url.fetch}/api/deleteRoom/${room_id}`);
                     setOverlay(false);
                 }
-                const { title: role_id, option } = data;
-                // let role_id = title;
-                console.log(role_id, option);
+                if (data.title === 'combo') {
+                    let url = `${window.location.protocol + '//' + window.location.host}/test/${room_id}`;
+                    window.open(url)
 
-                let url = `${window._url.play}/${role_data[role_id]}`;
-                console.log(option);
-                switch (option) {
-                    case 'open link':
-                        window.open(url)
-                        break;
-                    case 'share link':
-                        copy(url);
-                        console.log('copied to clipboard');
+                } else {
+                    const { title: role_id, option } = data;
+                    let url = `${window._url.play}/${role_data[role_id]}`;
+                    console.log(option);
+                    switch (option) {
+                        case 'open link':
+                            window.open(url)
+                            break;
+                        case 'share link':
+                            copy(url);
+                            console.log('copied to clipboard');
 
 
+                    }
                 }
+
             }
             _set.overlay({
                 type: 'option_groups',

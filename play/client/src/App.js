@@ -51,7 +51,7 @@ function App() {
   return (
     <Router>
       <Switch>
-        <Route path="/:role_url">
+        <Route path="/:role_url/:unsafe?">
           <Script socket={socket} user_id={user_id}>
 
           </Script>
