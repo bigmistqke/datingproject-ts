@@ -1,9 +1,5 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
-import {
-    atom,
-    useRecoilState
-} from 'recoil';
 
 import Iframe from 'react-iframe'
 
@@ -33,7 +29,7 @@ function Test() {
 
     return (<div>
         {Object.entries(roles).map(([key, role_url]) =>
-            <Iframe key={role_url} url={`http://localhost:3001/${role_url}/unsafe`}></Iframe>
+            <Iframe key={role_url} url={`${window._url.play}/${role_url}/unsafe`}></Iframe>
         )}
     </div>)
 }

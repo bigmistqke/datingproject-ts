@@ -14,7 +14,7 @@ export default class Mqtt {
         return new Promise((resolve) => {
             this.client = mqtt.connect(url);
             this.client.on('connect', () => {
-                console.log('ok');
+                console.log('connected');
                 this.client.on('message', this.receive)
                 resolve(this);
             })

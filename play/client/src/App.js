@@ -9,7 +9,7 @@ import {
 import uniqid from 'uniqid';
 
 import Mqtt from "./Mqtt.js"
-import Script from "./components/Script"
+import Game from "./components/Game"
 import Home from "./routes/Home"
 
 
@@ -33,10 +33,7 @@ function App() {
   const [socket, setSocket] = useState();
 
   async function initSocket() {
-    console.log('trying!');
-    console.log(window.location.protocol);
     let _socket = await new Mqtt(window._url.mqtt, true, window.location.protocol.indexOf('https') != -1);
-    console.log(_socket);
     setSocket(_socket);
   }
   let init = () => {
@@ -52,10 +49,9 @@ function App() {
     <Router>
       <Switch>
         <Route path="/:role_url/:unsafe?">
-          <Script socket={socket} user_id={user_id}>
+          <Game socket={socket} user_id={user_id}>
 
-          </Script>
-          <div className="background"><div ></div></div>
+          </Game>
         </Route>
         <Route path="/">
           <Home></Home>

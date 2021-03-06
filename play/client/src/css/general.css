@@ -157,8 +157,8 @@ body {
 
 .instruction {
     position: absolute;
-    width: calc(95vh * 0.5588507940957915);
-    height: 95%;
+    width: calc(90vh * 0.5588507940957915);
+    height: 90vh;
     top: 50%;
     left: 50%;
     transform: rotateY(0deg) translateX(-50%) translateY(-50%);
@@ -263,6 +263,27 @@ svg {
     z-index: 2
 }
 
+.instruction .text span.choice {
+    font-family: serif_italic;
+    margin-bottom: -5px;
+    margin-top: 5px;
+    display: block;
+    /* font-style:italic; */
+}
+
+.instruction .text span.swipe {
+    font-family: serif_italic;
+    font-size: 3vh;
+    line-height: 3vh;
+    margin-top: 3vh;
+    display: block;
+    opacity: 0.7;
+    width: 75%;
+    margin-left: 50%;
+    transform: translateX(-50%);
+    /* font-style:italic; */
+}
+
 .instruction .type {
     font-size: 3.5vh;
     line-height: 4vh;
@@ -301,7 +322,7 @@ svg {
     transform: translate(-50%, -50%);
     left: 50%;
     top: 50%;
-    width: 75%;
+    width: 70%;
     max-height: 75%;
     /* margin-top: 2.25vh; */
     z-index: 3;
@@ -409,6 +430,12 @@ svg {
 .fill {
     width: 100%;
     height: 100%;
+}
+
+.end {
+    font-size: 5vh;
+    font-family: serif_italic;
+    color: #03034e;
 }
 
 /* width = 95vh * 0.5588507940957915 + 5vh */
