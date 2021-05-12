@@ -117,6 +117,7 @@ const Swipe = forwardRef((props, ref) => {
                 };
                 if (!card.current) return;
                 transform.current = delta.current;
+
                 card.current.style.transform = `translateX(${transform.current.x}px) translateY(${transform.current.y}px) rotateZ(${2 * (transform.current.x) / r_screen.current.x * 30}deg)`;
             },
             () => {
@@ -136,6 +137,7 @@ const Swipe = forwardRef((props, ref) => {
                     x: deltaSnap.x * alpha,
                     y: deltaSnap.y * alpha
                 };
+                if (!card.current) return;
                 transform.current = delta.current;
                 card.current.style.transform = `translateX(${delta.current.x}px) translateY(${delta.current.y}px) rotateZ(${2 * (delta.current.x) / r_screen.current.x * 30}deg) /* rotateX(${2 * (delta.current.y) / r_screen.current.y * 30}deg)*/`;
                 // card.current.style.transform = getTransform(delta.current, { x: 0, y: 0 });
@@ -155,7 +157,7 @@ const Swipe = forwardRef((props, ref) => {
             swipeAway();
             setTimeout(() => {
                 props.swipeAction(props.zIndex)
-            }, 125)
+            }, 0)
 
         } else {
             snapBack();

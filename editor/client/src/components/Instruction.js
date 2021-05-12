@@ -9,7 +9,6 @@ import {
 
 const _instructionManager = atom({ key: 'instructionManager', default: '' });
 const _videoUploader = atom({ key: 'videoUploader', default: '' });
-const _setRender = atom({ key: 'setRender', default: performance.now() });
 
 
 const Instruction = (props) => {
@@ -22,7 +21,7 @@ const Instruction = (props) => {
   const [instructionManager] = useRecoilState(_instructionManager);
   const [videoUploader] = useRecoilState(_videoUploader);
 
-  let [render, setRender] = useRecoilState(_setRender);
+  let [render, setRender] = useState();
 
   const removeRow = () => {
     instructionManager.remove(props.block_id, props.id);
@@ -104,7 +103,6 @@ const Instruction = (props) => {
         <option value="do">action</option>
         <option value="idle">idle</option>
         <option value="video">video</option>
-
       </select>
       <div className="timer-container">
         <NumericInput
@@ -112,7 +110,7 @@ const Instruction = (props) => {
           type='number'
           onChange={changeTimespan}
           min={0}
-          step={15}
+          step={5}
           precision={0}
           value={props.timespan ? props.timespan : 0}
           format={myFormat}

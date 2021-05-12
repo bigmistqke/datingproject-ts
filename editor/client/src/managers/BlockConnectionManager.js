@@ -8,17 +8,6 @@ export default function ConnectionManager(blockManager) {
         direction: ''
     }
 
-    this.start = (block, role_id, direction) => {
-        _updating = {
-            block: block,
-            role_id: role_id,
-            direction: direction === 'in' ? 'prev' : 'next'
-        }
-        dispatch('start');
-        document.body.addEventListener("pointermove", move);
-        document.body.addEventListener("pointerup", end);
-    }
-
     const dispatch = (type, data = null) => {
         let event = new CustomEvent(type, { detail: data });
         this.dispatchEvent(event);
@@ -37,6 +26,7 @@ export default function ConnectionManager(blockManager) {
     }
 
     const dispatchAdd = (block_id, direction, data) => {
+        console.log(data);
         dispatch(
             'add',
             {
@@ -61,6 +51,16 @@ export default function ConnectionManager(blockManager) {
         );
     }
 
+    this.start = (block, role_id, direction) => {
+        _updating = {
+            block: block,
+            role_id: role_id,
+            direction: direction === 'in' ? 'prev' : 'next'
+        }
+        dispatch('start');
+        document.body.addEventListener("pointermove", move);
+        document.body.addEventListener("pointerup", end);
+    }
 
     const move = (e) => {
         dispatchUpdate(_updating.block, _updating.direction, { x: e.clientX, y: e.clientY });

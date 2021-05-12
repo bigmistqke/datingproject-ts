@@ -7,10 +7,15 @@ export default function BlockPositionManager() {
     let block = '';
     let position = {};
     let lastTick = performance.now();
+    let invertedZoom = 1;
 
-    this.start = (e, _block) => {
+    this.start = (e, _block, _zoom) => {
         if (!e.target.classList.contains("block")) return;
         block = _block;
+
+        console.log(_zoom);
+        invertedZoom = 1 / _zoom;
+
         coords = { x: e.clientX, y: e.clientY };
         position = block.position;
         //console.log('move start');
@@ -31,8 +36,8 @@ export default function BlockPositionManager() {
         if (performance.now() - lastTick < 1000 / 60) return;
         lastTick = performance.now();
         const coords_delta = {
-            x: (coords.x - e.clientX) * -1,
-            y: (coords.y - e.clientY) * -1
+            x: (coords.x - e.clientX) * -1 * invertedZoom,
+            y: (coords.y - e.clientY) * -1 * invertedZoom
         };
 
         position = {

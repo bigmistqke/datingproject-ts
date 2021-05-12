@@ -1,47 +1,138 @@
 import uniqid from 'uniqid';
-import BlockPositionManager from "./BlockPositionManager"
-import BlockConnectionManager from "./BlockConnectionManager"
+import Emitter from "../helpers/Emitter.js"
+// import BlockPositionManager from "./BlockPositionManager"
+// import BlockConnectionManager from "./BlockConnectionManager"
+
 
 function BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }) {
+    // SETUP CONNECTION MANAGER
+    const ConnectionManager = function () {
+        let _updating = {
+            block: '',
+            role_id: '',
+            direction: ''
+        }
 
-    const _connection = new BlockConnectionManager(this);
-    _connection.addEventListener('update', (e) => {
-        updateConnection(e.detail.block, e.detail.role_id, e.detail.direction, e.detail.data)
-    })
-    _connection.addEventListener('start', (e) => {
-        _set.connecting(true)
-    })
-    _connection.addEventListener('end', (e) => {
-        _set.connecting(false);
-        setTimeout(() => {
-            visualizeErrors();
-        }, 125)
-    })
-    _connection.addEventListener('add', (e) => {
-        updateConnectionById(e.detail.block_id, e.detail.role_id, e.detail.direction, e.detail.data);
-        setTimeout(() => {
-            visualizeErrors();
-        }, 250)
-        setTimeout(() => {
-            visualizeErrors();
-        }, 500)
-    })
+        this.start = (block, role_id, direction) => {
+            _updating = {
+                block: block,
+                role_id: role_id,
+                direction: direction === 'in' ? 'prev' : 'next'
+            }
+            // dispatch('start');
+            _set.connecting(true)
 
-    _connection.addEventListener('block', ({ detail }) => {
-        console.log(detail);
-        this.add(detail.position);
-    })
+            document.body.addEventListener("pointermove", move);
+            document.body.addEventListener("pointerup", end);
+        }
 
-    const _position = new BlockPositionManager();
-    _position.addEventListener('update', (e) => {
-        updateBlock(e.detail.block_id, { position: e.detail.position })
-    })
-    _position.addEventListener('add', (e) => {
-        updateBlock(e.detail.block_id, { position: e.detail.position })
-    })
+        const move = (e) => {
+            updateConnection(_updating.block, _updating.role_id, _updating.direction, { x: e.clientX, y: e.clientY })
+        }
 
-    this.startPosition = (e, block) => {
-        _position.start(e, block);
+        const end = async (e) => {
+            let this_id = _updating.block.block_id;
+
+            document.body.removeEventListener("pointermove", move);
+            document.body.removeEventListener("pointerup", end);
+
+            // dispatch('end');
+            console.log(e.target);
+
+            _set.connecting(false);
+            setTimeout(() => {
+                visualizeErrors();
+            }, 125)
+
+            if (e.target.classList.contains("block")) {
+                let connecting_id = e.target.id.replace('block_', '');
+
+                if (this_id !== connecting_id) {
+                    updateConnection(_updating.block, _updating.role_id, _updating.direction, connecting_id);
+                    let block = _get.blocks().find(v => v.block_id === connecting_id);
+                    updateConnection(block, _updating.role_id, (_updating.direction === 'next' ? 'prev' : 'next'), _updating.block.block_id);
+
+
+                    console.log('this should happen!!!!');
+                    setTimeout(visualizeErrors, 250)
+                    setTimeout(visualizeErrors, 500)
+                } else {
+                    updateConnection(_updating.block, _updating.role_id, _updating.direction, null)
+                }
+            } else {
+                updateConnection(_updating.block, _updating.role_id, _updating.direction, null)
+
+            }
+        }
+
+    }
+
+    // SET UP POSITIONMANAGER
+
+    function PositionManager() {
+        let coords = {};
+        let block = '';
+        let position = {};
+        let lastTick = performance.now();
+        let invertedZoom = 1;
+
+        this.start = (e, _block, _zoom) => {
+            if (!e.target.classList.contains("block")) return;
+            block = _block;
+
+            console.log(_zoom);
+            invertedZoom = 1 / _zoom;
+
+            coords = { x: e.clientX, y: e.clientY };
+            position = block.position;
+            //console.log('move start');
+
+            document.body.addEventListener("pointermove", move);
+            document.body.addEventListener("pointerup", end);
+            try {
+                document.body.setPointerCapture(e.pointerId);
+            } catch (e) {
+                console.error('no setPointerCapture');
+            }
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        const move = (e) => {
+            //console.log('move');
+            if (performance.now() - lastTick < 1000 / 60) return;
+            lastTick = performance.now();
+            const coords_delta = {
+                x: (coords.x - e.clientX) * -1 * invertedZoom,
+                y: (coords.y - e.clientY) * -1 * invertedZoom
+            };
+
+            position = {
+                x: position.x + coords_delta.x,
+                y: position.y + coords_delta.y
+            };
+            // const event = new CustomEvent('update', { detail: { block_id: block.block_id, position: position } });
+
+            // this.dispatchEvent(event);
+            updateBlock(block.block_id, { position: position })
+            coords = { x: e.clientX, y: e.clientY };
+        }
+        const end = (e) => {
+            document.body.removeEventListener("pointermove", move);
+            document.body.removeEventListener("pointerup", end);
+            try {
+                document.body.releasePointerCapture(e.pointerId);
+            } catch (e) {
+                console.error('no releasePointerCapture');
+            }
+        }
+    }
+
+    const _position = new PositionManager();
+    const _connection = new ConnectionManager();
+
+    this.startPosition = (e, block, zoom) => {
+        _position.start(e, block, zoom);
     }
 
     this.startConnection = (block, role_id, direction) => {
@@ -75,10 +166,21 @@ function BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }) {
     this.openRoleOverlay = async (e, block) => {
         e.preventDefault();
         e.stopPropagation();
+        console.log('eeeeeeeeeeeeeee', _get.roles());
 
-        let roles = _get.roles().filter(r_role => !block.connections.find(connection => connection.role_id === r_role.role_id));
+        let roles = _get.roles().filter(r_role => {
+            let foundRole = block.connections.find(connection => {
+                console.log(connection.role_id, r_role, connection.role_id === r_role);
+                return connection.role_id === r_role
+            })
+            console.log('did i find the role? ', foundRole);
+            return !foundRole;
+        });
+        if (roles.length === 0) return;
+        console.log('openROleOverlay ', roles);
         let result = await openOverlay({ type: 'role', data: { block: block, roles: roles } });
         //_set.overlay(false);
+
         if (!result) return;
         addRoleToConnections({ block: block, role_id: result });
         setTimeout(() => {
@@ -166,17 +268,21 @@ function BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }) {
     }
 
     const remove = (block) => {
+        // remove all instructions that are a part of block
+        let t_instructions = _get.instructions();
+        block.instructions.forEach(instruction => {
+            delete t_instructions[instruction];
+        })
+        _set.instructions(t_instructions);
+
+        // remove block
         let t_blocks = _get.blocks();
+
         block.connections.forEach(c => removeConnections(c))
         t_blocks = t_blocks.filter(v => v.block_id !== block.block_id);
         _set.blocks(t_blocks);
-    }
 
-    /*     const openOverlay = async ({ type, data }) => {
-            return new Promise((resolve) => {
-                //_set.overlay({ type, data, resolve });
-            })
-        } */
+    }
 
     const addDefaultInstruction = (block_id, role_id) => {
         let new_instr = getDefaultInstruction(block_id, role_id);
@@ -196,21 +302,16 @@ function BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }) {
         if (block.connections.length === 0) {
             addDefaultInstruction(block.block_id, role_id)
         }
-        block.connections.push(
-            {
-                role_id: role_id,
-                block_id: block.block_id,
-                script_id: script_id,
-                prev_block_id: null,
-                next_block_id: null
-            }
-        );
+        block.connections = [...block.connections, {
+            role_id: role_id,
+            block_id: block.block_id,
+            script_id: script_id,
+            prev_block_id: null,
+            next_block_id: null
+        }]
         block.connections.sort((a, b) => a.role_id > b.role_id);
         _set.blocks(t_blocks);
-        //_set.overlay(false);
     }
-
-
 
     const removeConnection = (connecting_id, role_id, direction) => {
         let t_blocks = _get.blocks();
@@ -220,10 +321,6 @@ function BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }) {
         connection[`${direction}_block_id`] = null;
     }
 
-    const updateConnectionById = (block_id, role_id, direction, data) => {
-        let block = _get.blocks().find(v => v.block_id === block_id);
-        updateConnection(block, role_id, direction, data);
-    }
 
     const updateConnection = async (block, role_id, direction, data) => {
         let t_blocks = _get.blocks();
@@ -246,14 +343,22 @@ function BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }) {
         _set.blocks(t_blocks);
     }
 
+
     const updateBlock = (block_id, data) => {
+        // let now = performance.now();
+
         let t_blocks = _get.blocks();
+        // console.log(t_blocks);
+
         let t_block = t_blocks.find(v => v.block_id === block_id);
+
         if (!t_block) return;
         Object.keys(data).forEach((key) => {
             t_block[key] = data[key];
         })
         _set.blocks(t_blocks);
+        // console.log('delta', performance.now() - now);
+
     }
     const getDefaultBlock = () => {
         let block_id = uniqid();

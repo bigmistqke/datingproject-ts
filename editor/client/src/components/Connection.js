@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 
 let _p = 10;
 
-const Connector = (props) => {
+const Connection = (props) => {
     const [boundaries, setBoundaries] = useState();
     const [SVG, setSVG] = useState();
 
     const [origin, setOrigin] = useState();
 
     let r_boundaries = useRef();
+
 
     const getBoundsFromPoses = (start_pos, end_pos) => {
         let t_bounds = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
@@ -30,7 +31,6 @@ const Connector = (props) => {
     }
 
     useEffect(() => {
-        // connectorMove(props.pos);
         let poses = props.pos;
         if (!poses[0] || !poses[1]) { console.error('errorrrr'); return; }
         let t_bounds = getBoundsFromPoses(poses[0], poses[1]);
@@ -42,12 +42,13 @@ const Connector = (props) => {
     }, [props.pos[0], props.pos[1]]);
 
 
+
     return boundaries ? <svg className="connectionLine"
         width={Math.abs(boundaries[1].x - boundaries[0].x)}
         height={Math.abs(boundaries[1].y - boundaries[0].y)}
         style={{
-            left: boundaries[0].x - origin.x - _p,
-            top: boundaries[0].y - origin.y - _p,
+            left: (boundaries[0].x - origin.x - _p),
+            top: (boundaries[0].y - origin.y - _p),
             height: Math.abs(boundaries[1].y - boundaries[0].y) + _p * 2,
             width: Math.abs(boundaries[1].x - boundaries[0].x) + _p * 2
         }}>
@@ -55,4 +56,4 @@ const Connector = (props) => {
     </svg> : null;
 }
 
-export default memo(Connector)
+export default memo(Connection)

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Swipe from "./Swipe";
+import memoize from "fast-memoize";
+
 
 import { ReactComponent as Do } from '../svg/do.svg';
 import { ReactComponent as Say } from '../svg/say.svg';
@@ -69,16 +71,19 @@ const AnimatedCardType = ({ type, animate, timespan }) => {
 }
 
 
-const VideoSide = ({ text, flip, swipeAction, dataurl, stop }) => {
+const VideoSide = ({ text, flip, swipeAction, dataurl, stop, instruction_id }) => {
     const r_video = useRef(false);
     const [url, setUrl] = useState();
 
 
     const play = useCallback((e) => {
+        console.log('this happens');
         let video = r_video.current;
         if (!(video.currentTime > 0 && !video.paused && !video.ended && video.readyState > 2))
             video.play();
-        video.muted = false;
+        setTimeout(() => {
+            video.removeAttribute('muted');
+        }, 0)
     }, [])
 
     useEffect(() => {
@@ -95,19 +100,27 @@ const VideoSide = ({ text, flip, swipeAction, dataurl, stop }) => {
         })
 
         r_video.current.classList.remove('hidden');
-        r_video.current.play();
+        setTimeout(() => {
+            r_video.current.play();
+        }, 0)
+        /*         setTimeout(() => {
+                    r_video.current.removeAttribute('muted');
+                    r_video.current.volume = 1;
+                }, 50) */
+
 
         setUrl(dataurl)
     }, [flip])
     return (
         <div className="front"
             onClick={play}
-            onTouchStart={play}
         >
             {text != '' ?
                 <video
-                    className='video hidden'
+                    className="video hidden"
+                    id={`${instruction_id}_video`}
                     ref={r_video}
+                    // muted
                     playsInline
                     src={dataurl.src}
                 >
@@ -134,7 +147,11 @@ function FrontSide({ text, type, flip, timespan, stopTimespan }) {
 
     useEffect(() => {
         if (!flip || !timespan) return;
-        window.navigator.vibrate(200);
+        try {
+            window.navigator.vibrate(200);
+        } catch (e) {
+            console.error(e);
+        }
 
         let count = 0;
         stopwatch.current = setInterval(() => {
@@ -160,45 +177,45 @@ function FrontSide({ text, type, flip, timespan, stopTimespan }) {
     }, [flip])
 
     useEffect(() => {
-        setFormattedText(formatText(text));
+        let _formattedText = formatText(text);
+        console.log(_formattedText);
+        setFormattedText(_formattedText);
+
     }, [text])
 
 
-    const formatText = (text) => {
-        let formattedText = [{ type: 'normal', text }];
-        let split = formattedText[0].text.split(`Swipe`);
+    const formatText = (_text) => {
+        let _formattedText = [{ type: 'normal', text: _text }];
+        let split = _formattedText[0].text.split(`Swipe`);
 
         // find Swipe-recommendations
 
         if (split.length > 1 && split[0] != '') {
 
-            formattedText = [
+            _formattedText = [
                 { type: 'normal', text: split[0] },
                 { type: 'swipe', text: `Swipe${split[1]}` }
             ];
         }
 
+        const regex = /[\["](.*?)[\]"][.!?\\-]?/g
 
-        // match []
-        // const regex = /\[(?<=\[)(.*?)(?=\])\][.!?\\-]?/g
-        const regex = /[\["](?<=[\["])(.*?)(?=[\]"])[\]"][.!?\\-]?/g
-
-        let matches = text.match(regex);
+        let matches = _text.match(regex);
 
         if (matches) {
             for (let i = matches.length - 1; i >= 0; i--) {
-                let split = formattedText.shift().text.split(`${matches[i]}`);
+                let split = _formattedText.shift().text.split(`${matches[i]}`);
 
-                formattedText = [
+                _formattedText = [
                     { type: 'normal', text: split[0] },
                     { type: 'choice', text: `${matches[i]}` },
                     { type: 'normal', text: split[1] },
-                    ...formattedText
+                    ..._formattedText
                 ];
             }
         }
 
-        return formattedText;
+        return _formattedText;
     }
 
     return (
@@ -211,8 +228,13 @@ function FrontSide({ text, type, flip, timespan, stopTimespan }) {
                     </div> : null
                 }
                 <div>{formattedText ? formattedText.map(
-                    ({ type, text }) =>
-                        type === 'normal' ? text : <span className={type} key={text}>{text}</span>
+                    ({ type, text }) => {
+                        console.log(type, text);
+                        return type === 'normal' ?
+                            text :
+                            <span className={type} key={text}>{text}</span>
+
+                    }
                 ) : null}</div>
             </div>
             {
@@ -242,24 +264,34 @@ const BackSide = () => {
 
 
 
-const Card = ({ type, waitYourTurn, text, timespan, flip, canPlay, swipeAction, zIndex, dataurl }) => {
+const Card = ({ instruction_id, type, waitYourTurn, text, timespan, flip, canPlay, swipeAction, zIndex, dataurl, video }) => {
     const [spanCompleted, setSpanCompleted] = useState(false);
     let r_swipe = useRef();
     let r_stopVideo = useRef(false);
     let r_stopTimespan = useRef(false);
 
     useEffect(() => {
-        if (flip) window.navigator.vibrate(100);
+        if (flip) {
+            try {
+                window.navigator.vibrate(100)
+            } catch (e) {
+                console.error(e);
+            }
+        };
 
         if (!flip || !timespan) return;
         let timer = setTimeout(() => {
             setSpanCompleted(true);
-            window.navigator.vibrate(200);
+            try {
+                window.navigator.vibrate(200)
+            } catch (e) {
+                console.error(e);
+            }
             swipeAction();
         }, timespan * 1000);
 
         return function cleanup() {
-            clearInterval(timer);
+            clearTimeout(timer);
         }
     }, [flip])
 
@@ -285,6 +317,7 @@ const Card = ({ type, waitYourTurn, text, timespan, flip, canPlay, swipeAction, 
                     <VideoSide
                         text={text}
                         flip={flip}
+                        instruction_id={instruction_id}
                         swipeAction={() => {
                             if (type === 'video') { r_swipe.current.videoDone() };
                             swipeAction()

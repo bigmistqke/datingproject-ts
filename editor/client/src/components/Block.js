@@ -1,5 +1,5 @@
 import React, { useCallback, memo } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Instruction from "./Instruction"
 import BlockRoles from "./BlockRoles"
 import {
@@ -9,28 +9,40 @@ import {
 
 const _blockManager = atom({ key: 'blockManager', default: '' });
 
-let Block = (props) => {
+function Block(props) {
     const [blockManager] = useRecoilState(_blockManager);
+    const r_container = useRef();
+    const [errors, setErrors] = useState();
+    // const r_
 
-    useEffect(() => {
-    }, [props.connecting])
+    /*     useEffect(() => {
+            setErrors(performance.now());
+        }, [props.errors]) */
 
 
 
-    const getConnectionError = (direction) => {
-        return props.errors && direction in props.errors ?
-            props.errors[direction] : false
-    }
+    const getConnectionError = useCallback((direction, errors) => {
+        return errors && direction in errors ?
+            errors[direction] : false
+    }, [])
 
     const startPosition = useCallback((e) => {
-        blockManager.startPosition(e, props.block);
+        blockManager.startPosition(e, props.block, props.zoom);
     }, []);
 
     const confirmDelete = useCallback((e) => {
         blockManager.confirmDelete(e, props.block);
     }, [])
 
-    // const _block = useMeme(()=>())
+    useEffect(() => {
+        // console.log(props.position);
+        if (!r_container) return;
+        r_container.current.style.transform = `translateX(${props.position.x}px) translateY(${props.position.y}px)`
+    }, [props.position])
+
+    useEffect(() => {
+        console.log('block update: ', props.roles);
+    }, [props.roles])
 
     return (
         <div
@@ -38,16 +50,16 @@ let Block = (props) => {
             className={`block ${props.connecting ? 'connecting' : ''}`}
             onPointerDown={startPosition}
             onContextMenu={confirmDelete}
+            ref={r_container}
         >
             <div className="">
                 <BlockRoles
                     block_id={props.id}
-                    errors={getConnectionError('start')}
-
+                    errors={getConnectionError('start', props.errors)}
                     block={props.block}
                     connections={props.block.connections}
                     direction="in"
-                    allRoles={props.roles}
+                    roles={props.roles}
                 ></BlockRoles>
                 <div className="instructions">
                     {
@@ -72,15 +84,26 @@ let Block = (props) => {
                 </div>
                 <BlockRoles
                     block_id={props.id}
-                    errors={getConnectionError('end')}
+                    errors={getConnectionError('end', props.errors)}
                     block={props.block}
                     connections={props.block.connections}
                     direction="out"
-                    allRoles={props.roles}
+                    roles={props.roles}
                 ></BlockRoles>
             </div>
         </div>
     )
 }
-export default memo(Block);
+
+
+function blockPropsAreEqual(prev, next) {
+    return prev.position === next.position &&
+        prev.connections === next.connections &&
+        prev.instructions === next.instructions &&
+        prev.errors === next.errors &&
+        prev.roles === next.roles;
+}
+
+
+export default memo(Block, blockPropsAreEqual);
 

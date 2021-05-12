@@ -1,5 +1,5 @@
 
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 
 import {
     atom,
@@ -15,7 +15,7 @@ const BlockRoles = (props) => {
     let [blockManager] = useRecoilState(_blockManager);
 
     const openRoleOverlay = (e) => {
-        blockManager.openRoleOverlay(e, props.block);
+        let remainingRoles = blockManager.openRoleOverlay(e, props.block);
     }
 
     const startConnection = (e, role_id) => {
@@ -32,15 +32,15 @@ const BlockRoles = (props) => {
     }
 
     const checkErrors = (role_id) => {
-        if (!!props.errors) {
-            if (props.errors.filter(e => e === role_id).length != 0) {
-                // console.log('this happens!!!', role_id, props.direction, props.block_id);
-                return 'error'
-
-            }
+        if (!!props.errors && props.errors.filter(e => e === role_id).length != 0) {
+            return 'error'
         }
         return ''
     }
+
+    useEffect(() => {
+        console.log(props.roles);
+    }, [props.roles])
 
     return <div className="connections">
         <div className="row flex Instruction-container"><div className="flex flexing">
@@ -61,7 +61,7 @@ const BlockRoles = (props) => {
             }
         </div>
             {
-                (!props.allRoles || props.block.connections.length != props.allRoles.length) ?
+                (!props.roles || props.block.connections.length != props.roles.length) ?
                     <button onClick={openRoleOverlay}>add role</button> :
                     <span></span>
             }
@@ -69,4 +69,10 @@ const BlockRoles = (props) => {
     </div>
 }
 
-export default memo(BlockRoles)
+function rolePropsAreEqual(prev, next) {
+    return prev.connections === next.connections &&
+        prev.errors === next.errors &&
+        prev.roles === next.roles;
+}
+
+export default memo(BlockRoles, rolePropsAreEqual)

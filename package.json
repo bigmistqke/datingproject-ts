@@ -25,7 +25,9 @@
     "url": "https://github.com/vincentvandijck/datingproject/issues"
   },
   "homepage": "https://github.com/vincentvandijck/datingproject#readme",
-  "dependencies": {},
+  "dependencies": {
+    "fast-memoize": "^2.5.2"
+  },
   "devDependencies": {
     "concurrently": "^5.3.0"
   }

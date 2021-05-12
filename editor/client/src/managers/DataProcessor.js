@@ -18,7 +18,6 @@ export default function DataProcessor() {
                 }
             }
         }
-        console.log(_errors);
 
         return { success: Object.values(_errors).length === 0, errors: _errors }
     }
@@ -28,11 +27,13 @@ export default function DataProcessor() {
         for (let instruction_id in instructions) {
             let isClean = blocks.find(block => block.instructions.indexOf(instruction_id) != -1);
             if (!!!isClean) {
-                console.error('found an unstr')
+                console.error('found an instruction that is not a part of a block:', instruction_id, blocks);
                 delete instructions[instruction_id];
             }
         }
+        console.log('pre-processed roles: ', roles);
         var { roles, errors } = await processRoles({ roles, blocks, instructions });
+        console.log('processed roles: ', roles);
         if (Object.values(errors).filter(e => e.length !== 0).length != 0) {
             if (safe) {
                 let _confirm = window.alert('there are multiple entry/exit points. this script will not be playable.');
@@ -51,26 +52,36 @@ export default function DataProcessor() {
     const processRoles = async ({ roles, blocks, instructions }) => {
         let _roles = {};
         let _errors = {};
-        for (let role of roles) {
-            let r_blocks = await getOrderedBlocksRole({ blocks: blocks, role_id: role.role_id });
+        for (let role_id of roles) {
+            let r_blocks = await getOrderedBlocksRole({ blocks: blocks, role_id: role_id });
+            console.log('process roles ', r_blocks)
             if (!r_blocks.success) {
-                _errors[role.role_id] = r_blocks.errors
+                _errors[role_id] = r_blocks.errors
             } else {
-                let _instructions = getAllInstructionsRole({ blocks: r_blocks.blocks, instructions: instructions, role_id: role.role_id });
-                _roles[role.role_id] = _instructions;
+                let _instructions = getAllInstructionsRole({ blocks: r_blocks.blocks, instructions: instructions, role_id: role_id });
+                _roles[`${role_id}`] = _instructions;
             }
         }
+        console.log(`roles:`, _roles);
         return { roles: _roles, errors: _errors }
     }
 
     const processInstructions = ({ blocks, instructions }) => {
         const processLastInstruction = ({ block, role, instruction, count }) => {
-            let connection = block.connections.find(v => v.role_id === role);
+            console.log(block, role);
+            let connection = block.connections.find(v => {
+                return v.role_id === role
+            });
+
+            if (!connection) console.error('no connections!');
+
             let next_block_id = connection.next_block_id;
+
 
             instructions[instruction].next_role_ids = [];
 
             block.connections.forEach((connection) => {
+                console.log(connection);
                 let next_block_id = connection.next_block_id;
                 if (!!next_block_id) {
                     let connected_block = blocks.find(v => v.block_id === next_block_id);
@@ -87,7 +98,10 @@ export default function DataProcessor() {
                 if (!!prev_block_id) {
                     let connected_block = blocks.find(v => v.block_id === prev_block_id);
                     let prev_instruction_id = connected_block.instructions[connected_block.instructions.length - 1];
-                    instructions[instruction].prev_instruction_ids.push(prev_instruction_id);
+                    console.log(instructions[instruction].prev_instruction_ids, prev_instruction_id);
+                    if (instructions[instruction].prev_instruction_ids.indexOf(prev_instruction_id) == -1) {
+                        instructions[instruction].prev_instruction_ids.push(prev_instruction_id);
+                    };
                 }
             })
         }
@@ -193,7 +207,7 @@ export default function DataProcessor() {
     }
 
     const getAllInstructionsRole = ({ blocks, instructions, role_id }) => {
-        //console.log(blocks, instructions, role_id);
+        console.log('getAllInstructionsRole', blocks, instructions, role_id);
         return blocks.map(block =>
             block.instructions.filter(instruction_id =>
                 instructions[instruction_id].role_id === role_id)

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { useHistory, useParams } from 'react-router-dom';
 import {
     atom,
     useRecoilState
 } from 'recoil';
+import NumericInput from 'react-numeric-input';
 // import { useBeforeunload } from 'react-beforeunload';
 
 
@@ -25,7 +26,7 @@ import Overlays from "../components/Overlays"
 const _instructionManager = atom({ key: 'instructionManager', default: '' });
 const _blockManager = atom({ key: 'blockManager', default: '' });
 const _videoUploader = atom({ key: 'videoUploader', default: false });
-const _setRender = atom({ key: 'setRender', default: performance.now() });
+// const _setRender = atom({ key: 'setRender', default: performance.now() });
 
 
 // const _overlayManager = atom({ key: 'overlayManager', default: '' });
@@ -46,6 +47,8 @@ function Editor({ socket, user_id }) {
 
     const { script_id } = useParams();
 
+    const r_saveButton = useRef();
+
 
 
     const [ctrl, setCtrl] = useState(false);
@@ -54,7 +57,7 @@ function Editor({ socket, user_id }) {
     const [connecting, setConnecting] = useState(false);
     const [overlay, setOverlay] = useState(false);
 
-    const [render, setRender] = useRecoilState(_setRender);
+    const [render, setRender] = useState(0);
     const [instructionManager, setInstructionManager] = useRecoilState(_instructionManager);
     const [blockManager, setBlockManager] = useRecoilState(_blockManager);
     const [videoUploader, setVideoUploader] = useRecoilState(_videoUploader);
@@ -69,6 +72,7 @@ function Editor({ socket, user_id }) {
     const r_blockManager = useRef();
     const r_cursor = useRef();
     const hasChanges = useRef(false);
+    const r_please = useRef();
 
 
     const openOverlay = async function ({ type, data }) {
@@ -77,7 +81,11 @@ function Editor({ socket, user_id }) {
                 _set.overlay(false);
                 _resolve(data);
             }
-            _set.overlay({ type, data, resolve })
+            const position = {
+                x: window.cursorPosition.x,
+                y: window.cursorPosition.y
+            }
+            _set.overlay({ type, data, position, resolve })
         })
     }
 
@@ -114,9 +122,12 @@ function Editor({ socket, user_id }) {
     const _set = {
         blocks: (_blocks) => {
             r_blocks.current = _blocks;
+            hasChanges.current = true;
             // setBlocks(_blocks);
             throttle(setRender(performance.now()), 10);
-            hasChanges.current = true;
+
+            // setRender(performance.now())
+
         },
         instructions: (_instructions) => {
             r_instructions.current = _instructions;
@@ -141,8 +152,6 @@ function Editor({ socket, user_id }) {
 
     useEffect(() => {
         if (!videoUploader) return
-        console.log("VIDEO UPLOADER JEEEE!!!");
-        console.log(videoUploader, videoUploader.isUploading());
 
         window.addEventListener('beforeunload', (e) => {
             if (!videoUploader.isUploading() && !hasChanges.current) return
@@ -169,31 +178,25 @@ function Editor({ socket, user_id }) {
             .then(res => res.json())
             .then(res => {
                 if (!res) return Promise.reject('errrr');
-                // clean instructions 
-                // (delete all instructions which are not inside a block)
-                /* console.log('jajajaja');
-                console.log('before clean', Object.keys(res.instructions).length);
-                for (let instruction_id in res.instructions) {
-                    // console.log(instruction_id, res.instructions[instruction_id].text);
-                    let isClean = res.blocks.find(block => block.instructions.indexOf(instruction_id) != -1);
-                    // console.log(instruction_id, isClean);
-                    if (!!!isClean) {
-                        delete res.instructions[instruction_id];
-                    }
-                }
-                console.log('after clean', Object.keys(res.instructions).length); */
-
-
-                console.log(res);
                 _set.instructions(res.instructions);
+
+                /* let blocks = {};
+                res.blocks.forEach((block) => {
+                    blocks[block.block_id] = block;
+                }) */
+
                 _set.blocks(res.blocks);
-                _set.roles([{ role_id: 'a' }, { role_id: 'b' }]);
+                //console.log('fetched roles: ', res.roles);
+
+                console.log(Object.keys(res.roles));
+
+                _set.roles(Object.keys(res.roles));
                 hasChanges.current = false;
             })
             .catch(err => {
                 r_instructions.current = {};
                 r_blocks.current = [];
-                r_roles.current = [{ role_id: 'a' }, { role_id: 'b' }];
+                r_roles.current = ["1", "2"];
             });
     }
 
@@ -212,7 +215,7 @@ function Editor({ socket, user_id }) {
     const updateData = (data) => {
         try {
             let data = JSON.parse(data);
-            console.log(data);
+            //console.log(data);
         } catch (e) {
             console.error(e);
         }
@@ -220,6 +223,7 @@ function Editor({ socket, user_id }) {
 
     const visualizeErrors = async () => {
         let check = await r_dataProcessor.current.checkConnections({ ..._get.all() });
+        //console.log(check);
         let _errors = {};
         if (!check.success) {
             _errors = check.errors;
@@ -227,26 +231,28 @@ function Editor({ socket, user_id }) {
         _set.errors(_errors);
     }
 
-    const test = async () => {
+    const test = useCallback(async () => {
         try {
+            //console.log('_get.all: ', _get.all());
             const processed_data = await r_dataProcessor.current.process({ safe: true, ..._get.all() });
             if (!processed_data.success) return
             const response = await postData(`${window._url.fetch}/api/save/${script_id}/test`, processed_data);
 
             let room = await postData(`${window._url.fetch}/api/createRoom/${script_id}/test`);
             room = await room.json();
-            console.log(room);
+            //console.log(room);
             const { role_data, room_id } = room;
             let options = {};
+            //console.log(role_data);
             for (let role_id in role_data) {
-                console.log(role_id, role_data[role_id]);
+                //console.log(role_id, role_data[role_id]);
                 options[role_id] = ['open link', 'share link'];
             }
             options['combo'] = ['open link']
-            console.log('options', options);
+            //console.log('options', options);
             const callback = async (data) => {
                 if (!data) {
-                    console.log('delete room!');
+                    //console.log('delete room!');
                     let data = await fetch(`${window._url.fetch}/api/deleteRoom/${room_id}`);
                     setOverlay(false);
                 }
@@ -257,14 +263,14 @@ function Editor({ socket, user_id }) {
                 } else {
                     const { title: role_id, option } = data;
                     let url = `${window._url.play}/${role_data[role_id]}`;
-                    console.log(option);
+                    //console.log(option);
                     switch (option) {
                         case 'open link':
                             window.open(url)
                             break;
                         case 'share link':
                             copy(url);
-                            console.log('copied to clipboard');
+                        //console.log('copied to clipboard');
 
 
                     }
@@ -280,29 +286,36 @@ function Editor({ socket, user_id }) {
 
 
 
-            // console.log(result);
+            // //console.log(result);
 
 
-            console.log(room);
+            //console.log(room);
         } catch (e) {
             console.error(e);
         }
 
-    }
+    }, [])
 
-    const save = async () => {
+    const save = useCallback(async () => {
         let data = await r_dataProcessor.current.process({ safe: false, ..._get.all() });
         if (!data.success) return
+        r_saveButton.current.innerHTML = 'saving...';
         data = await postData(`${window._url.fetch}/api/save/${script_id}/temp`, { ...data });
+        setTimeout(() => {
+            r_saveButton.current.innerHTML = 'saved!';
+            setTimeout(() => {
+                r_saveButton.current.innerHTML = 'save';
+            }, 2000);
+        }, 1000)
         hasChanges.current = false;
-    }
+    }, [])
 
-    const publish = async () => {
-        console.log(_get.all());
+    const publish = useCallback(async () => {
+        //console.log(_get.all());
         let data = await r_dataProcessor.current.process({ safe: true, ..._get.all() });
-        console.log(data);
+        //console.log(data);
         if (!data.success) return
-    }
+    }, [])
 
 
     const keyUp = (e) => {
@@ -327,14 +340,42 @@ function Editor({ socket, user_id }) {
 
     useEffect(initMqtt, [socket])
 
+    const changeRoles = useCallback(value => {
+        let roles = [];
+        for (let i = 0; i < value; i++) {
+            roles.push(String(i + 1));
+        }
+        _set.roles(roles)
+    }, [])
+
+    const myFormat = useCallback((num) => num + ' roles', []);
+
+    useEffect(() => {
+        if (!r_roles.current) return;
+
+        //console.log(r_roles.current);
+    })
+
     return (
         <div className="App" >
             <header className="row fixed flex">
                 <div className="flexing">editor for script {script_id}</div>
                 {/* <button onClick={() => visualizeErrors()} className="Instruction-button">debug</button> */}
-                <button onClick={() => test()} className="Instruction-button">test</button>
-                <button onClick={() => save()} className="Instruction-button">save</button>
-                <button onClick={() => publish()} className="Instruction-button">publish</button>
+                <NumericInput
+                    // ref={r_timespan}
+                    type='number'
+                    onChange={changeRoles}
+                    min={2}
+                    step={1}
+                    precision={0}
+                    strict={true}
+                    value={r_roles.current ? r_roles.current.length : 2}
+                    format={myFormat}
+                />
+
+                <button onClick={test} className="Instruction-button">test</button>
+                <button onClick={save} ref={r_saveButton} className="Instruction-button">save</button>
+                <button onClick={publish} className="Instruction-button">publish</button>
             </header>
             {
                 overlay ?
@@ -348,8 +389,8 @@ function Editor({ socket, user_id }) {
 
             <Map
                 instructions={r_instructions.current}
+                // blocks={r_blocks.current}
                 blocks={r_blocks.current}
-                // blocks={blocks}
                 roles={r_roles.current}
                 script_id={script_id}
                 connecting={connecting}

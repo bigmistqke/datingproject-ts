@@ -44,7 +44,11 @@ body {
     line-height: 100px;
     padding-left: 25px;
     padding-right: 25px;
-    font-size: 16pt;
+    font-size: 12pt;
+}
+
+.overlay>span {
+    margin: 5px;
 }
 
 .cards {
@@ -149,6 +153,8 @@ header {
 
 .block_container {
     margin-left: -400px;
+    width: 0px;
+    height: 0px;
 }
 
 .block {
@@ -169,8 +175,7 @@ video {
 
 .row {
     flex-direction: row;
-    font-size: 18pt;
-    font-size: 18pt;
+    font-size: 10pt;
     line-height: var(--r-height);
     min-height: var(--r-height);
     margin: auto;
@@ -180,7 +185,7 @@ video {
     cursor: default;
 }
 
-.row>div, .row>input, .row>select {
+.row>div, .row>input, .row>select, .row>span {
     font-size: 10pt;
     line-height: var(--r-height);
     /* padding-left: 10px; */
@@ -234,7 +239,7 @@ button {
     color: inherit;
 }
 
-button:hover {
+button:hover, button.focus {
     background: black !important;
     color: white !important;
 }
@@ -246,6 +251,7 @@ button:hover {
 
 .flex>*:not(.flexing) {
     flex: 0 0 80px;
+    width: 80px;
 }
 
 .flex>.flexing {
@@ -259,6 +265,7 @@ button:hover {
 
 .flex:not(header)>.tiny {
     font-size: 8pt;
+    color: #e0e0e0;
 }
 
 .flex>.tiny {
@@ -418,6 +425,11 @@ line, path {
     z-index: 10;
 }
 
+.map-container {
+    height: 100vh;
+    width: 100vw;
+}
+
 .map {
     position: absolute;
     height: 100vh;
@@ -472,3 +484,15 @@ line, path {
     padding-left: 15px;
     padding-right: 15px;
 }
+
+.react-numeric-input>input {
+    line-height: inherit !important;
+    width: inherit;
+    user-select: none;
+}
+
+/* 
+.zoom {
+    height: 100vh;
+    width: 100vw;
+} */

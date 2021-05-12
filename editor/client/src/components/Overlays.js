@@ -5,15 +5,15 @@ import React, { useState, useEffect } from 'react';
 const Overlays = {
     role: (props) => {
         return (
-            <div style={{ left: `${parseInt(window.cursorPosition.x)}px`, top: `${parseInt(window.cursorPosition.y)}px` }}
+            <div style={{ left: `${parseInt(props.position.x)}px`, top: `${parseInt(props.position.y)}px` }}
                 className="overlay flex">
                 {
-                    props.data.roles.sort((a, b) => a.role_id > b.role_id)
+                    props.data.roles.sort((a, b) => a > b)
                         .map((v, i) =>
                             <span className={"flexing connection-container "}
                                 key={i}>
-                                <span onMouseDown={() => { props.resolve(v.role_id) }}
-                                    className="connection">{v.role_id}</span>
+                                <span onMouseDown={() => { props.resolve(v) }}
+                                    className="connection">{v}</span>
                             </span>
                         )
                 }
@@ -22,7 +22,7 @@ const Overlays = {
     },
     confirm: (props) => {
         return (
-            <div style={{ left: `${parseInt(window.cursorPosition.x)}px`, top: `${parseInt(window.cursorPosition.y)}px` }}
+            <div style={{ left: `${parseInt(props.position.x)}px`, top: `${parseInt(props.position.y)}px` }}
                 className="overlay text_center">
                 <header>{props.data.text}</header>
                 <button onMouseDown={() => { props.resolve(true) }}>confirm</button>

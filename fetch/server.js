@@ -116,8 +116,11 @@ app.post('/api/createRoom/:script_id/:type', async function (req, res, next) {
   // keeping track of where in the game the actor is
   const role_status = {};
 
+  console.log(roles);
+
   Object.keys(roles)
     .forEach(role_id => {
+      console.log('make role url for ', role_id);
       const url = crypto.randomBytes(4).toString('hex');
       role_urls[url] = { room_id, role_id, script_id };
       role_data[role_id] = url;

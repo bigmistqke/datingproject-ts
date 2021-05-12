@@ -21,17 +21,19 @@ const OverlayManager = function (setOverlay) {
     }
     this.get = (type, props) => overlays(type, props);
     const overlays = {
+
         role: (props) => {
+            console.log('overlay roles:', props.data);
             return (
                 <div style={{ left: `${position.x}px`, top: `${position.y}px` }}
                     className="overlay flex">
                     {
-                        props.data.roles.sort((a, b) => a.role_id > b.role_id)
+                        props.data.roles.sort((a, b) => a > b)
                             .map((v, i) =>
                                 <span className={"flexing connection-container "}
                                     key={i}>
-                                    <span onMouseDown={() => { props.resolve(v.role_id) }}
-                                        className="connection">{v.role_id}</span>
+                                    <span onMouseDown={() => { props.resolve(v) }}
+                                        className="connection">{v}</span>
                                 </span>
                             )
                     }
