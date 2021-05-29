@@ -4,19 +4,18 @@ import Card from "./Card";
 import getData from '../helpers/getData';
 import memoize from "fast-memoize";
 
-
 import isMobile from "is-mobile";
 
 var uniqid = require('uniqid');
 let not_subscribed = true;
 
-
 function Game({ socket, user_id }) {
     const history = useHistory();
-    let { role_url, unsafe } = useParams();
+    let { game_url, unsafe } = useParams();
 
     let r_instructions = useRef();
-    let r_room_id = useRef('');
+    let r_room_url = useRef('');
+    let r_role_url = useRef('');
     let r_role_id = useRef('');
 
     let r_overlay = useRef();
@@ -108,13 +107,15 @@ function Game({ socket, user_id }) {
 
 
 
-    const fetchData = async () => {
-        const result = await fetch(`${window._url.fetch}/api/joinRoom/${role_url}`);
+    const joinRoom = async () => {
+        let result = await fetch(`${window._url.fetch}/api/joinRoom/${game_url}`);
         if (!result) {
             console.error('could not fetch instructions: double check the url');
             return false;
         }
-        return result.json();
+        result = await result.json();
+        console.log(result);
+        return result;
     }
 
     const initCookie = () => {
@@ -137,7 +138,7 @@ function Game({ socket, user_id }) {
         var d = new Date();
         d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
         var expires = "expires=" + d.toUTCString();
-        document.cookie = `${cname}=${cvalue};${expires};path=/${role_url}`;
+        document.cookie = `${cname}=${cvalue};${expires};path=/${game_url}`;
     }
 
     const getCookie = (cname) => {
@@ -159,13 +160,22 @@ function Game({ socket, user_id }) {
     const init = async () => {
         // initAlarm();
 
+
         window.isUnsafe = unsafe ? true : false;
         r_isMobile.current = isMobile();
         if (r_isMobile.current) document.getElementsByTagName('html')[0].classList.add('isMobile');
         if (!socket) return
 
         // get data via express
-        const { instructions, room_id, role_id } = await fetchData();
+        const { instructions, role_id, room_url, role_url } = await joinRoom();
+
+        console.log(room_url, role_url);
+
+        r_room_url.current = room_url;
+        r_role_url.current = role_url;
+        r_role_id.current = role_id;
+
+        console.log('joinRoom', { instructions, role_id });
 
         await preloadVideos(instructions);
 
@@ -196,15 +206,15 @@ function Game({ socket, user_id }) {
             console.log(document.cookie);
         }
 
-        r_room_id.current = room_id;
-        r_role_id.current = role_id;
 
+        console.log(`/${room_url}/${role_id}/swipe`);
+        console.log(`/${room_url}/${role_id}/confirmation`);
 
-        socket.subscribe(`/${room_id}/${role_id}/swipe`, receiveSwipedCard);
-        socket.subscribe(`/${room_id}/${role_id}/confirmation`, receiveConfirmation);
+        socket.subscribe(`/${room_url}/${role_id}/swipe`, receiveSwipedCard);
+        socket.subscribe(`/${room_url}/${role_id}/confirmation`, receiveConfirmation);
         socket.send('/connect', role_id);
         window.addEventListener('beforeunload', () => {
-            socket.send('/disconnect', JSON.stringify({ user_id, room_id }));
+            socket.send('/disconnect', JSON.stringify({ user_id, room_url }));
         })
 
         setRender(performance.now());
@@ -228,19 +238,20 @@ function Game({ socket, user_id }) {
 
     const sendSwipedCardToNextRoleIds = (instruction_id, next_role_ids) => {
         next_role_ids.forEach(next_role_id => {
-            if (next_role_id === r_role_id.current) {
+            if (next_role_id === r_role_url.current) {
                 receiveSwipedCard(JSON.stringify({ role_id: r_role_id.current, instruction_id }));
             } else {
                 console.log(socket);
                 console.log(socket.client.connected);
 
-                socket.send(`/${r_room_id.current}/${next_role_id}/swipe`, JSON.stringify({ role_id: r_role_id.current, instruction_id }));
+                socket.send(`/${r_room_url.current}/${next_role_id}/swipe`, JSON.stringify({ role_id: r_role_url.current, instruction_id }));
                 r_unconfirmedUpdates.current[`${next_role_id}_${instruction_id}`] = setInterval(() => {
                     if (!socket.client.connected) {
                         console.error(`client is not connected while trying to send an extra update`);
                     }
-                    console.error(`extra update sent to ${next_role_id} for instruction ${instruction_id} from ${r_role_id.current}`);
-                    socket.send(`/${r_room_id.current}/${next_role_id}/swipe`, JSON.stringify({ role_id: r_role_id.current, instruction_id }));
+
+                    console.error(`extra update sent to ${next_role_id} for instruction ${instruction_id} from ${r_role_url.current}`);
+                    socket.send(`/${r_room_url.current}/${next_role_id}/swipe`, JSON.stringify({ role_id: r_role_id.current, instruction_id }));
 
                 }, 500);
             }
@@ -251,6 +262,7 @@ function Game({ socket, user_id }) {
     const receiveConfirmation = (json) => {
         try {
             let { instruction_id, role_id } = JSON.parse(json);
+            console.log('receiveConfirmation', instruction_id, role_id);
             clearInterval(r_unconfirmedUpdates.current[`${role_id}_${instruction_id}`]);
             delete r_unconfirmedUpdates.current[`${role_id}_${instruction_id}`];
         } catch (e) {
@@ -287,7 +299,8 @@ function Game({ socket, user_id }) {
     const receiveSwipedCard = (json) => {
         try {
             let { instruction_id, role_id } = JSON.parse(json);
-            socket.send(`/${r_room_id.current}/${role_id}/confirmation`, JSON.stringify({ instruction_id, role_id: r_role_id.current }));
+            console.log('sent confirmation to ', instruction_id, role_id);
+            socket.send(`/${r_room_url.current}/${role_id}/confirmation`, JSON.stringify({ instruction_id, role_id: r_role_id.current }));
 
             if (r_receivedSwipes.current.indexOf(instruction_id) == -1) {
                 r_receivedSwipes.current.push(instruction_id);
@@ -349,7 +362,7 @@ function Game({ socket, user_id }) {
 
 
     const restart = async () => {
-        const { instructions } = await fetchData();
+        const { instructions } = await joinRoom();
         console.log(instructions)
         r_receivedSwipes.current = [];
         r_instructions.current = instructions;

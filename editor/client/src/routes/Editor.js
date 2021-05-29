@@ -64,9 +64,9 @@ function Editor({ socket, user_id }) {
 
     const [blocks, setBlocks] = useState([]);
 
-    const r_blocks = useRef();
-    const r_roles = useRef();
-    const r_instructions = useRef();
+    const r_blocks = useRef([]);
+    const r_roles = useRef([]);
+    const r_instructions = useRef([0, 1]);
     const r_dataProcessor = useRef();
     const r_errors = useRef({});
     const r_blockManager = useRef();
@@ -174,22 +174,13 @@ function Editor({ socket, user_id }) {
         document.body.addEventListener('mousemove', (e) => { r_cursor.current = { x: e.clientX, y: e.clientY } });
 
 
-        getData(`${window._url.fetch}/api/get/${script_id}/temp`)
+        getData(`${window._url.fetch}/api/get/${script_id}`)
             .then(res => res.json())
             .then(res => {
                 if (!res) return Promise.reject('errrr');
                 _set.instructions(res.instructions);
-
-                /* let blocks = {};
-                res.blocks.forEach((block) => {
-                    blocks[block.block_id] = block;
-                }) */
-
                 _set.blocks(res.blocks);
-                //console.log('fetched roles: ', res.roles);
-
                 console.log(Object.keys(res.roles));
-
                 _set.roles(Object.keys(res.roles));
                 hasChanges.current = false;
             })
@@ -236,43 +227,36 @@ function Editor({ socket, user_id }) {
             //console.log('_get.all: ', _get.all());
             const processed_data = await r_dataProcessor.current.process({ safe: true, ..._get.all() });
             if (!processed_data.success) return
-            const response = await postData(`${window._url.fetch}/api/save/${script_id}/test`, processed_data);
+            let result = await postData(`${window._url.fetch}/api/test/${script_id}`, processed_data);
+            const { roles, room_url, error } = await result.json();
+            if (error) console.error(error);
 
-            let room = await postData(`${window._url.fetch}/api/createRoom/${script_id}/test`);
-            room = await room.json();
-            //console.log(room);
-            const { role_data, room_id } = room;
+
             let options = {};
-            //console.log(role_data);
-            for (let role_id in role_data) {
-                //console.log(role_id, role_data[role_id]);
-                options[role_id] = ['open link', 'share link'];
+            for (let role of roles) {
+                options[role.role_id] = ['open link', 'share link'];
             }
+
             options['combo'] = ['open link']
-            //console.log('options', options);
+
             const callback = async (data) => {
                 if (!data) {
-                    //console.log('delete room!');
-                    let data = await fetch(`${window._url.fetch}/api/deleteRoom/${room_id}`);
                     setOverlay(false);
                 }
                 if (data.title === 'combo') {
-                    let url = `${window.location.protocol + '//' + window.location.host}/test/${room_id}`;
+                    let url = `${window.location.protocol + '//' + window.location.host}/test/${room_url}`;
                     window.open(url)
 
                 } else {
                     const { title: role_id, option } = data;
-                    let url = `${window._url.play}/${role_data[role_id]}`;
-                    //console.log(option);
+                    const role_url = roles.find(v => v.role_id === role_id).role_url;
+                    let url = `${window._url.play}/${room_url}${role_url}`;
                     switch (option) {
                         case 'open link':
                             window.open(url)
                             break;
                         case 'share link':
                             copy(url);
-                        //console.log('copied to clipboard');
-
-
                     }
                 }
 
@@ -282,25 +266,16 @@ function Editor({ socket, user_id }) {
                 data: { title: 'open/share the test urls', options }
                 , resolve: callback
             })
-
-
-
-
-            // //console.log(result);
-
-
-            //console.log(room);
         } catch (e) {
             console.error(e);
         }
-
     }, [])
 
     const save = useCallback(async () => {
         let data = await r_dataProcessor.current.process({ safe: false, ..._get.all() });
         if (!data.success) return
         r_saveButton.current.innerHTML = 'saving...';
-        data = await postData(`${window._url.fetch}/api/save/${script_id}/temp`, { ...data });
+        data = await postData(`${window._url.fetch}/api/save/${script_id}`, { ...data });
         setTimeout(() => {
             r_saveButton.current.innerHTML = 'saved!';
             setTimeout(() => {

@@ -1,0 +1,351 @@
+:root {
+  --bg-color: #f8eeda;
+  --txt-color: #0a4297;
+  --b-radius: 5vh;
+  --black: #212124;
+  --ratio: 0.5588507940957915;
+  --rHandlerSize: 6px;
+}
+
+.app {
+  text-align: center;
+  height: 100vh;
+  width: 100vw;
+  position: absolute;
+  overflow: hidden;
+  background: lightgrey
+}
+
+* {
+  user-select: none;
+}
+
+div[contenteditable] {
+  border: 1px solid black;
+}
+
+.card-container {
+  flex: 1;
+  position: relative;
+  /* pointer-events: none; */
+}
+
+/* .card-container>* {
+  pointer-events: all;
+} */
+
+.card {
+  width: calc(90vh * 0.5588507940957915);
+  height: 90vh;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 50%;
+  border-radius: var(--b-radius);
+  background: white;
+  /* overflow: hidden; */
+}
+
+.elements {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: absolute;
+  border-radius: var(--b-radius);
+}
+
+.element {
+  position: absolute;
+  cursor: move;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* border: 1px solid black; */
+}
+
+.element img {
+  height: 100%;
+  width: 100%
+}
+
+.element span {
+  flex: 1;
+  /* font-size: 4vh; */
+}
+
+.element .resize {
+  position: absolute;
+  background: lightgrey;
+}
+
+.blur-border {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  top: 0px;
+  left: 0px;
+}
+
+button.focus {
+  background: lightgrey;
+}
+
+.blur-border>* {
+  position: absolute;
+  background: lightgrey;
+}
+
+.blur-border>.top, .blur-border>.bottom {
+  height: 1px;
+  width: calc(100% - 2px);
+  left: 1px;
+}
+
+.blur-border>.top {
+  top: 0px;
+}
+
+.blur-border>.bottom {
+  bottom: 0px;
+}
+
+.blur-border>.left, .blur-border>.right {
+  height: 100%;
+  width: 1px;
+  top: 0px;
+}
+
+.blur-border>.left {
+  left: 0px;
+}
+
+.blur-border>.right {
+  right: 0px;
+}
+
+.resize.right, .resize.left {
+  height: 100%;
+  top: 0px;
+  width: 3px;
+  cursor: w-resize;
+}
+
+.resize.top, .element .resize.bottom {
+  width: 100%;
+  left: 0px;
+  height: 2px;
+  cursor: n-resize;
+  z-index: 1;
+}
+
+.resize.top_left, .resize.top_right, .resize.bottom_left, .resize.bottom_right {
+  width: 9px;
+  height: 9px;
+  z-index: 2;
+}
+
+.resize.top_right, .resize.bottom_left {
+  cursor: ne-resize;
+}
+
+.resize.top_left, .resize.bottom_right {
+  cursor: nw-resize;
+}
+
+.resize.top_left, .resize.top_right {
+  top: 0px;
+}
+
+.resize.left, .resize.top_left, .resize.bottom_left {
+  left: 0px;
+}
+
+.resize.right, .resize.top_right, .resize.bottom_right {
+  right: 0px;
+}
+
+.resize.top, .resize.top_left, .resize.top_right {
+  top: 0px;
+}
+
+.resize.bottom, .resize.bottom_left, .resize.bottom_right {
+  bottom: 0px;
+}
+
+.ruler {
+  background: white;
+  position: absolute;
+}
+
+.ruler.horizontal {
+  top: 0px;
+  height: 10px;
+  width: 100%;
+}
+
+.ruler.vertical {
+  left: 0px;
+  width: 10px;
+  height: 100%;
+}
+
+.guide {
+  position: absolute;
+  z-index: 5
+}
+
+.guide.horizontal {
+  width: 100vw;
+  height: 5px;
+  /* transform: translateY(-50%); */
+  cursor: n-resize;
+}
+
+.guide.horizontal::after {
+  content: "";
+  background: rgba(158, 158, 255, 1);
+  position: absolute;
+  width: 100vw;
+  transform: translateX(-50%);
+  height: 1px;
+}
+
+.guide.vertical::after {
+  content: "";
+  background: rgba(158, 158, 255, 1);
+  position: absolute;
+  height: 100vh;
+  /* transform: translateY(-50%); */
+  width: 1px;
+}
+
+.guide.vertical {
+  height: 100vh;
+  width: 3px;
+  transform: translateX(-50%);
+  cursor: w-resize;
+}
+
+.bottom-panel {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0px;
+}
+
+.gui {
+  /* position: absolute; */
+  bottom: 0px;
+  right: 0px;
+  background: white;
+  text-align: left;
+  z-index: 5;
+  text-align: left;
+  font-size: 8pt;
+  width: 300px;
+  height: 100vh;
+  flex-direction: column;
+}
+
+.gui * {
+  font-size: 8pt !important;
+}
+
+.gui-row {
+  line-height: 12pt;
+  padding-right: 5px;
+}
+
+.gui-row:not(:last-child) {
+  margin-bottom: 5px;
+}
+
+.gui label {
+  display: inline-block;
+  color: gray;
+  margin-left: 10px;
+  margin-right: 5px;
+}
+
+.gui input, .gui select, .gui option {
+  width: 65px;
+  box-sizing: border-box;
+}
+
+.gui .inline {
+  display: inline-block;
+}
+
+.gui>div:not(:last-child) {
+  padding-bottom: 5px;
+}
+
+.inlineBlock {
+  display: inline-block;
+}
+
+.button-container button {
+  flex: 1
+}
+
+.button-container button:not(:last-child) {
+  margin-right: 5px;
+}
+
+.gui button {
+  text-align: center;
+}
+
+.gui>* {
+  padding: 5px;
+}
+
+h1, h2 {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  margin: 0px;
+}
+
+h1 {
+  margin: 0px;
+  text-align: center;
+  background: gray;
+  color: white;
+}
+
+h2 {
+  margin: 0px;
+  margin-bottom: 5px;
+}
+
+.flex-container {
+  display: flex;
+}
+
+.flex-container .main {
+  flex: 1
+}
+
+.hierarchy-container {
+  flex: 1;
+  padding: 0px !important;
+}
+
+.hierarchy_element {
+  line-height: 12pt;
+  font-size: 16pt;
+  padding: 5px;
+}
+
+.hierarchy_element button {
+  font-size: 8pt;
+  line-height: 12pt;
+  flex: 0;
+}
+
+.hierarchy_element:not(:last-child) {
+  border-bottom: 1px solid gray;
+  /* padding: 5px; */
+}

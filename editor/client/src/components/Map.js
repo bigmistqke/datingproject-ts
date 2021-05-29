@@ -5,6 +5,7 @@ import {
     atom,
     useRecoilState
 } from 'recoil';
+import normalizeWheel from 'normalize-wheel';
 
 const _blockManager = atom({ key: 'blockManager', default: '' });
 
@@ -41,37 +42,37 @@ function Map(props) {
     const createBlock = (e) => {
         e.preventDefault();
         const coords = {
-            x: (e.clientX - r_origin.current.x),
+            x: (e.clientX - r_origin.current.x) / r_zoomValue.current,
             y: (e.clientY - r_origin.current.y) / r_zoomValue.current
         };
+        console.log(coords);
         blockManager.add(coords);
     }
 
     const zoom = (e) => {
-        r_zoomValue.current = Math.max(Math.min(r_zoomValue.current + e.deltaY * 0.01, 1), 0.2);
+        let normalized = normalizeWheel(e);
+        let speed = -0.025;
+        let delta = Math.min(3, Math.max(normalized.pixelY, -3)) * speed;
+        r_zoomValue.current = Math.max(Math.min(r_zoomValue.current + delta, 1), 0.2);
         r_zoomDom.current.style.transform = `scale(${r_zoomValue.current})`;
-        // r_zoomDom.current.style.transformOrigin = `${e.clientX + r_origin.current.x}px ${e.clientY + r_origin.current.x}px`;
-
         setRender(performance.now());
     }
 
     const scroll = (e) => {
-        console.log(e.deltaY);
-        let delta = e.deltaY;
-        if (Math.abs(e.deltaY) === 3) delta = delta * 10
-        let newCoords = { x: r_origin.current.x, y: r_origin.current.y + delta };
+        let normalized = normalizeWheel(e);
+        let speed = -10;
+        let newCoords = { x: r_origin.current.x + normalized.spinX * speed, y: r_origin.current.y + normalized.spinY * speed };
         r_map.current.style.transform = `translateX(${newCoords.x}px) translateY(${newCoords.y}px)`;
-        // setOrigin(newCoords);
-        // setRender(performance.now());
         r_origin.current = newCoords;
     }
 
     const navDown = useCallback((e) => {
-        if (e.buttons === 2 || !e.target.classList.contains("map")) return;
+        console.log('navDown', e.target);
+        if (!e.target.classList.contains('map-container')) return;
+        if (e.buttons === 2) return;
         let newCoords, origin_delta;
         let startCoords = { x: e.clientX, y: e.clientY };
 
-        console.log('navDown');
 
         const navMove = (e) => {
             console.log('navMove');
@@ -128,36 +129,36 @@ function Map(props) {
 
 
     return <div className="map-container" onPointerDown={navDown} onContextMenu={createBlock}>
-        <div className={`map ${connecting ? 'connecting' : ''}`} >
-            <div className="Map" ref={r_map}>
-                <div className="zoom" ref={r_zoomDom}>
+        <div className={`map ${connecting ? 'connecting' : ''}`} ref={r_map}>
+            {/* <div className="Map"> */}
+            <div className="zoom" ref={r_zoomDom}>
 
-                    {
-                        props.blocks ? props.blocks.map((block, i) => {
-                            return [
-                                <div
-                                    className="absolute block_container" key={block.block_id}
+                {
+                    props.blocks ? props.blocks.map((block, i) => {
+                        return [
+                            <div
+                                className="absolute block_container" key={block.block_id}
+                            >
+                                <Block
+                                    id={block.block_id}
+                                    block={block}
+                                    instructions={props.instructions}
+                                    connecting={props.connecting}
+                                    connections={block.connections}
+                                    roles={props.roles}
+                                    errors={props.errors[block.block_id]}
+                                    zoom={r_zoomValue.current}
+                                    position={block.position}
                                 >
-                                    <Block
-                                        id={block.block_id}
-                                        block={block}
-                                        instructions={props.instructions}
-                                        connecting={props.connecting}
-                                        connections={block.connections}
-                                        roles={props.roles}
-                                        errors={props.errors[block.block_id]}
-                                        zoom={r_zoomValue.current}
-                                        position={block.position}
-                                    >
-                                    </Block>
-                                </div>]
-                        }) : null
-                    }
-
-                </div>
-                {props.blocks ? <Connections blocks={props.blocks} origin={r_origin.current} zoom={r_zoomValue.current}></Connections> : null}
+                                </Block>
+                            </div>]
+                    }) : null
+                }
 
             </div>
+            {props.blocks ? <Connections blocks={props.blocks} origin={r_origin.current} zoom={r_zoomValue.current}></Connections> : null}
+
+            {/* </div> */}
         </div>
     </div>
 }

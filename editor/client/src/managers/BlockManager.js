@@ -249,7 +249,6 @@ function BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }) {
 
     const getDefaultInstruction = (block_id, role_id) => {
         return {
-            instruction_id: uniqid(),
             block_id: block_id,
             script_id: parseInt(script_id),
             role_id: role_id,

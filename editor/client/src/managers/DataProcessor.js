@@ -109,7 +109,7 @@ export default function DataProcessor() {
             instructions[instruction].next_role_ids = [instructions[block.instructions[count + 1]].role_id]
         }
         const getPrevInBlock = ({ block, role, instruction, count }) => {
-            instructions[instruction].prev_instruction_ids = [block.instructions[count - 1]]
+            instructions[instruction].prev_instruction_ids = [String(block.instructions[count - 1])]
         }
 
         for (let block of blocks) {
@@ -207,7 +207,6 @@ export default function DataProcessor() {
     }
 
     const getAllInstructionsRole = ({ blocks, instructions, role_id }) => {
-        console.log('getAllInstructionsRole', blocks, instructions, role_id);
         return blocks.map(block =>
             block.instructions.filter(instruction_id =>
                 instructions[instruction_id].role_id === role_id)

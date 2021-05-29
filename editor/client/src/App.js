@@ -49,7 +49,7 @@ function App() {
         <RecoilRoot>
             <Router>
                 <Switch>
-                    <Route path="/test/:room_id">
+                    <Route path="/test/:room_url">
                         <Test />
                         <div className="background"><div ></div></div>
                     </Route>

@@ -19,10 +19,13 @@ const BlockRoles = (props) => {
     }
 
     const startConnection = (e, role_id) => {
-        if (e.buttons != 1) return;
         e.preventDefault();
         e.stopPropagation();
+
+        if (e.buttons != 1) return;
+
         blockManager.startConnection(props.block, role_id, props.direction);
+
     }
 
     const removeRole = (e, role_id) => {
@@ -49,7 +52,12 @@ const BlockRoles = (props) => {
                     return (
                         <span className="flexing connection-container" key={i}>
                             <span
-                                onMouseDown={(e) => { startConnection(e, v.role_id) }}
+                                onPointerDown={(e) => {
+                                    console.log('this happens');
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    startConnection(e, v.role_id);
+                                }}
                                 onContextMenu={(e) => { removeRole(e, v.role_id) }}
                                 className={`connection ${props.direction}_${props.block_id}_${v.role_id} ${checkErrors(v.role_id)}`}
                             >

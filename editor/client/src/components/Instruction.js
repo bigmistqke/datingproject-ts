@@ -31,6 +31,7 @@ const Instruction = (props) => {
   }
 
   const change = (type, value) => {
+    console.log('chaaaaaaaaange', type, value);
     r_data.current[type] = value;
     instructionManager.change(props.id, r_data.current);
   }

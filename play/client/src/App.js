@@ -48,7 +48,7 @@ function App() {
   return (
     <Router>
       <Switch>
-        <Route path="/:role_url/:unsafe?">
+        <Route path="/:game_url/:unsafe?">
           <Game socket={socket} user_id={user_id}>
 
           </Game>
