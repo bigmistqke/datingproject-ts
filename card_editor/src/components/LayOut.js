@@ -3,7 +3,7 @@ import { GUI_Panel, GUI_Category, GUI_Input } from "./GUI_Components.js"
 import uniqid from 'uniqid';
 
 
-const LayOut = ({ guides, card_dim, elements }) => {
+const LayOut = ({ guides, card_dim, viewport }) => {
     const [layout, setLayout] = useState({
         horizontal: {
             amount: 0,
@@ -93,17 +93,17 @@ const LayOut = ({ guides, card_dim, elements }) => {
         <GUI_Panel label='Guide LayOut' data={layout}>
             <div style={{ display: 'flex' }}>
                 {
-                    Object.entries(layout).map(([categoryName, elements]) =>
+                    Object.entries(layout).map(([categoryName, viewport]) =>
                         <GUI_Category key={categoryName} label={categoryName} >
                             {
-                                Object.entries(elements).map(([elementName, element]) =>
+                                Object.entries(viewport).map(([elementName, element]) =>
                                     <GUI_Input
                                         key={elementName}
                                         label={elementName}
                                         value={element}
                                         onChange={
                                             (data) => {
-                                                let _category = { ...elements, [elementName]: data };
+                                                let _category = { ...viewport, [elementName]: data };
                                                 setLayout({ ...layout, [categoryName]: _category });
                                             }}
                                     >
@@ -122,7 +122,7 @@ const LayOut = ({ guides, card_dim, elements }) => {
         </div>
         <div className='flex-container button-container'>
             <button onClick={() => { guides.hidden.update(!guides.hidden.state) }}>{guides.hidden.state ? 'show guides' : 'hide guides'}</button>
-            <button onClick={() => { elements.blurredBorder.update(!elements.blurredBorder.state) }}>{!elements.blurredBorder.state ? 'show borders' : 'hide borders'}</button>
+            <button onClick={() => { viewport.blurredBorder.update(!viewport.blurredBorder.state) }}>{!viewport.blurredBorder.state ? 'show borders' : 'hide borders'}</button>
 
         </div>
     </>)

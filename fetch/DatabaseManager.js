@@ -13,6 +13,11 @@ function DatabaseManager({ mongo_url = 'mongodb://localhost:27017' }) {
     const _mongo = new _Mongo({ url: mongo_url, dbName: 'datingProject' });
     const _redis = new _Redis();
 
+    this.init = async () => {
+        await _redis.init();
+        await _mongo.init();
+    }
+
     this.createRoom = async ({ script_id, script }) => {
         // get from mongodb
         if (!script)
@@ -28,8 +33,10 @@ function DatabaseManager({ mongo_url = 'mongodb://localhost:27017' }) {
         Object.entries(script.roles).forEach(([role_id, instruction_ids]) => {
             let role_url = crypto.randomBytes(1).toString('hex');
             let instructions = instruction_ids.map(instruction_id => {
-                let instruction = Object.filter(script.instructions[instruction_id], key =>
-                    ['text', 'type', 'instruction_id', 'next_role_ids', 'prev_instruction_ids', 'timespan'].indexOf(key) != -1
+                let instruction = Object.filter(
+                    script.instructions[instruction_id], key =>
+                    ['text', 'type', 'instruction_id', 'next_role_ids',
+                        'prev_instruction_ids', 'timespan'].indexOf(key) != -1
                 )
                 return { ...instruction, instruction_id };
             });
@@ -41,10 +48,8 @@ function DatabaseManager({ mongo_url = 'mongodb://localhost:27017' }) {
             }
         })
 
-        console.log('room', room);
-        console.log('flatten room: ', _redis.flatten(room));
-
         _redis.set('r_' + room_url, _redis.flatten(room));
+
         return { room_url, room };
     }
 
@@ -67,8 +72,29 @@ function DatabaseManager({ mongo_url = 'mongodb://localhost:27017' }) {
         let room = await _redis.get(`r_${room_url}`);
         room = _redis.unflatten(room);
         let role_urls = Object.keys(room.roles);
-
         return { role_urls };
+    }
+
+    this.getRooms = async ({ script_id }) => {
+        let keys = await _redis.getAllKeys();
+        let room_urls = keys.filter(key => key.startsWith('r_'))
+        let rooms = {};
+        await (() => {
+            return Promise.all(
+                room_urls.map(
+                    async (room_url) => {
+                        let room = await _redis.get(room_url);
+                        room = _redis.unflatten(room);
+                        if (room.script_id !== script_id) return false;
+                        console.log(room.script_id, script_id);
+                        rooms[room_url.substring(2)] = room;
+                        console.log(rooms);
+                    }
+                )
+            )
+        })();
+        console.log(rooms);
+        return rooms
 
     }
 
@@ -76,16 +102,26 @@ function DatabaseManager({ mongo_url = 'mongodb://localhost:27017' }) {
         await _mongo.getCollection('scripts').
             updateDocument({ script_id }, { script_id, blocks, roles, instructions })
 
-    this.getScript = async (script_id) => _mongo.getCollection('scripts').findDocument({ script_id });
+    this.getScript = async (script_id) => _mongo.getCollection('scripts')
+        .findDocument({ script_id });
+
     this.testScript = async ({ script_id, script }) => {
         let { room_url, room } = await this.createRoom({ script, script_id });
-        let roles = Object.entries(room.roles).map(([role_url, role]) => { return { role_url, role_id: role.role_id } });
+        let roles = Object.entries(room.roles).map(
+            ([role_url, role]) => {
+                return { role_url, role_id: role.role_id }
+            });
         return { roles, room_url }
     }
 
-    this.init = async () => {
-        await _redis.init();
-        await _mongo.init();
+
+
+    this.saveCard = async ({ card, card_id }) =>
+        _mongo.getCollection('cards').updateDocument({ card_id }, { designs: card })
+
+    this.getCard = async ({ card_id }) => {
+        // TODO: check cache
+        return _mongo.getCollection('cards').findDocument({ card_id })
     }
 }
 

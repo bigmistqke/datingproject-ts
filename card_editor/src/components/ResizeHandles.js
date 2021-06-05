@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useCallback, useState, useRef } from 'react';
 
-const ResizeHandles = ({ guides, card_dim, id, el, elements, shiftPressed, altPressed }) => {
+const ResizeHandles = ({ guides, card_dim, id, el, viewport, shiftPressed, altPressed }) => {
     const ResizeHandle = ({ direction }) => {
         const checkGuides = () => {
 
@@ -160,7 +160,7 @@ const ResizeHandles = ({ guides, card_dim, id, el, elements, shiftPressed, altPr
 
                 }
 
-                elements.update(id, el);
+                viewport.update(id, el);
             }
 
             const finish = e => {
@@ -170,7 +170,7 @@ const ResizeHandles = ({ guides, card_dim, id, el, elements, shiftPressed, altPr
 
             window.addEventListener('mousemove', update, true);
             window.addEventListener('mouseup', finish, true);
-        }, [card_dim, guides, elements, el])
+        }, [card_dim, guides, viewport, el])
 
         return <div className={`resize ${direction}`} onMouseDown={resizeStart}></div>
     }

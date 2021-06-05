@@ -1,7 +1,7 @@
 import { GUI_Panel, GUI_Category, GUI_Input, GUI_Select } from "./GUI_Components.js"
 import React, { memo, useEffect, useCallback, useState, useRef } from 'react';
 
-const TextOptions = ({ elements, element }) => {
+const TextOptions = ({ viewport, element }) => {
 
     useEffect(() => {
         console.log(element.options);
@@ -9,17 +9,17 @@ const TextOptions = ({ elements, element }) => {
 
     const handleChange = useCallback((type, value) => {
         console.log(type, value);
-        elements.update(elements.elementInFocus.state,
+        viewport.update(viewport.elementInFocus.state,
             {
                 ...element,
                 options: { ...element.options, [type]: value }
             }
         )
-    }, [element, elements])
+    }, [element, viewport])
     return <>
         <GUI_Panel label='Text Options'>
             <div className='flex-container'>
-                <div class='main'>
+                <div className='main'>
                     <GUI_Category label='Font Options'>
                         <GUI_Select
                             label='Family'
@@ -70,7 +70,7 @@ const TextOptions = ({ elements, element }) => {
                         </GUI_Category>
                     </GUI_Category>
                 </div>
-                <div class='main'>
+                <div className='main'>
 
                     <GUI_Category label='Text Shadow'>
                         <GUI_Input

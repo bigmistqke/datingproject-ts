@@ -1,17 +1,22 @@
 import React, { memo, useEffect, useCallback, useState, useRef } from 'react';
-import ResizeHandles from "./ResizeHandles.js"
-import BlurBorder from "./BlurBorder.js"
+
 
 import uniqid from "uniqid"
 
-const Element = ({ id, element, elements, guides, card_dim, shouldSnap, shiftPressed, altPressed, typeInFocus, loremIpsum }) => {
 
-    let r_elements = useRef();
+
+const CardElement = ({ id, element, viewport, guides, card_dim, shouldSnap, shiftPressed, altPressed, typeInFocus, loremIpsum, children }) => {
+
+    let r_viewport = useRef();
     let r_element = useRef();
 
+    function isDataURL(s) {
+        return !!s.match(/^\s*data:([a-z]+\/[a-z]+(;[a-z\-]+\=[a-z\-]+)?)?(;base64)?,[a-z0-9\!\$\&\'\,\(\)\*\+\,\;\=\-\.\_\~\:\@\/\?\%\s]*\s*$/i);
+    }
+
     useEffect(() => {
-        r_elements.current = elements;
-    }, [elements])
+        r_viewport.current = viewport;
+    }, [viewport])
     useEffect(() => {
         r_element.current = element;
     }, [element])
@@ -21,7 +26,7 @@ const Element = ({ id, element, elements, guides, card_dim, shouldSnap, shiftPre
     const moveStart = useCallback(e => {
         if (element.locked) return;
 
-        elements.focus(id);
+        viewport.focus(id);
         // element.focused = true;
 
         e.preventDefault();
@@ -79,7 +84,7 @@ const Element = ({ id, element, elements, guides, card_dim, shouldSnap, shiftPre
 
             }
 
-            elements.update(id, element);
+            viewport.update(id, element);
         }
 
         const finish = e => {
@@ -93,19 +98,19 @@ const Element = ({ id, element, elements, guides, card_dim, shouldSnap, shiftPre
         }, 50)
 
 
-    }, [element, card_dim, shiftPressed, guides, elements])
+    }, [element, card_dim, shiftPressed, guides, viewport])
 
     const focusElement = useCallback(e => {
         e.preventDefault();
         if (!element.focused) {
-            // elements.focus(id);
+            // viewport.focus(id);
         }
-    }, [element, elements])
+    }, [element, viewport])
 
     const openContext = useCallback(e => {
         e.preventDefault();
 
-    }, [element, elements])
+    }, [element, viewport])
 
     useEffect(() => {
         console.log(element.dim);
@@ -115,7 +120,7 @@ const Element = ({ id, element, elements, guides, card_dim, shouldSnap, shiftPre
     const Type = ({ element }) => {
         switch (element.type) {
             case 'image':
-                return <img src={element.src}></img>;
+                return <img src={isDataURL(element.src) ? element.src : `${window._url.fetch}/api/${element.src}`}></img>;
             case 'text_type':
                 return <span>{typeInFocus}</span>;
             case 'text_instruction':
@@ -129,7 +134,7 @@ const Element = ({ id, element, elements, guides, card_dim, shouldSnap, shiftPre
 
     return (
         <div
-            className={`element ${id === elements.elementInFocus.state ? 'focus' : 'blur'}`}
+            className={`element ${id === viewport.elementInFocus.state ? 'focus' : 'blur'}`}
             id={id}
             onMouseDown={moveStart}
             onClick={focusElement}
@@ -152,24 +157,10 @@ const Element = ({ id, element, elements, guides, card_dim, shouldSnap, shiftPre
             }}
         >
             <Type element={element}></Type>
-            {
-                id === elements.elementInFocus.state ?
-                    <ResizeHandles
-                        id={id}
-                        el={element}
-                        guides={guides}
-                        card_dim={card_dim}
-                        elements={elements}
-                        shiftPressed={shiftPressed}
-                        altPressed={altPressed}
-
-                    ></ResizeHandles> :
-                    !elements.blurredBorder.state ? null :
-                        <BlurBorder></BlurBorder>
-            }
+            {children}
 
         </div>
     )
 }
 
-export default Element;
+export default CardElement;

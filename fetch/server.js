@@ -1,7 +1,4 @@
-/* 
-const flat = require('flat');
-var unflatten = require('flat').unflatten;
-const promisify = require('util').promisify; */
+
 const fs = require('fs');
 const path = require('path');
 
@@ -17,6 +14,9 @@ app.use(cors())
 app.listen(8080);
 app.use('/api/uploads', express.static('uploads'))
 app.use('/api/system', express.static('system'))
+app.use('/api/cards', express.static('cards'))
+
+
 
 
 
@@ -34,8 +34,6 @@ const _db = new DatabaseManager({ mongo_url: 'mongodb://localhost:27017' });
 _db.init().then(() => {
   console.info('connection made with mongodb');
 })
-
-
 
 app.use(bodyParser.json())
 
@@ -59,13 +57,10 @@ app.get('/api/get/:script_id', async function (req, res, next) {
 app.post('/api/test/:script_id', async function (req, res, next) {
   const { script_id } = req.params;
   let script = req.body;
-
   let { roles, room_url, error } = await _db.testScript({ script_id, script });
-
   if (error) res.json({ success: false, error: error });
   res.json({ roles, room_url });
 })
-
 
 app.use(fileUpload());
 
@@ -73,9 +68,7 @@ app.use(fileUpload());
 app.post('/api/uploadVideo/:script_id/:type', async function (req, res) {
   let script_path = `./uploads/${req.params.script_id}`;
   let type = req.params.type;
-
   let { blocks, roles, instructions } = req.body;
-
   if (!fs.existsSync(script_path)) {
     fs.mkdirSync(script_path);
   }
@@ -94,17 +87,18 @@ app.get('/api/downloadVideo/:file_name', async (req, res, next) => {
   res.attachment(`/api/uploads/${file_name}`);
 })
 
+// ROOM
+
 // create room
-app.post('/api/createRoom/:script_id/:type', async function (req, res, next) {
+app.post('/api/room/create/:script_id/:type', async function (req, res, next) {
   const type = req.params.type;
   const script_id = req.params.script_id;
   _redis.createRoom({ script_id });
-
   res.json({ room_id, role_data });
 })
 
 // delete room
-app.get('/api/deleteRoom/:room_id', async function (req, res, next) {
+app.get('/api/room/delete/:room_id', async function (req, res, next) {
   try {
     const room_id = req.params.room_id;
     console.log();
@@ -117,39 +111,78 @@ app.get('/api/deleteRoom/:room_id', async function (req, res, next) {
   } catch (e) {
     console.error(e);
   }
-
 })
-
-app.get('/api/getRoleUrls/:room_url', async function (req, res, next) {
-  const room_url = req.params.room_url;
-  try {
-    let { role_urls } = await _db.getRoleUrls({ room_url });
-    console.log('get room ', role_urls, 'geetetet');
-
-    if (!role_urls) res.send(false);
-
-    res.json({ role_urls, room_url });
-
-  } catch (e) {
-    res.json({ error: e });
-
-  }
-})
-
-
 
 // join room + fetch role
-app.get('/api/joinRoom/:url', async function (req, res, next) {
+app.get('/api/room/join/:url', async function (req, res, next) {
   const { url } = req.params;
   const room_url = url.slice(0, 6);
   const role_url = url.slice(6);
-
   let { role_id, instructions, error } = await _db.joinRoom({ room_url, role_url });
-
   if (error) {
     console.error('errrrrr', error);
     res.json({ success: false, error: error })
   };
   res.json({ role_id, instructions, room_url, role_url });
-  // res.json(JSON.stringify());
+})
+
+// get all the role_urls of a room (for the combo-test)
+app.get('/api/room/getRoleUrls/:room_url', async function (req, res, next) {
+  const room_url = req.params.room_url;
+  try {
+    let { role_urls } = await _db.getRoleUrls({ room_url });
+    console.log('get room ', role_urls, 'geetetet');
+    if (!role_urls) res.send(false);
+    res.json({ role_urls, room_url });
+  } catch (e) {
+    res.json({ error: e });
+  }
+})
+
+// get active rooms with certain script_id (for game-master)
+app.get('/api/room/getRooms/:script_id', async function (req, res, next) {
+  const script_id = req.params.script_id;
+  try {
+    console.log('get those rooms!!');
+    let rooms = await _db.getRooms({ script_id });
+    res.json(rooms);
+  } catch (e) {
+    res.json({ error: e });
+  }
+})
+
+
+
+// CARD
+
+app.post('/api/card/uploadImage/:card_id/:image_id', async function (req, res, next) {
+  let { card_id, image_id } = req.params;
+  let card_path = `./cards/${card_id}`;
+  !fs.existsSync(card_path) ? fs.mkdirSync(card_path) : null;
+  let new_filename = `${image_id}${path.extname(req.files.file.name)}`;
+  let new_path = `${card_path}/${new_filename}`;
+  console.log('upload image!!! ', new_path);
+  fs.writeFile(new_path, req.files.file.data, async (err) => {
+    if (!err) {
+      res.send(new_path);
+    } else {
+      res.status(500).send(err);
+    }
+  })
+})
+
+app.post('/api/card/save/:card_id', async function (req, res, next) {
+  const { card_id } = req.params;
+  // sanitize?
+  let saved = await _db.saveCard({ card_id, card: req.body })
+  console.log(saved);
+  res.send(saved);
+})
+
+app.get('/api/card/get/:card_id', async function (req, res, next) {
+  const { card_id } = req.params;
+  // sanitize?
+  console.log('get card id');
+  let card = await _db.getCard({ card_id })
+  res.json(card);
 })

@@ -9,12 +9,13 @@ import {
 import uniqid from 'uniqid';
 
 import Mqtt from "./Mqtt.js"
-import Game from "./components/Game"
+import Game from "./routes/Game"
 import Home from "./routes/Home"
 
 
 
 import "./css/general.css";
+import "./css/card.css";
 
 const isDev = window.location.href.indexOf('localhost') != -1;
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useHistory } from "react-router-dom";
-import Card from "./Card";
+import Card from "../components/_Card";
 import getData from '../helpers/getData';
 import memoize from "fast-memoize";
 
@@ -12,6 +12,8 @@ let not_subscribed = true;
 function Game({ socket, user_id }) {
     const history = useHistory();
     let { game_url, unsafe } = useParams();
+
+    let [designs, setDesigns] = useState({});
 
     let r_instructions = useRef();
     let r_room_url = useRef('');
@@ -105,10 +107,20 @@ function Game({ socket, user_id }) {
         // alarm.play();
     }
 
+    const getDesigns = async () => {
+        let result = await fetch(`${window._url.fetch}/api/card/get/test`);
+        result = await result.json();
+        setDesigns(result.designs);
+        setRender(performance.now());
+        console.log('getDesigns', result);
+    }
 
+    useEffect(() => {
+        console.log(designs);
+    }, [designs])
 
     const joinRoom = async () => {
-        let result = await fetch(`${window._url.fetch}/api/joinRoom/${game_url}`);
+        let result = await fetch(`${window._url.fetch}/api/room/join/${game_url}`);
         if (!result) {
             console.error('could not fetch instructions: double check the url');
             return false;
@@ -168,6 +180,8 @@ function Game({ socket, user_id }) {
 
         // get data via express
         const { instructions, role_id, room_url, role_url } = await joinRoom();
+
+        const card_designs = await getDesigns();
 
         console.log(room_url, role_url);
 
@@ -438,6 +452,7 @@ function Game({ socket, user_id }) {
                                                         console.log('next is video');
                                                     }}
                                                     video={r_videos.current[instruction.instruction_id]}
+                                                    designs={designs}
                                                 ></Card>
                                             </div>
 

@@ -2,7 +2,7 @@ import React, { memo, useEffect, useCallback, useState, useRef } from 'react';
 import { GUI_Container } from "./GUI_Components.js"
 
 
-const Element = ({ id, element, elements }) => {
+const Element = ({ id, element, viewport }) => {
     const lockElement = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -11,9 +11,9 @@ const Element = ({ id, element, elements }) => {
             element.focused = false;
         } else {
             element.focused = true;
-            elements.focus(id);
+            viewport.focus(id);
         }
-        elements.update(id, { ...element, locked: !element.locked });
+        viewport.update(id, { ...element, locked: !element.locked });
 
     }
     const changeOrder = (e) => {
@@ -23,7 +23,7 @@ const Element = ({ id, element, elements }) => {
         let range = oldZ < newZ ? { min: oldZ, max: newZ } : { min: newZ, max: oldZ };
 
 
-        Object.entries(elements.state).forEach(([id, element]) => {
+        Object.entries(viewport.state).forEach(([id, element]) => {
             if (element.z >= range.min && element.z <= range.max) {
                 if (element.z == newZ) {
                     element.z = oldZ;
@@ -32,7 +32,7 @@ const Element = ({ id, element, elements }) => {
                     element.z = oldZ < newZ ? element.z + 1 : element.z - 1;
                 }
 
-                elements.update(id, element);
+                viewport.update(id, element);
             }
         })
     }
@@ -46,19 +46,19 @@ const Element = ({ id, element, elements }) => {
 
     const focusElement = e => {
         if (!element.locked)
-            elements.focus(id);
+            viewport.focus(id);
     }
 
     const deleteElement = e => {
         e.preventDefault();
         e.stopPropagation();
-        elements.delete(id);
+        viewport.delete(id);
     }
     return (<>
         <div
             onMouseDown={focusElement}
             className='hierarchy_element flex-container'
-            style={{ background: elements.elementInFocus.state === id ? '#e6e3e3' : 'white' }}
+            style={{ background: viewport.elementInFocus.state === id ? '#e6e3e3' : 'white' }}
             draggable="true"
             onDragStart={dragStart}
             onDragOver={allowDrag}
@@ -75,15 +75,15 @@ const Element = ({ id, element, elements }) => {
     </>)
 }
 
-const Hierarchy = ({ elements }) => {
+const Hierarchy = ({ viewport }) => {
     return (
         <GUI_Container label="Hierarchy">
             <div className='hierarchy-container'>
                 {
-                    elements ? Object.entries(elements.state).sort((a, b) => {
+                    viewport ? Object.entries(viewport.state).sort((a, b) => {
                         return b[1].z > a[1].z ? 1 : -1
                     }).map(([key, element]) => {
-                        return <Element key={key} element={element} elements={elements} id={key}></Element>
+                        return <Element key={key} element={element} viewport={viewport} id={key}></Element>
                     }) : null
                 }
             </div>

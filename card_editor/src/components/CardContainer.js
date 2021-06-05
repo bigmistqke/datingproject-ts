@@ -4,7 +4,7 @@ import uniqid from "uniqid"
 
 
 
-const Card = ({ children, updateCardDim, card_dim, elements, shouldSnap, shouldAddTextType }) => {
+const CardContainer = ({ children, updateCardDim, card_dim, viewport, shouldSnap, shouldAddTextType }) => {
 
     let r_card = useRef();
 
@@ -25,18 +25,20 @@ const Card = ({ children, updateCardDim, card_dim, elements, shouldSnap, shouldA
     }, [updateCardDim])
 
     const drawStart = useCallback(e => {
+        console.log(shouldAddTextType);
 
         if (!shouldAddTextType.state) {
-            elements.focus(false)
+            viewport.focus(false)
             return
         };
-        shouldAddTextType.update(false);
         let id = uniqid();
 
         let start_origin = {
             x: (e.clientX - card_dim.left) / card_dim.width * 100,
             y: (e.clientY - card_dim.top) / card_dim.height * 100
         };
+
+        console.log(shouldAddTextType.state);
 
         let element = {
             type: shouldAddTextType.state,
@@ -47,7 +49,7 @@ const Card = ({ children, updateCardDim, card_dim, elements, shouldSnap, shouldA
             origin: { ...start_origin },
             dim: { width: 0, height: 0 },
             locked: false,
-            z: Object.values(elements.state).length,
+            z: Object.values(viewport.state).length,
             options: {
                 size: shouldAddTextType.state === 'text_instruction' ? 24 : 16,
                 lineHeight: shouldAddTextType.state === 'text_instruction' ? 26 : 18,
@@ -63,9 +65,11 @@ const Card = ({ children, updateCardDim, card_dim, elements, shouldSnap, shouldA
             },
         };
 
-        elements.update(id, element);
+        viewport.update(id, element);
+        shouldAddTextType.update(false);
+
         setTimeout(() => {
-            elements.focus(id);
+            viewport.focus(id);
 
         }, 0)
 
@@ -86,14 +90,14 @@ const Card = ({ children, updateCardDim, card_dim, elements, shouldSnap, shouldA
                 x: element.drawing.origin.x < element.drawing.cursor.x ? element.drawing.origin.x : element.drawing.cursor.x,
                 y: element.drawing.origin.y < element.drawing.cursor.y ? element.drawing.origin.y : element.drawing.cursor.y,
             }
-            elements.update(id, element);
-            // console.log(elements.state);
+            viewport.update(id, element);
+            // console.log(viewport.state);
 
             // setRender(performance.now());
         }
         const finish = e => {
             if (element.dim.height < 5 && element.dim.width < 5) {
-                elements.delete(id);
+                viewport.delete(id);
             }
             window.removeEventListener('mousemove', update, true);
             window.removeEventListener('mouseup', finish, true);
@@ -101,7 +105,7 @@ const Card = ({ children, updateCardDim, card_dim, elements, shouldSnap, shouldA
         }
         window.addEventListener('mousemove', update, true);
         window.addEventListener('mouseup', finish, true);
-    }, [elements, r_card, card_dim])
+    }, [viewport, r_card, card_dim])
 
 
 
@@ -113,4 +117,4 @@ const Card = ({ children, updateCardDim, card_dim, elements, shouldSnap, shouldA
     )
 }
 
-export default Card
+export default CardContainer

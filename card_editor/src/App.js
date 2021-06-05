@@ -2,69 +2,38 @@ import './App.css';
 import React, { memo, useEffect, useCallback, useState, useRef } from 'react';
 import uniqid from 'uniqid';
 
-import RightPanel from "./RightPanel.js"
-import BottomPanel from "./BottomPanel.js"
+import RightPanel from "./components/RightPanel.js"
+import BottomPanel from "./components/BottomPanel.js"
 
-import Card from "./Card.js"
-import Guides from "./Guides.js"
-import Rulers from "./Rulers.js"
+import CardContainer from "./components/CardContainer.js"
+import Guides from "./components/Guides.js"
+import Rulers from "./components/Rulers.js"
 
-import Element from "./Element.js"
+import CardElement from "./components/CardElement.js"
 
+import ImageUploader from "./managers/ImageUploader.js";
+import postData from "./helpers/postData.js"
 
+import ResizeHandles from "./components/ResizeHandles.js"
+import BlurBorder from "./components/BlurBorder.js"
 
-
-const Store = function () {
-  const [state, setState] = useState({});
-  let r_state = useRef({});
-  this.state = state;
-
-  this.update = (id, element) => {
-
-    r_state.current = { ...r_state.current, [id]: element }
-    setState({ ...r_state.current, [id]: element });
-  }
-  this.delete = (id) => {
-    let _state = { ...state };
-    delete _state[id];
-    r_state.current = _state;
-    setState(_state);
-  }
-
-  this.updateAll = (_state) => {
-    r_state.current = _state;
-    setState(_state);
-  }
-}
-
-const State = function (defaultValue) {
-  const [state, setState] = useState(defaultValue);
-  this.state = state;
-  this.update = (value) => {
-    setState(value);
-  }
-}
+import Store from "./helpers/react/Store.js"
+import State from "./helpers/react/State.js"
+import Designs from "./state/Designs.js"
+import Viewport from "./state/Viewport.js"
+import { useHistory, useParams } from 'react-router-dom';
 
 
-const Designs = function () {
-  const [designs, setDesigns] = useState({
-    action: {},
-    speech: {},
-    thoughts: {}
-  });
-  const [typeInFocus, setTypeInFocus] = useState('action');
+const isDev = window.location.href.indexOf('localhost') != -1;
 
-  this.designs = designs;
-  this.typeInFocus = typeInFocus;
-
-  this.changeType = (type, archive) => {
-    designs[typeInFocus] = { ...archive };
-    setTypeInFocus(type);
-    return { ...designs[type] };
-  }
+window._url = {
+  mqtt: isDev ? "localhost:8883" : "socket.datingproject.net/mqtt",
+  fetch: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net",
+  play: isDev ? "http://localhost:3001" : "https://play.datingproject.net",
 }
 
 function App() {
+  const { card_id } = useParams();
 
   const [card_dim, setcard_dim] = useState({})
   const [shouldSnap, setShouldSnap] = useState(true);
@@ -72,24 +41,21 @@ function App() {
   const [shiftPressed, setShiftPressed] = useState(false);
   const [altPressed, setAltPressed] = useState(false);
 
+  const r_uploader = useRef(new ImageUploader({ card_id }));
+
   const r_loremIpsum = useRef(['A week ago, when I returned home from doing my weekly groceries, I passed a theatre, ...'])
 
   const guides = new Store();
   guides.locked = new State(false);
   guides.hidden = new State(false);
-  const elements = new Store();
-  elements.blurredBorder = new State(true);
-  elements.elementInFocus = new State(false);
+  const viewport = new Viewport();
 
-  elements.focus = function (id) {
-    this.elementInFocus.update(id);
-  }
-  /*   elements.focus = (id) => {
-      Object.entries(elements.state).forEach(([_id, _element]) => {
+  /*   viewport.focus = (id) => {
+      Object.entries(viewport.state).forEach(([_id, _element]) => {
         if (id == _id) {
-          elements.update(id, { ..._element, focused: true })
+          viewport.update(id, { ..._element, focused: true })
         } else if (_element.focused) {
-          elements.update(_id, { ..._element, focused: false })
+          viewport.update(_id, { ..._element, focused: false })
         }
       })
     } */
@@ -99,8 +65,20 @@ function App() {
 
   const shouldAddTextType = new State(false);
 
+  const getCards = useCallback(async () => {
+    let result = await fetch(`${window._url.fetch}/api/card/get/${card_id}`);
+    result = await result.json();
+    Object.entries(result.designs).forEach(([type, data]) => {
+      designs.archive({ data, type });
+    });
+    // console.log(designs.getFocusedDesign());
+    viewport.updateAll(designs.getFocusedDesign());
+  }, []);
 
-
+  const saveCards = useCallback(() => {
+    let designs_state = designs.archive({ data: viewport.state });
+    postData(`${window._url.fetch}/api/card/save/${card_id}`, { ...designs_state })
+  }, [designs, viewport]);
 
 
   const keyDown = e => {
@@ -131,6 +109,12 @@ function App() {
     window.addEventListener('keyup', keyUp);
   }, [])
 
+  useEffect(async () => {
+    getCards()
+  }, [card_id])
+
+
+
   const updateCardDim = (dim) => {
     setcard_dim(dim);
   }
@@ -147,15 +131,12 @@ function App() {
       y: (e.clientY - card_dim.y) / card_dim.height * 100,
     }
 
-    //console.log('upload image ', e);
     var file = e.dataTransfer.files[0];
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function ({ target }) {
-      //console.log(target);
       let img = new Image();
-      img.onload = function () {
-        // //console.log(elements.state)
+      img.onload = async function () {
         let element = {
           type: 'image',
           src: target.result,
@@ -165,16 +146,18 @@ function App() {
             height: this.height / this.width * 25 * (card_dim.width / card_dim.height)
           },
           locked: false,
-          z: Object.values(elements.state).length,
+          z: Object.values(viewport.state).length,
         }
-        //console.log(element);
-        elements.update(uniqid(), element);
+        let element_id = uniqid();
+        viewport.update(element_id, element);
+        let uploaded = await r_uploader.current.process({ file, element_id });
+        if (!uploaded.success) return;
+        element.src = uploaded.url.replace('./', '');
+        viewport.update(element_id, element);
       }
       img.src = target.result;
-
     }
     reader.readAsDataURL(file);
-
   }
 
   const dragOver = useCallback((e) => {
@@ -182,46 +165,60 @@ function App() {
   }, []);
 
   const changeType = (type) => {
-    elements.updateAll(designs.changeType(type, elements.state));
+    designs.archive({ data: viewport.state });
+    viewport.updateAll(designs.changeType({ type }));
   }
 
   return (
     <div className="app flex-container" onDragOver={dragOver} onDrop={uploadImage}>
-
-
-      <div className='card-container' onMouseDown={() => { elements.focus(false) }}>
+      <button onClick={saveCards}></button>
+      <div className='card-container' onMouseDown={() => { viewport.focus(false) }}>
         <Rulers
           card_dim={card_dim}
           guides={guides}
           shouldSnap={shouldSnap}
         ></Rulers>
-
-        <Card
+        <CardContainer
           shouldSnap={shouldSnap}
           card_dim={card_dim}
           guides={guides}
           updateCardDim={updateCardDim}
           shiftPressed={shiftPressed}
-          elements={elements}
+          viewport={viewport}
           shouldAddTextType={shouldAddTextType}
         >
-          <div className='elements'>
+          <div className='viewport'>
             {
-              Object.entries(elements.state).map(([id, element]) =>
-                <Element
+              Object.entries(viewport.state).map(([id, element]) =>
+                <CardElement
                   key={id}
                   id={id}
                   element={element}
-
                   card_dim={card_dim}
-                  elements={elements}
+                  viewport={viewport}
                   guides={guides}
                   shouldSnap={shouldSnap}
                   shiftPressed={shiftPressed}
                   altPressed={altPressed}
                   loremIpsum={r_loremIpsum.current}
                   typeInFocus={designs.typeInFocus}
-                ></Element>
+                >
+                  {
+                    id === viewport.elementInFocus.state ?
+                      <ResizeHandles
+                        id={id}
+                        el={element}
+                        guides={guides}
+                        card_dim={card_dim}
+                        viewport={viewport}
+                        shiftPressed={shiftPressed}
+                        altPressed={altPressed}
+
+                      ></ResizeHandles> :
+                      !viewport.blurredBorder.state ? null :
+                        <BlurBorder></BlurBorder>
+                  }
+                </CardElement>
               )
             }
           </div>
@@ -235,7 +232,7 @@ function App() {
               null
           }
 
-        </Card>
+        </CardContainer>
 
         <BottomPanel
           changeType={changeType}
@@ -245,7 +242,7 @@ function App() {
 
       <RightPanel
         guides={guides}
-        elements={elements}
+        viewport={viewport}
         card_dim={card_dim}
         shouldAddTextType={shouldAddTextType}
         changeType={changeType}

@@ -231,7 +231,7 @@ svg {
     fill: #ffc200;
 }
 
-.instruction>div {
+/* .instruction>div {
     height: 100%;
     width: 100%;
     position: absolute;
@@ -240,20 +240,21 @@ svg {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     transition: transform 1s;
-    /* background: url(clouds.jpg); */
     background: var(--bg-color);
     background-size: cover;
     border-radius: var(--b-radius);
     overflow: hidden;
     box-shadow: 1px 1px 2px rgb(0 0 0 / 3%), 2.5px 2.5px 8px rgb(0 0 0 / 5%), 5px 5px 20px rgb(0 0 0 / 4%)
-}
+} */
 
 .instruction .front {
-    transform: translate3d(0, 0, 0);
+    /* transform: translate3d(0, 0, 0); */
+    backface-visibility: hidden;
 }
 
 .instruction .back {
     transform: rotateY(-180deg);
+    backface-visibility: hidden;
 }
 
 .instruction .stopwatch {
