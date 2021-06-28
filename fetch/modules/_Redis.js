@@ -1,8 +1,10 @@
-const flat = require('flat');
-var unflatten = require('flat').unflatten;
+/* const flat = require('flat');
+var unflatten = require('flat').unflatten; */
 const redis = require("redis");
 const jsonify = require('redis-jsonify')
 const promisify = require('util').promisify;
+
+const { flatten, unflatten } = require('safe-flat');
 
 const _Redis = function () {
     const _redis = redis.createClient();
@@ -12,7 +14,7 @@ const _Redis = function () {
         console.error(error);
     });
 
-    this.get = promisify(j_redis.get).bind(_redis);
+    this.get = promisify(_redis.get).bind(_redis);
     this.set = promisify(j_redis.set).bind(_redis);
     this.hset = promisify(j_redis.hset).bind(_redis);
 
@@ -31,9 +33,9 @@ const _Redis = function () {
             });
         })
     }
-    this.flatten = (data) => flat(data, { safe: true })
+    this.flatten = (data) => JSON.stringify(data)
 
-    this.unflatten = (data) => unflatten(data, { safe: true })
+    this.unflatten = (data) => JSON.parse(data)
     this.init = () => { }
 }
 

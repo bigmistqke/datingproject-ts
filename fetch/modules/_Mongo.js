@@ -1,13 +1,18 @@
 const MongoClient = require('mongodb').MongoClient;
 
+// import { MongoClient } from 'mongodb';
 
-const _Mongo = function ({ url, dbName }) {
+const _Mongo = function ({ url }) {
     const client = new MongoClient(url);
     let db;
 
 
 
     const _Collection = function (collection_name) {
+        if (!db) {
+            console.error('db is not defined !');
+            return;
+        }
         let collection = db.collection(collection_name);
 
         this.findDocument = async (query) => await collection.findOne(query)
@@ -32,8 +37,6 @@ const _Mongo = function ({ url, dbName }) {
     }
 
     this.getCollection = (collection_name) => new _Collection(collection_name)
-
-    this.init = async () => await this.connect(dbName)
-
 }
 module.exports = _Mongo
+// export default _Mongo

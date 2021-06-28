@@ -6,7 +6,9 @@ import {
 } from 'recoil';
 import NumericInput from 'react-numeric-input';
 // import { useBeforeunload } from 'react-beforeunload';
+import Iframe from 'react-iframe'
 
+import State from "../helpers/react/State.js";
 
 import copy from 'copy-to-clipboard';
 
@@ -23,13 +25,9 @@ import VideoUploader from '../managers/VideoUploader';
 
 import Overlays from "../components/Overlays"
 
-const _instructionManager = atom({ key: 'instructionManager', default: '' });
-const _blockManager = atom({ key: 'blockManager', default: '' });
-const _videoUploader = atom({ key: 'videoUploader', default: false });
-// const _setRender = atom({ key: 'setRender', default: performance.now() });
+import flatten, { unflatten } from 'flat';
 
 
-// const _overlayManager = atom({ key: 'overlayManager', default: '' });
 
 function decodeSingleQuotes(text) {
     return (text.replace(/&#039;/g, "'"));
@@ -42,6 +40,10 @@ window.addEventListener('mousemove', e => {
 
 
 
+window.unflatten = unflatten;
+window.flatten = flatten;
+
+
 function Editor({ socket, user_id }) {
     const history = useHistory();
 
@@ -49,50 +51,52 @@ function Editor({ socket, user_id }) {
 
     const r_saveButton = useRef();
 
+    const connecting = new State(false);
+    const [render, setRender] = useState();
 
 
-    const [ctrl, setCtrl] = useState(false);
-    const [shift, setShift] = useState(false);
-    const [roles, setRoles] = useState([]);
-    const [connecting, setConnecting] = useState(false);
-    const [overlay, setOverlay] = useState(false);
-
-    const [render, setRender] = useState(0);
-    const [instructionManager, setInstructionManager] = useRecoilState(_instructionManager);
-    const [blockManager, setBlockManager] = useRecoilState(_blockManager);
-    const [videoUploader, setVideoUploader] = useRecoilState(_videoUploader);
-
-    const [blocks, setBlocks] = useState([]);
-
-    const r_blocks = useRef([]);
-    const r_roles = useRef([]);
-    const r_instructions = useRef([0, 1]);
-    const r_dataProcessor = useRef();
-    const r_errors = useRef({});
+    const r_instructionManager = useRef();
+    const r_videoUploader = useRef();
     const r_blockManager = useRef();
-    const r_cursor = useRef();
-    const hasChanges = useRef(false);
-    const r_please = useRef();
+    const r_dataProcessor = useRef();
 
+    const blocks = new State([]);
+    const roles = new State([1, 2]);
+    const instructions = new State({});
+
+
+
+    const connections = new State([]);
+    const origin = new State({ x: 0, y: 0 });
+    const zoom = new State(1);
+
+    const overlay = new State();
+    const errors = new State({});
+    const initialized = new State(false);
+
+    const r_cursor = useRef();
+
+    const hasChanges = useRef(false);
 
     const openOverlay = async function ({ type, data }) {
         return new Promise((_resolve) => {
             const resolve = (data) => {
-                _set.overlay(false);
+                overlay.set(false);
                 _resolve(data);
             }
             const position = {
-                x: window.cursorPosition.x,
-                y: window.cursorPosition.y
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 2
             }
-            _set.overlay({ type, data, position, resolve })
+            overlay.set({ type, data, position, resolve })
         })
     }
 
     const getOverlay = (overlay) => {
-        // return OverlayManager.get(overlay.type, overlay);
+
         return Overlays[overlay.type](overlay);
     }
+
     function throttle(func, timeFrame) {
         var lastTime = 0;
         return function () {
@@ -104,91 +108,42 @@ function Editor({ socket, user_id }) {
         };
     }
 
-
-    const _get = {
-        instructions: () => { return { ...r_instructions.current } },
-        blocks: () => [...r_blocks.current],
-        roles: () => [...r_roles.current],
-        errors: () => [...r_errors.current],
-        all: () => {
-            return {
-                instructions: _get.instructions(),
-                blocks: _get.blocks(),
-                roles: _get.roles()
-            }
-        }
-    }
-
-    const _set = {
-        blocks: (_blocks) => {
-            r_blocks.current = _blocks;
-            hasChanges.current = true;
-            // setBlocks(_blocks);
-            throttle(setRender(performance.now()), 10);
-
-            // setRender(performance.now())
-
-        },
-        instructions: (_instructions) => {
-            r_instructions.current = _instructions;
-            throttle(setRender(performance.now()), 10);
-            hasChanges.current = true;
-        },
-        roles: (_roles) => {
-            r_roles.current = _roles;
-            throttle(setRender(performance.now()), 10);
-            hasChanges.current = true;
-        },
-        errors: (_errors) => {
-            r_errors.current = _errors;
-            setRender(performance.now());
-        },
-        connecting: (bool) => setConnecting(bool),
-        overlay: (bool) => setOverlay(bool)
-    }
-
-    // useBeforeunload((event) => 'ok?');
-
-
     useEffect(() => {
-        if (!videoUploader) return
-
+        if (!r_videoUploader.current) return
         window.addEventListener('beforeunload', (e) => {
-            if (!videoUploader.isUploading() && !hasChanges.current) return
+            if (!r_videoUploader.current.isUploading() && !hasChanges.current) return
             e.preventDefault();
-            // if (!videoUploader.isUploading()) return
             alert('please wait until all videos are uploaded');
         })
-    }, [videoUploader])
+    }, [r_videoUploader])
 
     const init = () => {
 
-        r_dataProcessor.current = new DataProcessor();
+        r_blockManager.current = new BlockManager({ connections, origin, blocks, zoom, instructions, roles, connecting, script_id, visualizeErrors, openOverlay });
+        r_instructionManager.current = new InstructionManager({ blocks, instructions, roles, script_id });
 
-        setBlockManager(new BlockManager({ _get, _set, script_id, visualizeErrors, openOverlay }));
-        setInstructionManager(new InstructionManager({ _get, _set, script_id }));
-        setVideoUploader(new VideoUploader({ script_id }));
-        // updateBlocks([...blocks]);
-
+        r_dataProcessor.current = new DataProcessor({ blockManager: r_blockManager.current });
+        r_videoUploader.current = new VideoUploader({ script_id });
 
         document.body.addEventListener('mousemove', (e) => { r_cursor.current = { x: e.clientX, y: e.clientY } });
 
-
-        getData(`${window._url.fetch}/api/get/${script_id}`)
+        getData(`${window._url.fetch}/api/script/get/${script_id}`)
             .then(res => res.json())
             .then(res => {
-                if (!res) return Promise.reject('errrr');
-                _set.instructions(res.instructions);
-                _set.blocks(res.blocks);
-                console.log(Object.keys(res.roles));
-                _set.roles(Object.keys(res.roles));
+                if (!res) return Promise.reject('error fetching data ', res);
+                instructions.set(res.instructions);
+                blocks.set(res.blocks);
+                //console.log(res.roles);
+                roles.set(Object.keys(res.roles));
                 hasChanges.current = false;
             })
             .catch(err => {
-                r_instructions.current = {};
-                r_blocks.current = [];
-                r_roles.current = ["1", "2"];
+                instructions.set({});
+                blocks.set([]);
+                roles.set([1, 2]);
             });
+
+        initialized.set(true);
     }
 
     const initMqtt = () => {
@@ -206,34 +161,37 @@ function Editor({ socket, user_id }) {
     const updateData = (data) => {
         try {
             let data = JSON.parse(data);
-            //console.log(data);
         } catch (e) {
             console.error(e);
         }
     }
 
     const visualizeErrors = async () => {
-        let check = await r_dataProcessor.current.checkConnections({ ..._get.all() });
-        //console.log(check);
+        //console.log('visualizeErrors');
+
+        let check = await r_dataProcessor.current.checkConnections({ instructions: instructions.get(), blocks: blocks.get(), roles: roles.get() });
+        //console.log('visualizeErrors', check);
+
         let _errors = {};
         if (!check.success) {
             _errors = check.errors;
         }
-        _set.errors(_errors);
+        errors.set(_errors);
+        // _set.errors(_errors);
     }
 
     const test = useCallback(async () => {
         try {
-            //console.log('_get.all: ', _get.all());
-            const processed_data = await r_dataProcessor.current.process({ safe: true, ..._get.all() });
+            const processed_data = await r_dataProcessor.current.process({ safe: true, instructions: instructions.get(), blocks: blocks.get(), roles: roles.get() });
             if (!processed_data.success) return
-            let result = await postData(`${window._url.fetch}/api/test/${script_id}`, processed_data);
-            const { roles, room_url, error } = await result.json();
+            //console.log(processed_data);
+            let result = await postData(`${window._url.fetch}/api/script/test/${script_id}`, processed_data);
+            const { roles: _roles, room_url, error } = await result.json();
             if (error) console.error(error);
 
 
             let options = {};
-            for (let role of roles) {
+            for (let role of Object.values(_roles)) {
                 options[role.role_id] = ['open link', 'share link'];
             }
 
@@ -241,7 +199,7 @@ function Editor({ socket, user_id }) {
 
             const callback = async (data) => {
                 if (!data) {
-                    setOverlay(false);
+                    overlay.set(false);
                 }
                 if (data.title === 'combo') {
                     let url = `${window.location.protocol + '//' + window.location.host}/test/${room_url}`;
@@ -249,7 +207,7 @@ function Editor({ socket, user_id }) {
 
                 } else {
                     const { title: role_id, option } = data;
-                    const role_url = roles.find(v => v.role_id === role_id).role_url;
+                    const role_url = Object.entries(_roles).find(([role_url, role]) => role.role_id === role_id)[0];
                     let url = `${window._url.play}/${room_url}${role_url}`;
                     switch (option) {
                         case 'open link':
@@ -257,11 +215,14 @@ function Editor({ socket, user_id }) {
                             break;
                         case 'share link':
                             copy(url);
+                            break;
+                        default:
+                            break;
                     }
                 }
 
             }
-            _set.overlay({
+            overlay.set({
                 type: 'option_groups',
                 data: { title: 'open/share the test urls', options }
                 , resolve: callback
@@ -272,10 +233,18 @@ function Editor({ socket, user_id }) {
     }, [])
 
     const save = useCallback(async () => {
-        let data = await r_dataProcessor.current.process({ safe: false, ..._get.all() });
-        if (!data.success) return
+        let data = await r_dataProcessor.current.process({ safe: false, instructions: instructions.get(), blocks: blocks.get(), roles: roles.get() });
+        if (!data.success) {
+            //console.log('save', data);
+            return;
+        }
+        if (data.errors) {
+            //console.log('errors', data.errors);
+            errors.set(data.errors);
+        }
+        console.log('data', data);
         r_saveButton.current.innerHTML = 'saving...';
-        data = await postData(`${window._url.fetch}/api/save/${script_id}`, { ...data });
+        data = await postData(`${window._url.fetch}/api/script/save/${script_id}`, { ...data });
         setTimeout(() => {
             r_saveButton.current.innerHTML = 'saved!';
             setTimeout(() => {
@@ -285,30 +254,6 @@ function Editor({ socket, user_id }) {
         hasChanges.current = false;
     }, [])
 
-    const publish = useCallback(async () => {
-        //console.log(_get.all());
-        let data = await r_dataProcessor.current.process({ safe: true, ..._get.all() });
-        //console.log(data);
-        if (!data.success) return
-    }, [])
-
-
-    const keyUp = (e) => {
-        setCtrl(false);
-    }
-    const keyDown = (e) => {
-        if (e.ctrlKey || e.metaKey) {
-            setCtrl(true);
-        }
-        if (e.shiftKey) {
-            setShift(true);
-        }
-    }
-
-    useEffect(() => {
-        document.body.addEventListener("keydown", keyDown);
-        document.body.addEventListener("keyup", keyUp);
-    }, [])
 
 
     useEffect(init, [script_id]);
@@ -316,63 +261,87 @@ function Editor({ socket, user_id }) {
     useEffect(initMqtt, [socket])
 
     const changeRoles = useCallback(value => {
-        let roles = [];
+
+        let _roles = [];
         for (let i = 0; i < value; i++) {
-            roles.push(String(i + 1));
+            _roles.push(String(i + 1));
         }
-        _set.roles(roles)
-    }, [])
+        roles.set(_roles)
+    }, [roles])
 
-    const myFormat = useCallback((num) => num + ' roles', []);
 
-    useEffect(() => {
-        if (!r_roles.current) return;
 
-        //console.log(r_roles.current);
-    })
+
+
+    const format = useCallback((num) => num + ' roles', []);
 
     return (
         <div className="App" >
-            <header className="row fixed flex">
-                <div className="flexing">editor for script {script_id}</div>
-                {/* <button onClick={() => visualizeErrors()} className="Instruction-button">debug</button> */}
-                <NumericInput
-                    // ref={r_timespan}
-                    type='number'
-                    onChange={changeRoles}
-                    min={2}
-                    step={1}
-                    precision={0}
-                    strict={true}
-                    value={r_roles.current ? r_roles.current.length : 2}
-                    format={myFormat}
-                />
+            {initialized ?
+                <>
+                    {
+                        overlay.get() ?
+                            <div
+                                className="overlay-container"
+                                onMouseDown={(e) => { if (Array.from(e.target.classList).indexOf('overlay-container') != -1) overlay.get().resolve(false) }}
+                            >
+                                {getOverlay(overlay.get())}
+                            </div> : null
+                    }
+                    <div className='viewport'>
+                        <div className="panel">
+                            <header className="row absolute flex">
+                                <h1 className="flexing">editor for script {script_id}</h1>
+                                <NumericInput
+                                    type='number'
+                                    onChange={changeRoles}
+                                    min={2}
+                                    step={1}
+                                    precision={0}
+                                    strict={true}
+                                    value={roles.get() ? roles.get().length : 2}
+                                    format={format}
+                                />
 
-                <button onClick={test} className="Instruction-button">test</button>
-                <button onClick={save} ref={r_saveButton} className="Instruction-button">save</button>
-                <button onClick={publish} className="Instruction-button">publish</button>
-            </header>
-            {
-                overlay ?
-                    <div
-                        className="overlay-container"
-                        onMouseDown={(e) => { if (Array.from(e.target.classList).indexOf('overlay-container') != -1) overlay.resolve(false) }}
-                    >
-                        {getOverlay(overlay)}
-                    </div> : null
+                                <button onClick={test} className="Instruction-button">test</button>
+                                <button onClick={test} className="Instruction-button">active games</button>
+                                <button onClick={save} ref={r_saveButton} className="Instruction-button">save</button>
+                            </header>
+                            <Map
+                                instructions={instructions.get()}
+
+                                blocks={blocks}
+
+                                roles={roles.get()}
+                                connections={connections.get()}
+
+                                zoom={zoom.get()}
+                                setZoom={zoom.set}
+                                getZoom={zoom.get}
+
+                                origin={origin.get()}
+                                getOrigin={origin.get}
+                                setOrigin={origin.set}
+
+                                script_id={script_id}
+                                connecting={connecting.get()}
+                                errors={errors}
+                                blockManager={r_blockManager.current}
+                                instructionManager={r_instructionManager.current}
+                                videoUploader={r_videoUploader.current}
+
+                                render={render}
+                            ></Map>
+                        </div>
+
+                        {/* <Iframe url={window._url.gamemaster}> </Iframe> */}
+                    </div>
+
+                    <ProgressBars videoUploader={r_videoUploader.current}></ProgressBars>
+                </> : null
             }
 
-            <Map
-                instructions={r_instructions.current}
-                // blocks={r_blocks.current}
-                blocks={r_blocks.current}
-                roles={r_roles.current}
-                script_id={script_id}
-                connecting={connecting}
-                errors={r_errors.current}
-            ></Map>
-            <ProgressBars></ProgressBars>
-        </div >
+        </div>
     );
 }
 export default Editor;

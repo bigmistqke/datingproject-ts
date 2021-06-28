@@ -26,7 +26,7 @@ export default function ConnectionManager(blockManager) {
     }
 
     const dispatchAdd = (block_id, direction, data) => {
-        console.log(data);
+        ////console.log(data);
         dispatch(
             'add',
             {
@@ -73,7 +73,7 @@ export default function ConnectionManager(blockManager) {
         document.body.removeEventListener("pointerup", end);
 
         dispatch('end');
-        console.log(e.target);
+        ////console.log(e.target);
 
         if (e.target.classList.contains("block")) {
             let connecting_id = e.target.id.replace('block_', '');

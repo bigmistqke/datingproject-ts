@@ -15,14 +15,14 @@ const _set = promisify(_redis.set).bind(_redis);
 const disconnect = async (json) => {
     /* try {
         const { script_id, user_id } = JSON.parse(json);
-        console.log(room_id, user_id);
+        ////console.log(room_id, user_id);
         let data = await _get(`room_${room_id}`);
 
         if (data === null) {
         } else {
             data = JSON.parse(data);
             let updated_cast = Object.entries(data.cast).filter(([role, id]) => {
-                console.log(id, role, user_id);
+                ////console.log(id, role, user_id);
                 return id !== user_id;
             });
             if (updated_cast.length == 0) {
@@ -32,13 +32,13 @@ const disconnect = async (json) => {
                 // update room
                 data.cast = Object.fromEntries(updated_cast);
                 // data = flat(data, { safe: true });
-                console.log(data);
+                ////console.log(data);
                 _redis.set(`room_${room_id}`, JSON.stringify(data));
             }
         }
 
     } catch (e) {
-        console.log(e);
+        ////console.log(e);
     } */
 }
 
@@ -46,10 +46,10 @@ const addToRoom = async ({ script_id, room_id, user_id }) => {
 
     /* let data = await _get(`room_${room_id}`)
 
-    console.log(room_id, data);
+    ////console.log(room_id, data);
     if (data === null) {
         // get data of script / roles
-        console.log('script_id', script_id)
+        ////console.log('script_id', script_id)
         const roles = ['a', 'b'];
         const role = 'a';
         let data = {
@@ -59,7 +59,7 @@ const addToRoom = async ({ script_id, room_id, user_id }) => {
         }
         data.cast[role] = user_id;
         // data = flat(data, { safe: true });
-        console.log(data);
+        ////console.log(data);
         return role;
     } else {
         data = JSON.parse(data);
@@ -67,12 +67,12 @@ const addToRoom = async ({ script_id, room_id, user_id }) => {
         let leftover_roles = data.roles.filter(v => taken_roles.indexOf(v) == -1);
         if (leftover_roles.length != 0) {
             let new_role = leftover_roles[Math.floor(Math.random() * leftover_roles.length)];
-            console.log(new_role);
+            ////console.log(new_role);
             data.cast[new_role] = user_id;
             _redis.set(`room_${room_id}`, JSON.stringify(data));
             return new_role;
         } else {
-            console.log('no more roles available');
+            ////console.log('no more roles available');
             return false;
         }
 
@@ -84,7 +84,7 @@ const addToRoom = async ({ script_id, room_id, user_id }) => {
 const connect = async (json) => {
     /* try {
         const { script_id, user_id } = JSON.parse(json);
-        console.log(script_id, user_id);
+        ////console.log(script_id, user_id);
 
         _redis.set(`editor_room_${script_id}`, JSON.stringify(data));
 
@@ -92,7 +92,7 @@ const connect = async (json) => {
             { success: true, role_id: role_id, instructions: r_instructions }
         ));
     } catch (e) {
-        console.log('errrrrr', e);
+        ////console.log('errrrrr', e);
     } */
 }
 
@@ -107,4 +107,4 @@ const init = async () => {
 
 init();
 
-console.log('ok');
+////console.log('ok');

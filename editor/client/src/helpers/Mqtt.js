@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 export default class Mqtt {
     constructor(url, websocket = false, ssl = false) {
         let id = uuidv4();
-        console.log(id);
+        ////console.log(id);
         this.subscriptions = {};
         this.base = "";
         let prefix = websocket ? ssl ? 'wss' : 'ws' : 'mqtt';
@@ -14,7 +14,7 @@ export default class Mqtt {
         return new Promise((resolve) => {
             this.client = mqtt.connect(url);
             this.client.on('connect', () => {
-                console.log('connected');
+                ////console.log('connected');
                 this.client.on('message', this.receive)
                 resolve(this);
             })
@@ -22,7 +22,7 @@ export default class Mqtt {
     }
 
     subscribe = (topic, callback) => {
-        console.log(`${this.base}${topic}`);
+        ////console.log(`${this.base}${topic}`);
         this.client.subscribe(`${this.base}${topic}`);
         this.subscriptions[topic] = { function: callback };
     }

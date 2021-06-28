@@ -80,6 +80,7 @@ body {
 
 .block {
     display: block;
+    /* box-sizing: border-box; */
 }
 
 .relative-center {
@@ -134,6 +135,14 @@ header {
     top: 0px;
     z-index: 99;
     box-shadow: var(--light-shadow);
+    width: 100%;
+}
+
+header h1 {
+    font-size: 10pt;
+    padding-left: 10pt;
+    font-weight: normal;
+    line-height: normal;
 }
 
 ::placeholder {
@@ -170,7 +179,7 @@ header {
 }
 
 video {
-    height: 250px;
+    height: 150px;
 }
 
 .row {
@@ -217,6 +226,23 @@ video {
 .instruction .timer-container .timespan, .instruction .timer-container>*, .instruction .timer-container>*>input {
     height: 100%;
     width: 100%
+}
+
+.timer-sound {
+    flex: 0 50px !important;
+    align-self: center;
+    display: flex;
+    align-items: center;
+}
+
+.timer-sound label {
+    flex: 1;
+    text-align: center;
+    color: lightgrey;
+}
+
+.timer-sound.on label {
+    color: black;
 }
 
 .gray {
@@ -312,13 +338,14 @@ i {
 }
 
 .overlay button {
+    font-size: 8pt;
     border-radius: 20px;
     background: white;
     text-align: center;
     /* flex: 0 0; */
-    padding-right: 25px;
-    padding-left: 25px;
-    line-height: var(--r-height);
+    padding-right: 5px;
+    padding-left: 5px;
+    /* line-height: var(--r-height); */
     cursor: pointer;
 }
 
@@ -333,9 +360,9 @@ i {
 }
 
 .group header {
-    font-size: 10pt !important;
+    font-size: 8pt !important;
     margin-left: 5px;
-    margin-right: 15px;
+    margin-right: 5px;
 }
 
 .group {
@@ -425,9 +452,20 @@ line, path {
     z-index: 10;
 }
 
+.viewport {
+    display: flex
+}
+
+.viewport .panel {
+    flex: 1;
+    position: relative;
+}
+
 .map-container {
     height: 100vh;
-    width: 100vw;
+    width: 100%;
+    overflow: hidden;
+    transform: translateX(0px) translateY(0px);
 }
 
 .map {
@@ -491,6 +529,19 @@ line, path {
     line-height: inherit !important;
     width: inherit;
     user-select: none;
+}
+
+.selectionBox {
+    position: absolute;
+    border: 2px dashed white;
+    background: #ffffff41;
+}
+
+.selected {
+    /* border: 2px dashed white; */
+    background: blue;
+    /* background: red; */
+    /* margin: -2px; */
 }
 
 /* 

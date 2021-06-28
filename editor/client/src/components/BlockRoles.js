@@ -6,16 +6,16 @@ import {
     useRecoilState
 } from 'recoil';
 
-const _blockManager = atom({
-    key: 'blockManager', // unique ID (with respect to other atoms/selectors)
+/* const _props.blockManager = atom({
+    key: 'props.blockManager', // unique ID (with respect to other atoms/selectors)
     default: '', // default value (aka initial value)
-});
+}); */
 
 const BlockRoles = (props) => {
-    let [blockManager] = useRecoilState(_blockManager);
+    // let [props.blockManager] = useRecoilState(_props.blockManager);
 
     const openRoleOverlay = (e) => {
-        let remainingRoles = blockManager.openRoleOverlay(e, props.block);
+        let remainingRoles = props.blockManager.openRoleOverlay(e, props.block);
     }
 
     const startConnection = (e, role_id) => {
@@ -23,15 +23,15 @@ const BlockRoles = (props) => {
         e.stopPropagation();
 
         if (e.buttons != 1) return;
-
-        blockManager.startConnection(props.block, role_id, props.direction);
+        ////console.log(props.block, role_id, props.direction);
+        props.blockManager.processConnection({ block: props.block, role_id, direction: props.direction });
 
     }
 
     const removeRole = (e, role_id) => {
         e.preventDefault();
         e.stopPropagation();
-        blockManager.removeRole(e, role_id, props.block);
+        props.blockManager.removeRole(e, role_id, props.block);
     }
 
     const checkErrors = (role_id) => {
@@ -42,18 +42,20 @@ const BlockRoles = (props) => {
     }
 
     useEffect(() => {
-        console.log(props.roles);
-    }, [props.roles])
+        //console.log('blockroles, conenct', props.connections);
+
+    }, [props.connections])
+
 
     return <div className="connections">
         <div className="row flex Instruction-container"><div className="flex flexing">
             {
-                props.block ? props.block.connections.map((v, i) => {
+                props.block ? props.connections.map((v, i) => {
                     return (
                         <span className="flexing connection-container" key={i}>
                             <span
                                 onPointerDown={(e) => {
-                                    console.log('this happens');
+                                    ////console.log('this happens');
                                     e.preventDefault();
                                     e.stopPropagation();
                                     startConnection(e, v.role_id);
@@ -83,4 +85,4 @@ function rolePropsAreEqual(prev, next) {
         prev.roles === next.roles;
 }
 
-export default memo(BlockRoles, rolePropsAreEqual)
+export default BlockRoles

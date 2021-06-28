@@ -2,19 +2,21 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Swipe from "./Swipe";
 import memoize from "fast-memoize";
 
+// import do from '../svg/do.png';
+
 
 import { ReactComponent as Do } from '../svg/do.svg';
 import { ReactComponent as Say } from '../svg/say.svg';
-import { ReactComponent as Think } from '../svg/think.svg';
-import { ReactComponent as Back } from '../svg/back.svg';
-import { ReactComponent as Idle } from '../svg/idle.svg';
+import { ReactComponent as Think } from '../svg/do.svg';
+import { ReactComponent as Back } from '../svg/wait.svg';
+import { ReactComponent as Idle } from '../svg/do.svg';
 
 import decodeSingleQuotes from "../helpers/decodeSingleQuotes"
 
 import enableInlineVideo from 'iphone-inline-video';
 import videojs from 'video.js'
 
-const CardMasks = () => {
+/* const CardMasks = () => {
     return (
         <div style={{ position: 'absolute', display: 'none' }}>
             <Do id="do_mask"></Do>
@@ -24,26 +26,30 @@ const CardMasks = () => {
             <Back id="back_mask"></Back>
         </div>
     )
-}
+} */
 
-
-const CardType = ({ type, animate, timespan }) => {
-    let card = useRef(false);
-
+const CardTimer = ({ timespan }) => {
+    let timer = useRef(false);
     let r_animationEnd = useRef();
 
     useEffect(() => {
-        if (!animate) return
-        card.current.style.transition = `clip-path ${timespan}s`;
-        card.current.setAttribute('class', 'animation start');
+        timer.current.style.transition = `height ${timespan}s linear`;
+        timer.current.classList.add('start');
+
         r_animationEnd.current = setTimeout(() => {
-            if (card.current)
-                card.current.setAttribute('class', 'animation end');
+            if (timer.current) {
+                timer.current.classList.remove('class', 'start');
+                timer.current.classList.add('class', 'end');
+            }
         }, 125);
 
-    }, [animate])
+    }, [timespan])
+    return <div className='timer' ref={timer}></div>
+}
 
 
+const CardType = ({ type, animate }) => {
+    let card = useRef(false);
 
     switch (type) {
         case 'do':
@@ -61,10 +67,10 @@ const CardType = ({ type, animate, timespan }) => {
     }
 }
 
-const AnimatedCardType = ({ type, animate, timespan }) => {
+const AnimatedCardType = ({ type, timespan }) => {
     return (
         <div>
-            <CardType animate={animate} timespan={timespan} type={type}></CardType>
+            <CardTimer timespan={timespan} animate={true}></CardTimer>
             <CardType type={type}></CardType>
         </div>
     )
@@ -186,7 +192,7 @@ function FrontSide({ text, type, flip, timespan, stopTimespan }) {
 
     const formatText = (_text) => {
         let _formattedText = [{ type: 'normal', text: _text }];
-        let split = _formattedText[0].text.split(`Swipe`);
+        /* let split = _formattedText[0].text.split(`Swipe`);
 
         // find Swipe-recommendations
 
@@ -196,7 +202,7 @@ function FrontSide({ text, type, flip, timespan, stopTimespan }) {
                 { type: 'normal', text: split[0] },
                 { type: 'swipe', text: `Swipe${split[1]}` }
             ];
-        }
+        } */
 
         const regex = /[\["](.*?)[\]"][.!?\\-]?/g
 
@@ -206,9 +212,13 @@ function FrontSide({ text, type, flip, timespan, stopTimespan }) {
             for (let i = matches.length - 1; i >= 0; i--) {
                 let split = _formattedText.shift().text.split(`${matches[i]}`);
 
+                let multi_choice = matches[i].replace('[', '').replace(']', '');
+                let choices = multi_choice.split('/');
+
+
                 _formattedText = [
                     { type: 'normal', text: split[0] },
-                    { type: 'choice', text: `${matches[i]}` },
+                    { type: 'choice', text: choices },
                     { type: 'normal', text: split[1] },
                     ..._formattedText
                 ];
@@ -220,20 +230,27 @@ function FrontSide({ text, type, flip, timespan, stopTimespan }) {
 
     return (
         <div className="front">
+            {/* <div className="type">
+                {type}
+            </div> */}
             {/* <div class='swipe_reminder'>swipe when you finished your action</div> */}
             <div className="text">
-                {type !== 'do' ?
-                    <div className="type">
-                        {type}
-                    </div> : null
-                }
+
                 <div>{formattedText ? formattedText.map(
                     ({ type, text }) => {
                         console.log(type, text);
                         return type === 'normal' ?
                             text :
-                            <span className={type} key={text}>{text}</span>
+                            <div className='choice' key={text.toString()}>
+                                {
+                                    text.map(choice =>
+                                        <div key={choice}>
+                                            <span>{choice}</span>
 
+                                        </div>
+                                    )
+                                }
+                            </div>
                     }
                 ) : null}</div>
             </div>
@@ -254,9 +271,9 @@ function FrontSide({ text, type, flip, timespan, stopTimespan }) {
 const BackSide = () => {
     return (
         <div className="back">
-            <div className="wait">
+            {/* <div className="wait">
                 <div>wait</div>
-            </div>
+            </div> */}
             <CardType type="back"></CardType>
         </div>
     )

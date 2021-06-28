@@ -11,7 +11,7 @@ class Mqtt {
         return new Promise((resolve) => {
             this.client = mqtt.connect(`${ws ? 'ws' : 'mqtt'}://${url}:${ws ? 8883 : 1883}`, v4());
             this.client.on('connect', () => {
-                console.log('ok');
+                ////console.log('ok');
                 this.client.on('message', this.receive)
                 resolve(this);
             })

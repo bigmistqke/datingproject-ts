@@ -23,7 +23,7 @@ const OverlayManager = function (setOverlay) {
     const overlays = {
 
         role: (props) => {
-            console.log('overlay roles:', props.data);
+            ////console.log('overlay roles:', props.data);
             return (
                 <div style={{ left: `${position.x}px`, top: `${position.y}px` }}
                     className="overlay flex">
@@ -41,7 +41,7 @@ const OverlayManager = function (setOverlay) {
             )
         },
         confirm: (props) => {
-            console.log(props);
+            ////console.log(props);
             return (
                 <div style={{ left: `${position.x}px`, top: `${position.y}px` }}
                     className="overlay text_center">
@@ -51,7 +51,7 @@ const OverlayManager = function (setOverlay) {
             )
         },
         options: (props) => {
-            console.log(props);
+            ////console.log(props);
             return (
                 <div style={{ left: `${position.x}px`, top: `${position.y}px` }}
                     className="overlay text_center">

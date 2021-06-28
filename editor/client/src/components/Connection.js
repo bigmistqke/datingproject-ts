@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
+import State from "../helpers/react/State.js"
 
 let _p = 10;
 
 const Connection = (props) => {
-    const [boundaries, setBoundaries] = useState();
-    const [SVG, setSVG] = useState();
-
-    const [origin, setOrigin] = useState();
-
-    let r_boundaries = useRef();
+    const boundaries = new State();
+    const SVG = new State();
 
 
     const getBoundsFromPoses = (start_pos, end_pos) => {
@@ -32,27 +29,23 @@ const Connection = (props) => {
 
     useEffect(() => {
         let poses = props.pos;
-        if (!poses[0] || !poses[1]) { console.error('errorrrr'); return; }
+        if (!poses[0] || !poses[1]) return
         let t_bounds = getBoundsFromPoses(poses[0], poses[1]);
-        setBoundaries(t_bounds);
+        boundaries.set(t_bounds);
         let t_SVG = getSVGFromPoses(poses[0], poses[1]);
-        setSVG(t_SVG);
-        if (props.origin)
-            setOrigin(props.origin);
+        SVG.set(t_SVG);
     }, [props.pos[0], props.pos[1]]);
 
-
-
-    return boundaries ? <svg className="connectionLine"
-        width={Math.abs(boundaries[1].x - boundaries[0].x)}
-        height={Math.abs(boundaries[1].y - boundaries[0].y)}
+    return boundaries.get() && props.origin ? <svg className="connectionLine"
+        width={Math.abs(boundaries.get()[1].x - boundaries.get()[0].x)}
+        height={Math.abs(boundaries.get()[1].y - boundaries.get()[0].y)}
         style={{
-            left: (boundaries[0].x - origin.x - _p),
-            top: (boundaries[0].y - origin.y - _p),
-            height: Math.abs(boundaries[1].y - boundaries[0].y) + _p * 2,
-            width: Math.abs(boundaries[1].x - boundaries[0].x) + _p * 2
+            left: (boundaries.get()[0].x - _p),
+            top: (boundaries.get()[0].y - _p),
+            height: Math.abs(boundaries.get()[1].y - boundaries.get()[0].y) + _p * 2,
+            width: Math.abs(boundaries.get()[1].x - boundaries.get()[0].x) + _p * 2
         }}>
-        <path d={`M${SVG[0].x},${SVG[0].y} C${SVG[0].x},${SVG[2].y} ${SVG[1].x},${SVG[2].y} ${SVG[1].x},${SVG[1].y}`}></path>
+        <path d={`M${SVG.get()[0].x},${SVG.get()[0].y} C${SVG.get()[0].x},${SVG.get()[2].y} ${SVG.get()[1].x},${SVG.get()[2].y} ${SVG.get()[1].x},${SVG.get()[1].y}`}></path>
     </svg> : null;
 }
 

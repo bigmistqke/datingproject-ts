@@ -41,7 +41,7 @@ export default function VideoUploader({ script_id }) {
             uploader.process(`${window._url.fetch}/api/uploadVideo/${script_id}/mp4`,
                 { file, instruction_id });
             uploader.addEventListener('progress', (e) => {
-                console.log(e);
+                ////console.log(e);
                 update({ instruction_id, type: 'progress' });
             });
             uploader.addEventListener('complete', () => {

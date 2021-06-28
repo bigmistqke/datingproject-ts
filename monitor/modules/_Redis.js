@@ -6,7 +6,9 @@ const promisify = require('util').promisify;
 
 const _Redis = function () {
     const _redis = redis.createClient();
-    const j_redis = jsonify(_redis);
+    const j_redis = jsonify(redis.createClient());
+    _redis.config("SET", "notify-keyspace-events", "KEA");
+    // const pubsub = _redis.pubsub()
 
     _redis.on("error", function (error) {
         console.error(error);
@@ -22,6 +24,14 @@ const _Redis = function () {
 
     this.hdel = promisify(_redis.hdel).bind(_redis);
     this.del = promisify(_redis.del).bind(_redis);
+
+    this.subscribe = (key, callback) => {
+        _redis.psubscribe([`__key*__:${key}`]);
+
+        _redis.on('pmessage', function (pattern, channel, message) {
+            callback(pattern, channel, message);
+        });
+    }
 
     this.getAllKeys = () => {
         return new Promise((resolve) => {

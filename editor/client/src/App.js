@@ -24,6 +24,7 @@ window._url = {
     mqtt: isDev ? "localhost:8883" : "socket.datingproject.net/mqtt",
     fetch: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net",
     play: isDev ? "http://localhost:3001" : "https://play.datingproject.net",
+    gamemaster: isDev ? "http://localhost:3004" : "https://gamemaster.datingproject.net",
 }
 
 function App() {
@@ -33,7 +34,7 @@ function App() {
 
     async function initSocket() {
         let _socket = await new Mqtt(window._url.mqtt, true, window.location.protocol.indexOf('https') != -1);
-        console.log(_socket);
+        ////console.log(_socket);
         setSocket(_socket);
     }
 

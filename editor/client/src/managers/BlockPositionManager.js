@@ -13,12 +13,12 @@ export default function BlockPositionManager() {
         if (!e.target.classList.contains("block")) return;
         block = _block;
 
-        console.log(_zoom);
+        ////console.log(_zoom);
         invertedZoom = 1 / _zoom;
 
         coords = { x: e.clientX, y: e.clientY };
         position = block.position;
-        //console.log('move start');
+        //////console.log('move start');
 
         document.body.addEventListener("pointermove", move);
         document.body.addEventListener("pointerup", end);
@@ -32,7 +32,7 @@ export default function BlockPositionManager() {
     }
 
     const move = (e) => {
-        //console.log('move');
+        //////console.log('move');
         if (performance.now() - lastTick < 1000 / 60) return;
         lastTick = performance.now();
         const coords_delta = {

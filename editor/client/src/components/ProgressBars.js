@@ -4,21 +4,21 @@ import {
     atom,
     useRecoilState
 } from 'recoil';
-const _videoUploader = atom({ key: 'videoUploader', default: false });
+// const _videoUploader = atom({ key: 'videoUploader', default: false });
 
 
-export default function ProgressBars() {
-    const [videoUploader] = useRecoilState(_videoUploader);
+export default function ProgressBars(props) {
+    // const [videoUploader] = useRecoilState(_videoUploader);
     const [uploaders, setUploaders] = useState({});
     let r_uploaders = useRef({})
     useEffect(() => {
-        if (!videoUploader) return
-        videoUploader.addEventListener('update', ({ detail }) => {
+        if (!props.videoUploader) return
+        props.videoUploader.addEventListener('update', ({ detail }) => {
             // setUploaders(detail);
             r_uploaders.current = detail;
             setUploaders(performance.now())
         })
-    }, [videoUploader])
+    }, [props.videoUploader])
 
     return (
         Object.keys(r_uploaders.current).length != 0 ?

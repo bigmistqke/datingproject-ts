@@ -18,10 +18,10 @@ export default function Uploader() {
         const dispatch = (type, detail) => this.dispatchEvent(new CustomEvent(type, { detail: detail }));
 
         var xhr = new XMLHttpRequest();
-        // console.log('start', performance.now());
+        // ////console.log('start', performance.now());
         xhr.onload = function (e) {
             if (this.readyState == 4 && this.status == 200) {
-                console.log(xhr.responseText);
+                ////console.log(xhr.responseText);
                 try {
                     setResponse(JSON.parse(xhr.responseText));
                 } catch (e) {
@@ -34,9 +34,9 @@ export default function Uploader() {
             }
         };
         xhr.upload.onprogress = function (e) {
-            /* console.log('first progress', performance.now());
+            /* ////console.log('first progress', performance.now());
 
-            console.log(e); */
+            ////console.log(e); */
             setProgress({ loaded: e.loaded, total: e.total, percentage: e.loaded / e.total * 100 });
             setStatus('uploading');
             dispatch('progress');

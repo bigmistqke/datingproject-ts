@@ -1,15 +1,31 @@
 @font-face {
-    font-family: 'serif';
+    font-family: 'arial_rounded';
     src: url('acaslon.otf') format('opentype')
 }
 
 @font-face {
-    font-family: 'serif_italic';
+    font-family: 'arial_rounded';
     src: url('acaslon_italic.otf') format('opentype')
+}
+
+@font-face {
+    font-family: 'arial_rounded';
+    src: url('arial_rounded.ttf') format('truetype')
 }
 
 :root {
     --bg-color: #f8eeda;
+    --wait-text: #b779b3;
+    --wait-light: #b779b3;
+    --wait-dark: #49247f;
+    --do-text: #f8eeda;
+    --do-light: #f8eeda;
+    --do-dark: #ff2b00;
+    /*  --say-light: #33b44a;
+    --say-dark: #002f24; */
+    --say-text: #99ffab;
+    --say-light: #99ffab;
+    --say-dark: #1f5c4e;
     --txt-color: #0a4297;
     --b-radius: 5vh;
     --black: #212124;
@@ -26,7 +42,7 @@ body {
     padding: 0px;
     margin: 0px;
     overflow: hidden;
-    font-family: serif;
+    font-family: arial_rounded;
     /* font-style: italic; */
     /* background: linear-gradient(185deg, var(--bg-color)  25%, var(--txt-color) 100%); */
 }
@@ -54,7 +70,7 @@ body {
 
 .intro-button {
     z-index: 5;
-    font-family: serif_italic;
+    font-family: arial_rounded;
     font-size: 5vh;
     outline: none;
     border-radius: 10vh;
@@ -81,7 +97,7 @@ body {
     color: rgb(71, 70, 70);
     box-shadow: 0px 0px 50px rgba(0, 0, 0, 0.096);
     background: rgb(239, 240, 240);
-    font-family: serif_italic;
+    font-family: arial_rounded;
     border-radius: 50px;
     padding-left: 37.5px;
     padding-right: 37.5px;
@@ -118,9 +134,9 @@ body {
     opacity: 0.5;
 }
 
-.zoom {
-    height: 100vh;
-    width: 100vw;
+img {
+    height: 100%;
+    width: 100%;
 }
 
 /* img{
@@ -132,6 +148,10 @@ body {
     filter: invert(1);
     z-index:0;
 } */
+
+.back {
+    background: var(--wait-dark);
+}
 
 .scriptCards {
     position: absolute;
@@ -176,10 +196,6 @@ body {
     color: var(--bg-color);
 }
 
-.instruction--do .text {
-    font-family: serif_italic;
-}
-
 svg {
     height: 100%;
     width: 100%;
@@ -187,7 +203,7 @@ svg {
     z-index: 0;
 }
 
-.instruction--do svg {
+/* .instruction--do svg {
     fill: #ff5242;
 }
 
@@ -229,9 +245,9 @@ svg {
 
 .idle svg {
     fill: #ffc200;
-}
+} */
 
-/* .instruction>div {
+.instruction>div {
     height: 100%;
     width: 100%;
     position: absolute;
@@ -240,44 +256,101 @@ svg {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     transition: transform 1s;
-    background: var(--bg-color);
+    /* background: url(clouds.jpg); */
     background-size: cover;
     border-radius: var(--b-radius);
     overflow: hidden;
     box-shadow: 1px 1px 2px rgb(0 0 0 / 3%), 2.5px 2.5px 8px rgb(0 0 0 / 5%), 5px 5px 20px rgb(0 0 0 / 4%)
-} */
+}
 
 .instruction .front {
-    /* transform: translate3d(0, 0, 0); */
-    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
 }
 
 .instruction .back {
     transform: rotateY(-180deg);
-    backface-visibility: hidden;
 }
 
 .instruction .stopwatch {
-    font-size: 3.5vh;
+    font-size: 3vh;
     position: absolute;
-    bottom: 0px;
+    left: 6vh;
+    bottom: 9.5vh;
     width: 100%;
-    text-align: center;
-    margin-bottom: 7.5vh;
-    font-family: serif_italic;
+    /* text-align: center; */
+    /* margin-bottom: 7.5vh; */
+    font-family: arial_rounded;
     color: var(--bg-color);
     opacity: 0.7;
     z-index: 2
 }
 
-.instruction .text span.choice {
-    font-family: serif_italic;
+.instruction .text .choice {
+    /* font-family: arial_rounded; */
     display: block;
+    text-align: right;
+    margin-bottom: 5%;
     /* font-style:italic; */
 }
 
+.instruction .text .choice div {
+    margin-top: 5%;
+    margin-left: 5%;
+    display: inline-block;
+    text-align: right;
+}
+
+.instruction .text .choice span {
+    padding: 5px;
+    line-height: 3.5vh;
+    background: black;
+}
+
+.instruction--say .front {
+    color: var(--say-text);
+    background: var(--say-dark);
+}
+
+.instruction--say .text .choice span {
+    background: var(--say-light);
+    color: var(--say-dark);
+}
+
+.instruction--do .frame {
+    fill: var(--do-light);
+}
+
+/* .instruction--do .animation {
+    --do-light: red;
+    --do-dark: black;
+} */
+
+.timer {
+    position: absolute;
+    height: 0%;
+    width: 100%;
+    top: 0px;
+    mix-blend-mode: difference;
+    background-color: white;
+    z-index: 5;
+}
+
+.instruction--do svg.animation .frame {
+    fill: black !important;
+}
+
+.instruction--do .front {
+    color: var(--do-light);
+    background: var(--do-dark);
+}
+
+.instruction--do .text .choice span {
+    background: var(--do-light);
+    color: var(--do-dark);
+}
+
 .instruction .text span.swipe {
-    font-family: serif_italic;
+    font-family: arial_rounded;
     font-size: 3vh;
     line-height: 3vh;
     margin-top: 3vh;
@@ -290,12 +363,14 @@ svg {
 }
 
 .instruction .type {
+    position: absolute;
+    top: 5%;
     font-size: 3.5vh;
     line-height: 4vh;
-    margin-bottom: 2vh;
-    margin-top: -6vh;
+    /* margin-bottom: 2vh;
+    margin-top: -6vh; */
     opacity: 0.7;
-    font-family: serif_italic;
+    font-family: arial_rounded;
     /* position: absolute; */
     width: 100%;
     text-align: center;
@@ -312,7 +387,7 @@ svg {
 .instruction .wait {
     font-size: 3.5vh;
     opacity: 0.7;
-    font-family: serif_italic;
+    font-family: arial_rounded;
     position: absolute;
     transform: translate(-50%, -50%);
     left: 50%;
@@ -325,18 +400,20 @@ svg {
 
 .instruction .text {
     position: absolute;
-    transform: translate(-50%, -50%);
-    left: 50%;
-    top: 50%;
-    width: 70%;
+    /* transform: translate(-50%, -50%); */
+    /* left: 50%; */
+    /* top: 55%; */
+    left: 10%;
+    top: 25%;
+    width: 80%;
     max-height: 75%;
     /* margin-top: 2.25vh; */
     z-index: 3;
-    font-family: serif;
-    font-size: 4vh;
+    font-family: arial_rounded;
+    font-size: 3.5vh;
     line-height: 5vh;
     letter-spacing: -0.025em;
-    text-align: center;
+    text-align: left;
 }
 
 .hide {
@@ -419,18 +496,14 @@ svg {
     transition: margin-top 0.5s, margin-left 0.5s;
 }
 
-.animation {
-    position: absolute;
-    transition-timing-function: linear !important;
-    z-index: 1;
+.timer.start {
+    height: 0%;
+    /* clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); */
 }
 
-.animation.start {
-    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
-}
-
-.animation.end {
-    clip-path: polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%);
+.timer.end {
+    height: 100%;
+    /* clip-path: polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%); */
 }
 
 .fill {
@@ -440,7 +513,7 @@ svg {
 
 .uiText {
     font-size: 5vh;
-    font-family: serif_italic;
+    font-family: arial_rounded;
     color: #03034e;
     background: transparent;
     border: none;

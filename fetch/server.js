@@ -2,7 +2,17 @@
 const fs = require('fs');
 const path = require('path');
 
-const DatabaseManager = require('./DatabaseManager.js');
+const _Mqtt = require("./modules/_Mqtt.js")
+const _Mongo = require('./modules/_Mongo.js');
+const _Redis = require('./modules/_Redis.js');
+
+const _Monitor = require('./_Monitor.js');
+
+
+
+const _Database = require('./_Database.js');
+const _Rooms = require('./_Rooms.js');
+// const _Scripts = require('./_Scripts.js');
 
 const express = require('express');
 const fileUpload = require('express-fileupload');
@@ -12,55 +22,50 @@ var bodyParser = require('body-parser')
 var app = express();
 app.use(cors())
 app.listen(8080);
-app.use('/api/uploads', express.static('uploads'))
-app.use('/api/system', express.static('system'))
-app.use('/api/cards', express.static('cards'))
+
+
+
+const _mongo = new _Mongo({ url: 'mongodb://localhost:27017' });
+const _redis = new _Redis();
+const _mqtt = new _Mqtt();
+
+let _db, _rooms, monitor;
+
+
+
+
+const isDev = true;
+let mqtt_url = isDev ? "localhost:8883" : "socket.datingproject.net/mqtt";
+
+_mongo.connect('datingProject')
+  .then(async () => {
+    _db = new _Database({ _mongo, _redis });
+    _rooms = new _Rooms({ _mongo, _redis });
+
+    await _mqtt.connect(mqtt_url, true)
+
+    _monitor = new _Monitor({ _rooms, _mqtt });
+
+    let urls = await _rooms.getAllRoomUrls();
+    urls.map(url => url.replace('r_', '')).map(room_url => _monitor.start({ room_url }))
+    console.error('ok?');
+  })
 
 
 
 
 
 
-const _db = new DatabaseManager({ mongo_url: 'mongodb://localhost:27017' });
 
-// const test = async () => {
-//   console.log('test');
-//   let { room_url, room } = await _db.createRoom({ script_id: 'barleon' });
-//   // console.log(room_url, Object.keys(room));
-//   /*  let { role_id, instructions, error } = await _db.joinRoom({ room_url: room_url, role_url: Object.keys(room)[0] });
-//    console.log(error); */
+app.use(bodyParser.urlencoded({
+  limit: "50mb",
+  extended: false
+}));
+app.use(bodyParser.json({ limit: "50mb" }));
 
-// }
-_db.init().then(() => {
-  console.info('connection made with mongodb');
-})
 
-app.use(bodyParser.json())
 
-// save script
-app.post('/api/save/:script_id', async function (req, res, next) {
-  let { blocks, roles, instructions } = req.body;
-  const script_id = req.params.script_id;
-  const result = await _db.saveScript({ script_id, blocks, roles, instructions });
-  res.json(result);
-})
 
-// get script
-app.get('/api/get/:script_id', async function (req, res, next) {
-  const script_id = req.params.script_id;
-  let results = await _db.getScript(script_id);
-  res.send(results);
-  return next();
-})
-
-// test script
-app.post('/api/test/:script_id', async function (req, res, next) {
-  const { script_id } = req.params;
-  let script = req.body;
-  let { roles, room_url, error } = await _db.testScript({ script_id, script });
-  if (error) res.json({ success: false, error: error });
-  res.json({ roles, room_url });
-})
 
 app.use(fileUpload());
 
@@ -87,27 +92,62 @@ app.get('/api/downloadVideo/:file_name', async (req, res, next) => {
   res.attachment(`/api/uploads/${file_name}`);
 })
 
+// script
+
+// save script
+app.post('/api/script/save/:script_id', async function (req, res, next) {
+  let { blocks, roles, instructions } = req.body;
+  const script_id = req.params.script_id;
+  const result = await _db.saveScript({ script_id, blocks, roles, instructions });
+  res.json(result);
+})
+
+// get script
+app.get('/api/script/get/:script_id', async function (req, res, next) {
+  const script_id = req.params.script_id;
+  let results = await _db.getScript(script_id);
+  res.send(results);
+  return next();
+})
+
+// test script
+
+// test script
+app.post('/api/script/test/:script_id', async function (req, res, next) {
+  const { script_id } = req.params;
+  let script = req.body;
+  let { room, room_url } = await _rooms.createRoom({ script, script_id });
+  _monitor.start({ room_url });
+  res.json({ ...room, room_url });
+})
+
 // ROOM
 
+
+
 // create room
-app.post('/api/room/create/:script_id/:type', async function (req, res, next) {
-  const type = req.params.type;
-  const script_id = req.params.script_id;
-  _redis.createRoom({ script_id });
-  res.json({ room_id, role_data });
+app.post('/api/room/create/:script_id', async function (req, res, next) {
+  const { script_id } = req.params;
+  const { roles, room_url, error } = await _rooms.createRoom({ script_id });
+  _monitor.monitor({ room_url, roles, script_id });
+  res.json({ roles, room_url, error });
 })
 
 // delete room
-app.get('/api/room/delete/:room_id', async function (req, res, next) {
+app.get('/api/room/delete/:room_url', async function (req, res, next) {
   try {
-    const room_id = req.params.room_id;
-    console.log();
-    const role_urls = await _hget(`r_${room_id}`, 'role_urls');
-    Object.values(role_urls).forEach(async (role_url) => {
-      await _hdel(`role_urls`, role_url);
-    })
-    await _del(`r_${room_id}`);
-    res.send(true)
+    const room_url = req.params.room_url;
+    let response = await _rooms.deleteRoom({ room_url });
+    res.send(response)
+  } catch (e) {
+    console.error(e);
+  }
+})
+
+// delete room
+app.get('/api/room/status', async function (req, res, next) {
+  try {
+    //console.log('this works somehow!!!');
   } catch (e) {
     console.error(e);
   }
@@ -118,7 +158,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
   const { url } = req.params;
   const room_url = url.slice(0, 6);
   const role_url = url.slice(6);
-  let { role_id, instructions, error } = await _db.joinRoom({ room_url, role_url });
+  let { role_id, instructions, error } = await _rooms.joinRoom({ room_url, role_url });
   if (error) {
     console.error('errrrrr', error);
     res.json({ success: false, error: error })
@@ -130,10 +170,12 @@ app.get('/api/room/join/:url', async function (req, res, next) {
 app.get('/api/room/getRoleUrls/:room_url', async function (req, res, next) {
   const room_url = req.params.room_url;
   try {
-    let { role_urls } = await _db.getRoleUrls({ room_url });
-    console.log('get room ', role_urls, 'geetetet');
-    if (!role_urls) res.send(false);
-    res.json({ role_urls, room_url });
+    //console.log('get room ', room_url, 'geetetet');
+    let { role_urls } = await _rooms.getRoleUrlsOfRoom({ room_url });
+    if (!role_urls)
+      res.send(false);
+    else
+      res.json({ role_urls, room_url });
   } catch (e) {
     res.json({ error: e });
   }
@@ -143,15 +185,26 @@ app.get('/api/room/getRoleUrls/:room_url', async function (req, res, next) {
 app.get('/api/room/getRooms/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id;
   try {
-    console.log('get those rooms!!');
-    let rooms = await _db.getRooms({ script_id });
+    ////console.log('get those rooms!!');
+    let rooms = await _rooms.getRooms({ script_id });
     res.json(rooms);
   } catch (e) {
     res.json({ error: e });
   }
 })
 
+// get active rooms with certain script_id (for game-master)
+app.get('/api/room/disconnect/:room_url/:role_url', async function (req, res, next) {
+  const { room_url, role_url } = req.params;
+  try {
+    let rooms = await _rooms.updateStatusOfRole({ room_url, role_url, status: 'disconnected' });
+    _mqtt.send(`/monitor/${room_url}/${role_url}/status`, JSON.stringify({ status: 'disconnected' }));
 
+    res.json(rooms);
+  } catch (e) {
+    res.json({ error: e });
+  }
+})
 
 // CARD
 
@@ -161,7 +214,7 @@ app.post('/api/card/uploadImage/:card_id/:image_id', async function (req, res, n
   !fs.existsSync(card_path) ? fs.mkdirSync(card_path) : null;
   let new_filename = `${image_id}${path.extname(req.files.file.name)}`;
   let new_path = `${card_path}/${new_filename}`;
-  console.log('upload image!!! ', new_path);
+  ////console.log('upload image!!! ', new_path);
   fs.writeFile(new_path, req.files.file.data, async (err) => {
     if (!err) {
       res.send(new_path);
@@ -175,14 +228,32 @@ app.post('/api/card/save/:card_id', async function (req, res, next) {
   const { card_id } = req.params;
   // sanitize?
   let saved = await _db.saveCard({ card_id, card: req.body })
-  console.log(saved);
+  ////console.log(saved);
   res.send(saved);
 })
 
 app.get('/api/card/get/:card_id', async function (req, res, next) {
   const { card_id } = req.params;
   // sanitize?
-  console.log('get card id');
+  ////console.log('get card id');
   let card = await _db.getCard({ card_id })
   res.json(card);
 })
+
+app.get('/api/convertAllScripts', async function (req, res, next) {
+  res.json(await _db.convertAllScripts());
+})
+
+app.use('/api/uploads', express.static(__dirname + '/uploads'))
+app.use('/api/system', express.static('system'))
+app.use('/api/cards', express.static('cards'))
+
+app.get('/api/video/:script_id/:file_id', () => {
+
+  const { script_id, file_id } = req.params;
+  console.log('get video', script_id, file_id);
+  // res.attachment(`/api/uploads/${script_id}/${file_id}`);
+
+})
+
+console.log('ok');

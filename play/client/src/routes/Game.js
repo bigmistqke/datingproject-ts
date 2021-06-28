@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useHistory } from "react-router-dom";
-import Card from "../components/_Card";
+import Card from "../components/Card";
 import getData from '../helpers/getData';
 import memoize from "fast-memoize";
 
@@ -51,10 +51,6 @@ function Game({ socket, user_id }) {
             if (instruction.type === 'video') {
                 videos_amount++;
                 let _p = new Promise((resolve) => {
-                    /* let video = document.createElement('video');
-                    video.src = `${window._url.fetch}${instruction.text}`;
-                    r_videos.current[instruction.instruction_id] = video;
-                    resolve() */
                     var xhrReq = new XMLHttpRequest();
                     xhrReq.open('GET', `${window._url.fetch}${instruction.text}`, true);
                     xhrReq.responseType = 'blob';
@@ -62,18 +58,14 @@ function Game({ socket, user_id }) {
                         videos_loaded++;
                         if (this.status === 200) {
                             try {
-                                console.log('loaded ', this.response, URL.createObjectURL(this.response));
                                 let video = document.createElement('video');
                                 video.src = URL.createObjectURL(this.response);
                                 video.className = 'video';
                                 video.setAttribute('playsinline', '');
-
                                 r_videos.current[instruction.instruction_id] = video;
                             } catch (e) {
                                 console.error(e);
                             }
-                            console.log('video preloaded!!! loaded: ', videos_loaded, ' of ', videos_amount);
-
                         } else {
                             console.error('video could not load!!!!!');
                         }
@@ -81,7 +73,7 @@ function Game({ socket, user_id }) {
 
                     }
                     xhrReq.onerror = function () {
-                        console.log('err', arguments);
+                        console.error('err', arguments);
                     }
                     xhrReq.onprogress = function (e) {
                         if (e.lengthComputable) {
@@ -104,22 +96,18 @@ function Game({ socket, user_id }) {
         alarm.addEventListener('loadeddata', () => {
             window.alarm = alarm;
         })
-        // alarm.play();
     }
 
     const getDesigns = async () => {
         let result = await fetch(`${window._url.fetch}/api/card/get/test`);
         result = await result.json();
+        if (!result || result.designs) return;
         setDesigns(result.designs);
         setRender(performance.now());
-        console.log('getDesigns', result);
     }
 
-    useEffect(() => {
-        console.log(designs);
-    }, [designs])
-
     const joinRoom = async () => {
+
         let result = await fetch(`${window._url.fetch}/api/room/join/${game_url}`);
         if (!result) {
             console.error('could not fetch instructions: double check the url');
@@ -130,48 +118,46 @@ function Game({ socket, user_id }) {
         return result;
     }
 
-    const initCookie = () => {
-        setCookie('ownCards', '');
-        setCookie('receivedCards', '');
-    }
+    /*     const initCookie = () => {
+            setCookie('ownCards', '');
+            setCookie('receivedCards', '');
+        } */
 
-    const addToCookie = (id, type) => {
-        try {
-            let data = getCookie(type);
-            if (data != '') data += ','
-            data += id;
-            setCookie(type, data);
-        } catch (e) {
-
-        }
-    }
-
-    const setCookie = (cname, cvalue, exdays) => {
-        var d = new Date();
-        d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
-        var expires = "expires=" + d.toUTCString();
-        document.cookie = `${cname}=${cvalue};${expires};path=/${game_url}`;
-    }
-
-    const getCookie = (cname) => {
-        var name = cname + "=";
-        var decodedCookie = decodeURIComponent(document.cookie);
-        var ca = decodedCookie.split(';');
-        for (var i = 0; i < ca.length; i++) {
-            var c = ca[i];
-            while (c.charAt(0) == ' ') {
-                c = c.substring(1);
+    /*     const addToCookie = (id, type) => {
+            try {
+                let data = getCookie(type);
+                if (data != '') data += ','
+                data += id;
+                setCookie(type, data);
+            } catch (e) {
+    
             }
-            if (c.indexOf(name) == 0) {
-                return c.substring(name.length, c.length);
+        } */
+
+    /*     const setCookie = (cname, cvalue, exdays) => {
+            var d = new Date();
+            d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+            var expires = "expires=" + d.toUTCString();
+            document.cookie = `${cname}=${cvalue};${expires};path=/${game_url}`;
+        } */
+
+    /*     const getCookie = (cname) => {
+            var name = cname + "=";
+            var decodedCookie = decodeURIComponent(document.cookie);
+            var ca = decodedCookie.split(';');
+            for (var i = 0; i < ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) == ' ') {
+                    c = c.substring(1);
+                }
+                if (c.indexOf(name) == 0) {
+                    return c.substring(name.length, c.length);
+                }
             }
-        }
-        return "";
-    }
+            return "";
+        } */
 
     const init = async () => {
-        // initAlarm();
-
 
         window.isUnsafe = unsafe ? true : false;
         r_isMobile.current = isMobile();
@@ -183,59 +169,52 @@ function Game({ socket, user_id }) {
 
         const card_designs = await getDesigns();
 
-        console.log(room_url, role_url);
-
         r_room_url.current = room_url;
         r_role_url.current = role_url;
         r_role_id.current = role_id;
 
-        console.log('joinRoom', { instructions, role_id });
-
         await preloadVideos(instructions);
 
-        console.log('all videos are preloaded ', instructions);
-
         r_instructions.current = instructions;
-        console.log('cookie is ', document.cookie);
-        if (document.cookie != '') {
+        /* if (document.cookie != '') {
 
-            console.log(getCookie('receivedCards'), getCookie('ownCards'))
             try {
                 getCookie('receivedCards').split(',').forEach(instruction_id => {
                     removeFromPrevInstructionIds(instruction_id, false)
                 });
                 getCookie('ownCards').split(',').forEach(instruction_id => {
-                    console.log('ownCards:', instruction_id);
                     removeInstruction(instruction_id, false);
                 });
             } catch (e) {
-                /* setCookie('ownCards', JSON.stringify([]), 1);
-                setCookie('receivedCards', JSON.stringify([]), 1); */
                 console.error(e);
-                console.log(document.cookie);
             }
         } else {
-            initCookie();
-
-            console.log(document.cookie);
-        }
-
-
-        console.log(`/${room_url}/${role_id}/swipe`);
-        console.log(`/${room_url}/${role_id}/confirmation`);
+            // initCookie();
+        } */
+        socket.subscribe(`/${room_url}/${role_id}/ping`, (message, topic) => {
+            console.log('ping!');
+            socket.send(`/${room_url}/${role_id}/pong`, message);
+        })
 
         socket.subscribe(`/${room_url}/${role_id}/swipe`, receiveSwipedCard);
         socket.subscribe(`/${room_url}/${role_id}/confirmation`, receiveConfirmation);
-        socket.send('/connect', role_id);
+        socket.send(`/${room_url}/${role_id}/status`, JSON.stringify({ role_url, status: 'connected' }));
         window.addEventListener('beforeunload', () => {
-            socket.send('/disconnect', JSON.stringify({ user_id, room_url }));
+            socket.send(`${room_url}/${role_id}/status`, JSON.stringify({ role_url, status: 'disconnected' }));
         })
+        /*         window.addEventListener('beforeunload', () => {
+                    socket.send(`${room_url}/${role_id}/status`, JSON.stringify({ role_url, status: 'disconnected' }));
+                }) */
+        window.onbeforeunload = async function () {
+            let result = await fetch(`${window._url.fetch}/api/room/disconnect/${room_url}/${role_url}`);
+            socket.send(`${room_url}/${role_id}/status`, JSON.stringify({ role_url, status: 'disconnected' }));
 
+
+        }
         setRender(performance.now());
     }
 
     useEffect(() => {
-        console.log('socket is ', socket);
         if (!r_isInitialized.current) init();
 
     }, [socket])
@@ -248,37 +227,37 @@ function Game({ socket, user_id }) {
         setRender(performance.now());
     }
 
-
+    const sendFinished = () => {
+        socket.send(`/${r_room_url.current}/${r_role_id.current}/status`, JSON.stringify({ status: 'finished', role_url: r_role_url.current }));
+    }
 
     const sendSwipedCardToNextRoleIds = (instruction_id, next_role_ids) => {
+        const resend = ({ role_id, instruction_id }) => {
+            if (r_unconfirmedUpdates.current.indexOf(`${role_id}_${instruction_id}`) === -1) return;
+            socket.send(`/${r_room_url.current}/${role_id}/swipe`, JSON.stringify({ role_id: r_role_id.current, role_url: r_role_url.current, instruction_id }));
+            setTimeout(() => { resend({ role_id, instruction_id }) }, 500);
+        }
+
+        console.log('ok')
+
         next_role_ids.forEach(next_role_id => {
-            if (next_role_id === r_role_url.current) {
+            console.log(next_role_id);
+
+            if (next_role_id === r_role_id.current) {
                 receiveSwipedCard(JSON.stringify({ role_id: r_role_id.current, instruction_id }));
-            } else {
-                console.log(socket);
-                console.log(socket.client.connected);
-
-                socket.send(`/${r_room_url.current}/${next_role_id}/swipe`, JSON.stringify({ role_id: r_role_url.current, instruction_id }));
-                r_unconfirmedUpdates.current[`${next_role_id}_${instruction_id}`] = setInterval(() => {
-                    if (!socket.client.connected) {
-                        console.error(`client is not connected while trying to send an extra update`);
-                    }
-
-                    console.error(`extra update sent to ${next_role_id} for instruction ${instruction_id} from ${r_role_url.current}`);
-                    socket.send(`/${r_room_url.current}/${next_role_id}/swipe`, JSON.stringify({ role_id: r_role_id.current, instruction_id }));
-
-                }, 500);
             }
-
+            socket.send(`/${r_room_url.current}/${next_role_id}/swipe`, JSON.stringify({ role_id: r_role_id.current, role_url: r_role_url.current, instruction_id }));
+            console.log('this happenned !', instruction_id);
+            r_unconfirmedUpdates.current.push(`${next_role_id}_${instruction_id}`);
+            setTimeout(() => { resend({ role_id: next_role_id, instruction_id }) }, 500);
         })
     }
 
     const receiveConfirmation = (json) => {
         try {
             let { instruction_id, role_id } = JSON.parse(json);
-            console.log('receiveConfirmation', instruction_id, role_id);
-            clearInterval(r_unconfirmedUpdates.current[`${role_id}_${instruction_id}`]);
-            delete r_unconfirmedUpdates.current[`${role_id}_${instruction_id}`];
+            let resend_id = `${role_id}_${instruction_id}`;
+            r_unconfirmedUpdates.current.splice(r_unconfirmedUpdates.current.indexOf(resend_id), 1);
         } catch (e) {
             console.error(e);
         }
@@ -313,15 +292,11 @@ function Game({ socket, user_id }) {
     const receiveSwipedCard = (json) => {
         try {
             let { instruction_id, role_id } = JSON.parse(json);
-            console.log('sent confirmation to ', instruction_id, role_id);
-            socket.send(`/${r_room_url.current}/${role_id}/confirmation`, JSON.stringify({ instruction_id, role_id: r_role_id.current }));
-
+            socket.send(`/${r_room_url.current}/${role_id}/confirmation`, JSON.stringify({ instruction_id, role_url: r_role_url.current, role_id: r_role_id.current }));
             if (r_receivedSwipes.current.indexOf(instruction_id) == -1) {
                 r_receivedSwipes.current.push(instruction_id);
                 removeFromPrevInstructionIds(instruction_id);
-                addToCookie(instruction_id, `receivedCards`);
-            } else {
-                console.log('already received swipe!!!!', instruction_id);
+                // addToCookie(instruction_id, `receivedCards`);
             }
         } catch (e) {
             console.error(e)
@@ -347,15 +322,7 @@ function Game({ socket, user_id }) {
     }, [])
 
     const enterGame = () => {
-        console.log('ENTER GAME', r_videos.current);
-
-        Object.entries(r_videos.current).forEach(([instruction_id, video]) => {
-            console.log('play', instruction_id, video);
-            // video.play();
-            // video.pause();
-        })
         setFullscreen(true);
-
         if (r_isMobile.current) {
             try {
                 const elem = document.documentElement;
@@ -377,10 +344,9 @@ function Game({ socket, user_id }) {
 
     const restart = async () => {
         const { instructions } = await joinRoom();
-        console.log(instructions)
         r_receivedSwipes.current = [];
         r_instructions.current = instructions;
-        initCookie();
+        // initCookie();
         setRender(performance.now());
     }
 
@@ -394,7 +360,7 @@ function Game({ socket, user_id }) {
 
     const addToOwnSwipes = useCallback((instruction_id) => {
         r_ownSwipes.current.push(instruction_id);
-        addToCookie(instruction_id, `ownCards`)
+        // addToCookie(instruction_id, `ownCards`)
     }, [])
 
     const Intro = () => {
@@ -438,18 +404,18 @@ function Game({ socket, user_id }) {
                                                     waitYourTurn={waitYourTurn}
                                                     swipeAction={() => {
                                                         sendSwipedCardToNextRoleIds(instruction.instruction_id, instruction.next_role_ids);
+                                                        if (r_instructions.current.length === 1) {
+                                                            sendFinished();
+                                                        }
                                                         setTimeout(() => {
                                                             removeInstruction(instruction.instruction_id);
                                                         }, 125);
                                                         addToOwnSwipes(instruction.instruction_id);
-                                                        console.log(r_instructions.current);
                                                         if (r_instructions.current.length > 1 && r_instructions.current[1].type === 'video') {
                                                             let id = `${r_instructions.current[1].instruction_id}_video`;
-                                                            console.log(id, document.querySelector(`#${id}`));
                                                             document.querySelector(`#${id}`).play();
                                                             document.querySelector(`#${id}`).pause();
                                                         }
-                                                        console.log('next is video');
                                                     }}
                                                     video={r_videos.current[instruction.instruction_id]}
                                                     designs={designs}

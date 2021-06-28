@@ -1,7 +1,8 @@
-import mqtt from "mqtt"
-import { v4 as uuidv4 } from 'uuid';
+const mqtt = require('mqtt');
+const { v4: uuidv4 } = require('uuid');
 
-export default class _Mqtt {
+
+class _Mqtt {
     constructor(url, websocket = false, ssl = false) {
         let id = uuidv4();
         console.log(id);
@@ -39,3 +40,5 @@ export default class _Mqtt {
         this.client.publish(`${this.base}${topic}`, msg)
     }
 }
+
+module.exports = _Mqtt;

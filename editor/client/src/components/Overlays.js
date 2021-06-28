@@ -31,7 +31,7 @@ const Overlays = {
     },
     options: (props) => {
         return (
-            <div style={{ left: `${parseInt(window.cursorPosition.x)}px`, top: `${parseInt(window.cursorPosition.y)}px` }}
+            <div style={{ left: `${parseInt(props.position.x)}px`, top: `${parseInt(props.position.y)}px` }}
                 className="overlay text_center">
                 <header>{props.data.text}</header>
                 {

@@ -14,14 +14,14 @@ function List() {
     getData("https://fetch.datingproject.net/scripts")
       .then(res => res.json())
       .then(res => {
-        console.log(res);
+        ////console.log(res);
         current.scripts = res;
         setScripts(res);
       });
   }, [])
 
   const clickHandler = (link) => {
-    console.log(link);
+    ////console.log(link);
     history.push(link);
   }
 
