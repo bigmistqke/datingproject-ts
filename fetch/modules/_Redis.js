@@ -35,7 +35,16 @@ const _Redis = function () {
     }
     this.flatten = (data) => JSON.stringify(data)
 
-    this.unflatten = (data) => JSON.parse(data)
+    this.unflatten = (data) => {
+        try {
+            data = JSON.parse(data);
+            return data;
+        } catch (e) {
+            console.error(e, data);
+
+        }
+        // return JSON.parse(data)
+    }
     this.init = () => { }
 }
 

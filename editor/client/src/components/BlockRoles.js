@@ -22,7 +22,7 @@ const BlockRoles = (props) => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (e.buttons != 1) return;
+        if (e.buttons !== 1) return;
         ////console.log(props.block, role_id, props.direction);
         props.blockManager.processConnection({ block: props.block, role_id, direction: props.direction });
 
@@ -31,7 +31,7 @@ const BlockRoles = (props) => {
     const removeRole = (e, role_id) => {
         e.preventDefault();
         e.stopPropagation();
-        props.blockManager.removeRole(e, role_id, props.block);
+        // props.blockManager.removeRole(e, role_id, props.block);
     }
 
     const checkErrors = (role_id) => {
@@ -41,16 +41,12 @@ const BlockRoles = (props) => {
         return ''
     }
 
-    useEffect(() => {
-        //console.log('blockroles, conenct', props.connections);
-
-    }, [props.connections])
 
 
     return <div className="connections">
         <div className="row flex Instruction-container"><div className="flex flexing">
             {
-                props.block ? props.connections.map((v, i) => {
+                props.block ? props.connections.sort((a, b) => parseInt(a.role_id) - parseInt(b.role_id)).map((v, i) => {
                     return (
                         <span className="flexing connection-container" key={i}>
                             <span

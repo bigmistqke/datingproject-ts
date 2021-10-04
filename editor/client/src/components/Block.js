@@ -15,13 +15,14 @@ function Block(props) {
     }, [])
 
     const startPosition = useCallback(async (e) => {
+        if (e.button !== 0) return;
         e.persist();
         if (!props.ctrlPressed && !props.block.selected)
             props.blockManager.deselectAllBlocks();
 
-        props.blockManager.selectBlock({ block_id: props.id });
+        props.blockManager.selectBlock({ block: props.block });
         await props.blockManager.processPosition(e, props.block, props.zoom);
-        if (props.blockManager.getSelectedBlocks().length != 1) return;
+        if (props.blockManager.getSelectedBlocks().length !== 1) return;
         if (!props.ctrlPressed)
             props.blockManager.deselectAllBlocks();
 
@@ -29,6 +30,7 @@ function Block(props) {
     }, [props.blockManager, props.shiftPressed, props.ctrlPressed]);
 
     const contextMenu = useCallback((e) => {
+        props.blockManager.selectBlock({ block: props.block });
         props.blockManager.confirmDelete(e, props.block);
     }, [])
 

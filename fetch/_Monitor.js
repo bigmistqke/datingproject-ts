@@ -18,14 +18,23 @@ function Monitor({ _rooms, _mqtt }) {
             _mqtt.send(`/monitor/${room_url}/${role_url}/card`, JSON.stringify({ type: instructions[0].type, text: instructions[0].text }));
     }
 
-    console.error('why?');
+    this.pingRole = async ({ role_url, room_url }) => {
+        let { role } = await _rooms.getRoleOfRoom({ room_url, role_url });
 
-    const monitorRole = ({ room_url, role_url, role }) => {
         let waitingForPing = true;
+
+        _mqtt.subscribe(`/${room_url}/${role.role_id}/pong`, async (message, topic) => {
+            let { ping } = JSON.parse(message);
+            let delta = performance.now() - ping;
+            waitingForPing = false;
+            _mqtt.send(`/monitor/${room_url}/${role_url}/ping`, { ping: delta.toFixed(2) });
+        })
+
         const ping = async () => {
             let { role } = await _rooms.getRoleOfRoom({ room_url, role_url });
+
             let room = await _rooms.getRoom({ room_url });
-            if (!role || role.status !== 'connected' || !room) return;
+            if (room.error || !role || role.status !== 'connected') return;
 
             _mqtt.send(`/${room_url}/${role.role_id}/ping`, { ping: performance.now() });
             setTimeout(() => {
@@ -39,13 +48,10 @@ function Monitor({ _rooms, _mqtt }) {
             }, 10000)
         }
         ping();
+    }
 
-        _mqtt.subscribe(`/${room_url}/${role.role_id}/pong`, async (message, topic) => {
-            let { ping } = JSON.parse(message);
-            let delta = performance.now() - ping;
-            waitingForPing = false;
-            _mqtt.send(`/monitor/${room_url}/${role_url}/ping`, { ping: delta.toFixed(2) });
-        })
+    const monitorRole = ({ room_url, role_url, role }) => {
+
 
         _mqtt.subscribe(`/${room_url}/${role.role_id}/swipe`, async (message, topic) => {
             let { instruction_id, role_url: _role_url } = JSON.parse(message);
@@ -57,15 +63,6 @@ function Monitor({ _rooms, _mqtt }) {
             if (instructions) //console.log('removeFromPrevInstructionIdsOfRole', instructions[0])
                 if (instructions)
                     sendCurrentCardOfRole({ room_url, role_url, instructions })
-        })
-
-        _mqtt.subscribe(`/${room_url}/${role.role_id}/status`, (message, topic) => {
-            let { role_url, status } = JSON.parse(message);
-            //console.log(status);
-            if (status === 'connected')
-                ping();
-            _rooms.updateStatusOfRole({ room_url, role_url, status });
-            _mqtt.send(`/monitor/${room_url}/${role_url}/status`, JSON.stringify({ status }));
         })
     }
 

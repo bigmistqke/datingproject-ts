@@ -2,8 +2,8 @@ import TWEEN from "@tweenjs/tween.js"
 
 class Tweener {
     tweenTo = (from, to, timespan, update, complete) => {
+
         let tweenData = { val: from };
-        this.animate();
         this.tween = new TWEEN.Tween(tweenData)
             .to({ val: to }, timespan)
             .easing(TWEEN.Easing.Quadratic.Out)
@@ -15,6 +15,8 @@ class Tweener {
                 this.tween = false
             })
             .start()
+        this.animate();
+
     }
     animate = (time) => {
         if (!this.tween) return;

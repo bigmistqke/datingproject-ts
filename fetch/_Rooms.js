@@ -6,7 +6,7 @@ Object.filter = (obj, predicate) =>
         .filter(key => predicate(key))
         .reduce((res, key) => (res[key] = obj[key], res), {});
 
-function _Rooms({ _redis, _mongo }) {
+function _Rooms({ _redis, _mongo, _mqtt }) {
     // this.role = new RoleManager({ _redis, _mongo });
     let _qs = {};
 
@@ -35,29 +35,66 @@ function _Rooms({ _redis, _mongo }) {
 
         if (!script) return { error: 'did not find any script' };
 
+
         let room_url = crypto.randomBytes(3).toString('hex');
 
         let room = {
             script_id,
             roles: {}
         };
+        console.info('script', JSON.stringify(script));
+
+        console.info('script.roles', script.roles);
 
         Object.entries(script.roles).forEach(async ([role_id, instruction_ids]) => {
             let role_url = crypto.randomBytes(1).toString('hex');
+
+            console.info('get instruction');
+
             let instructions = instruction_ids.map(instruction_id => {
                 let instruction = Object.filter(
                     script.instructions[instruction_id], key =>
                     ['text', 'type', 'instruction_id', 'next_role_ids',
-                        'prev_instruction_ids', 'timespan'].indexOf(key) != -1
+                        'prev_instruction_ids', 'timespan', 'sound'].indexOf(key) != -1
+
                 )
+                console.info(role_id, instruction);
+
                 return { ...instruction, instruction_id };
             });
             room.roles[role_url] = { instructions, role_id, status: 'uninitialized' };
         })
 
+        room._roles = { ...room.roles };
+
+
         let result = await _redis.set('r_' + room_url, room);
         console.info('room created ', result);
         return { room, room_url };
+    }
+
+    this.restartRoom = async ({ room_url }) => {
+        try {
+            let room = await _redis.get(`r_${room_url}`);
+            if (!room)
+                throw 'no room available with this url';
+
+            console.log(room);
+            room.roles = { ...room._roles };
+            let result = await _redis.set('r_' + room_url, room);
+
+            Object.entries(room.roles).forEach(([role_url, role]) => {
+                _mqtt.send(`/${room_url}/${role.role_id}/restart`, role);
+                _mqtt.subscribe(`/${room_url}/${role.role_id}/restart/confirmation`, () => {
+                    console.info('received confirmation from ', role.role_id, 'of room', room_url);
+                });
+
+            })
+
+            return { result, room };
+        } catch (e) {
+            return { error: e }
+        }
     }
 
     this.getAllRoomUrls = async () => {
@@ -101,6 +138,7 @@ function _Rooms({ _redis, _mongo }) {
             if (error) return { error };
             // //console.log('joined the room yo!');
             role.status = 'connected';
+            this.updateStatusOfRole({ room_url, role_url, status: 'connected' });
             // //console.log('joined the room')
             return { role_id: role.role_id, instructions: role.instructions };
         })
@@ -140,15 +178,50 @@ function _Rooms({ _redis, _mongo }) {
             if (!room)
                 throw 'no room available with this url';
             let role = room.roles[role_url];
-            return { role };
+            return { role, room };
         } catch (e) {
             return { error: e }
         }
     }
 
+    this.updateScriptOfRoom = ({ room_url, script_id }) => _process(room_url, { room_url, script_id },
+        async ({ room_url, script_id }) => {
+            try {
+                let script = await _mongo.getCollection('scripts').findDocument({ script_id });
+
+                let room = await _redis.get(`r_${room_url}`);
+                if (!room)
+                    throw 'no room available with this url';
+
+                Object.entries(script.roles).forEach(async ([role_id, instruction_ids]) => {
+                    let instructions = instruction_ids.map(instruction_id => {
+                        let instruction = Object.filter(
+                            script.instructions[instruction_id], key =>
+                            ['text', 'type', 'instruction_id', 'next_role_ids',
+                                'prev_instruction_ids', 'timespan', 'sound'].indexOf(key) != -1
+
+                        )
+                        console.log(instruction);
+                        return { ...instruction, instruction_id };
+                    });
+                    console.log(room.roles);
+                    let [role_url, role] = Object.entries(room.roles).find(([role_url, role]) => role.role_id === role_id);
+                    room.roles[role_url] = { instructions, role_id, status: 'uninitialized' };
+                })
+
+                room._roles = { ...room.roles };
+                let result = await _redis.set('r_' + room_url, room);
+                return { success: true, result: result };
+            } catch (e) {
+                return { success: false, errors: e };
+            }
+
+        })
+
     this.updateStatusOfRole = ({ room_url, role_url, status }) => _process(room_url, { room_url, role_url, status },
         async ({ room_url, role_url, status }) => {
             let room = await _redis.get(`r_${room_url}`);
+            if (!room) return;
             let role = Object.entries(room.roles).find(([_url]) => _url === role_url)[1];
             role.status = status;
             room.roles = { ...room.roles, [role_url]: role };

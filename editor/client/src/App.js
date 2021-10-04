@@ -18,13 +18,13 @@ import uniqid from 'uniqid';
 
 import Mqtt from "./helpers/Mqtt.js"
 
-const isDev = window.location.href.indexOf('localhost') != -1;
+const isDev = window.location.href.indexOf('localhost') !== -1;
 
 window._url = {
     mqtt: isDev ? "localhost:8883" : "socket.datingproject.net/mqtt",
     fetch: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net",
     play: isDev ? "http://localhost:3001" : "https://play.datingproject.net",
-    gamemaster: isDev ? "http://localhost:3004" : "https://gamemaster.datingproject.net",
+    monitor: isDev ? "http://localhost:3004" : "https://monitor.datingproject.net",
 }
 
 function App() {

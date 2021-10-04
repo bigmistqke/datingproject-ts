@@ -6,9 +6,6 @@ import memoize from "fast-memoize";
 
 import isMobile from "is-mobile";
 
-var uniqid = require('uniqid');
-let not_subscribed = true;
-
 function Game({ socket, user_id }) {
     const history = useHistory();
     let { game_url, unsafe } = useParams();
@@ -37,6 +34,9 @@ function Game({ socket, user_id }) {
     let r_isInitialized = useRef(false);
     let r_restartTimer = useRef();
 
+    let r_audioContext = useRef();
+    let r_alarm = useRef();
+
     const preloadVideos = async (instructions) => {
         let promises = [];
         let progresses = {};
@@ -45,17 +45,14 @@ function Game({ socket, user_id }) {
             let total_progress = Object.values(progresses).reduce((a, b) => a + b, 0) / Object.values(progresses).length;
             setProgress(parseInt(total_progress));
         }
-        let videos_amount = 0;
-        let videos_loaded = 0;
         for (let instruction of instructions) {
             if (instruction.type === 'video') {
-                videos_amount++;
-                let _p = new Promise((resolve) => {
+                // eslint-disable-next-line no-loop-func
+                promises.push(new Promise((resolve, reject) => {
                     var xhrReq = new XMLHttpRequest();
                     xhrReq.open('GET', `${window._url.fetch}${instruction.text}`, true);
                     xhrReq.responseType = 'blob';
                     xhrReq.onload = function () {
-                        videos_loaded++;
                         if (this.status === 200) {
                             try {
                                 let video = document.createElement('video');
@@ -74,6 +71,8 @@ function Game({ socket, user_id }) {
                     }
                     xhrReq.onerror = function () {
                         console.error('err', arguments);
+                        window.alert(arguments);
+                        resolve();
                     }
                     xhrReq.onprogress = function (e) {
                         if (e.lengthComputable) {
@@ -83,20 +82,44 @@ function Game({ socket, user_id }) {
                         }
                     }
                     xhrReq.send();
-                })
-                promises.push(_p)
+                }))
             }
         }
         return Promise.all(promises);
     }
 
-    const initAlarm = () => {
-        let alarm = document.createElement('audio');
-        alarm.src = `${window._url.fetch}/api/system/ping.mp3`;
-        alarm.addEventListener('loadeddata', () => {
-            window.alarm = alarm;
+    const initAlarm = useCallback(() => {
+        r_alarm.current = document.createElement('audio');
+
+        var xhrReq = new XMLHttpRequest();
+        xhrReq.open('GET', `${process.env.PUBLIC_URL}/audio/ping.wav`, true);
+        xhrReq.responseType = 'blob';
+        xhrReq.onload = function () {
+            if (this.status === 200) {
+                console.log('dled alarm');
+                r_audioContext.current = window.AudioContext || window.webkitAudioContext;
+                r_alarm.current.src = URL.createObjectURL(this.response);
+                r_alarm.current.play();
+                r_alarm.current.volume = 0.0000001;
+            }
+        }
+        xhrReq.send();
+
+    }, [])
+
+    const playAlarm = useCallback(() => {
+        return new Promise((resolve) => {
+            console.log(r_alarm.current);
+            r_alarm.current.currentTime = 0;
+            r_alarm.current.volume = 0.5;
+
+            r_alarm.current.onended = () => {
+                resolve();
+            }
+            r_alarm.current.play();
         })
-    }
+
+    }, [])
 
     const getDesigns = async () => {
         let result = await fetch(`${window._url.fetch}/api/card/get/test`);
@@ -130,7 +153,7 @@ function Game({ socket, user_id }) {
                 data += id;
                 setCookie(type, data);
             } catch (e) {
-    
+     
             }
         } */
 
@@ -158,7 +181,7 @@ function Game({ socket, user_id }) {
         } */
 
     const init = async () => {
-
+        // initAlarm();
         window.isUnsafe = unsafe ? true : false;
         r_isMobile.current = isMobile();
         if (r_isMobile.current) document.getElementsByTagName('html')[0].classList.add('isMobile');
@@ -177,7 +200,7 @@ function Game({ socket, user_id }) {
 
         r_instructions.current = instructions;
         /* if (document.cookie != '') {
-
+     
             try {
                 getCookie('receivedCards').split(',').forEach(instruction_id => {
                     removeFromPrevInstructionIds(instruction_id, false)
@@ -191,9 +214,24 @@ function Game({ socket, user_id }) {
         } else {
             // initCookie();
         } */
+
+        console.log('socket is ', socket);
         socket.subscribe(`/${room_url}/${role_id}/ping`, (message, topic) => {
-            console.log('ping!');
+            console.info('ping!');
             socket.send(`/${room_url}/${role_id}/pong`, message);
+        })
+
+        socket.subscribe(`/${room_url}/${role_id}/restart`, (message, topic) => {
+            console.info('restart!');
+            restart();
+            socket.send(`/monitor/${room_url}/${role_id}/restart/confirmation`, JSON.stringify({ success: true }));
+        })
+
+        socket.subscribe(`/${room_url}/${role_id}/forcedSwipe`, (message, topic) => {
+            let instruction = r_instructions.current[0];
+            if (instruction.prev_instruction_ids.length !== 0) return;
+            swipeAction(instruction);
+            socket.send(`/monitor/${room_url}/${role_id}/forcedSwipe/confirmation`, JSON.stringify({ success: true }));
         })
 
         socket.subscribe(`/${room_url}/${role_id}/swipe`, receiveSwipedCard);
@@ -208,8 +246,6 @@ function Game({ socket, user_id }) {
         window.onbeforeunload = async function () {
             let result = await fetch(`${window._url.fetch}/api/room/disconnect/${room_url}/${role_url}`);
             socket.send(`${room_url}/${role_id}/status`, JSON.stringify({ role_url, status: 'disconnected' }));
-
-
         }
         setRender(performance.now());
     }
@@ -323,6 +359,7 @@ function Game({ socket, user_id }) {
 
     const enterGame = () => {
         setFullscreen(true);
+        initAlarm();
         if (r_isMobile.current) {
             try {
                 const elem = document.documentElement;
@@ -340,9 +377,10 @@ function Game({ socket, user_id }) {
         }
     }
 
-
-
     const restart = async () => {
+        r_instructions.current = [];
+        setRender(performance.now());
+
         const { instructions } = await joinRoom();
         r_receivedSwipes.current = [];
         r_instructions.current = instructions;
@@ -350,13 +388,12 @@ function Game({ socket, user_id }) {
         setRender(performance.now());
     }
 
-    const startRestartTimer = useCallback(() => {
-        r_restartTimer.current = setTimeout(restart, 3000)
-    }, [])
-
-    const cancelRestartTimer = useCallback(() => {
-        clearTimeout(r_restartTimer.current)
-    }, [])
+    const refetch = async () => {
+        const { instructions } = await joinRoom();
+        r_instructions.current = instructions;
+        // initCookie();
+        setRender(performance.now());
+    }
 
     const addToOwnSwipes = useCallback((instruction_id) => {
         r_ownSwipes.current.push(instruction_id);
@@ -367,11 +404,21 @@ function Game({ socket, user_id }) {
         return <button className='centered uiText' onClick={enterGame}><span>Click Here To Start Your Date</span></button>
     }
 
-    const swipe = useCallback(memoize((instruction) => {
-
-    }), []);
-
-
+    const swipeAction = (instruction) => {
+        sendSwipedCardToNextRoleIds(instruction.instruction_id, instruction.next_role_ids);
+        if (r_instructions.current.length === 1) {
+            sendFinished();
+        }
+        setTimeout(() => {
+            removeInstruction(instruction.instruction_id);
+        }, 125);
+        addToOwnSwipes(instruction.instruction_id);
+        if (r_instructions.current.length > 1 && r_instructions.current[1].type === 'video') {
+            let id = `${r_instructions.current[1].instruction_id}_video`;
+            document.querySelector(`#${id}`).play();
+            document.querySelector(`#${id}`).pause();
+        }
+    }
 
     const Game = () => {
         return (
@@ -384,8 +431,7 @@ function Game({ socket, user_id }) {
                             {
                                 [...r_instructions.current].map(
                                     (instruction, i) => {
-                                        if (i > 5) return
-
+                                        if (i > 5) return null
                                         let zIndex = r_instructions.current.length - i;
                                         let margin = Math.max(0, i);
                                         return (
@@ -393,6 +439,7 @@ function Game({ socket, user_id }) {
                                                 className='card-offset'
                                                 style={{ marginLeft: margin * 20, marginTop: margin * 20 }}>
                                                 <Card
+                                                    alarm={instruction.sound ? playAlarm : false}
                                                     offset={i}
                                                     zIndex={zIndex}
                                                     instruction_id={instruction.instruction_id}
@@ -402,21 +449,7 @@ function Game({ socket, user_id }) {
                                                     timespan={instruction.timespan ? instruction.timespan : 0}
                                                     flip={instruction.prev_instruction_ids.length == 0}
                                                     waitYourTurn={waitYourTurn}
-                                                    swipeAction={() => {
-                                                        sendSwipedCardToNextRoleIds(instruction.instruction_id, instruction.next_role_ids);
-                                                        if (r_instructions.current.length === 1) {
-                                                            sendFinished();
-                                                        }
-                                                        setTimeout(() => {
-                                                            removeInstruction(instruction.instruction_id);
-                                                        }, 125);
-                                                        addToOwnSwipes(instruction.instruction_id);
-                                                        if (r_instructions.current.length > 1 && r_instructions.current[1].type === 'video') {
-                                                            let id = `${r_instructions.current[1].instruction_id}_video`;
-                                                            document.querySelector(`#${id}`).play();
-                                                            document.querySelector(`#${id}`).pause();
-                                                        }
-                                                    }}
+                                                    swipeAction={() => { swipeAction(instruction) }}
                                                     video={r_videos.current[instruction.instruction_id]}
                                                     designs={designs}
                                                 ></Card>
@@ -426,7 +459,11 @@ function Game({ socket, user_id }) {
                                     }
                                 )
                             }
-                            <span className='centered uiText' onTouchStart={startRestartTimer} onTouchEnd={cancelRestartTimer} onMouseDown={startRestartTimer} onMouseUp={cancelRestartTimer}>The End</span>
+                            {
+                                r_instructions.current.length < 2 ?
+                                    <span className='centered uiText'>Het<br></br>Einde</span> :
+                                    null
+                            }
                         </div> :
                         <span className='centered fullWidth uiText'>{progress}%</span>
                 }

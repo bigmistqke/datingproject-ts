@@ -107,10 +107,6 @@ const Instruction = (props) => {
   }, [props.type])
 
   useEffect(() => {
-    console.log('props.text is' + props.text);
-  }, [props.text])
-
-  useEffect(() => {
     //console.log('sound : ', props.sound);
     setSound(props.sound);
   }, [props.sound])
@@ -119,9 +115,9 @@ const Instruction = (props) => {
   useEffect(() => {
     setTimeout(() => {
       if (!role_ref.current) return;
+
       if (props.role_id !== role_ref.current.value) {
         console.error('ERROR!!');
-
         change('role_id', role_ref.current.value);
       }
     }, 1000)

@@ -12,6 +12,23 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
     let updatedBlocks = [];
     let deletedConnections = [];
 
+    const getExtendedBlocks = (block) => {
+        if (!block) return;
+        let extendedBlocks = {};
+        let _blocks = blocks.get();
+        extendedBlocks[block.block_id] = block;
+        block.connections.forEach(connection => {
+            if (connection.prev_block_id) {
+                extendedBlocks[connection.prev_block_id] = _blocks.find(block => block.block_id === connection.prev_block_id);
+            }
+            if (connection.next_block_id) {
+                extendedBlocks[connection.next_block_id] = _blocks.find(block => block.block_id === connection.next_block_id);
+            }
+        })
+
+        return extendedBlocks;
+    }
+
 
     this.getBlockFromBlockId = ({ block_id }) => blocks.get().find(block => block.block_id === block_id)
 
@@ -23,19 +40,24 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         }
         connecting.set(true)
 
-        // remove previous connection;
 
+        let connection = block.connections.find(connection => connection.role_id === role_id);
+        // remove previous connection;
+        if (direction === 'out' && connection.next_block_id) {
+            deleteConnection({ block_id: connection.next_block_id, role_id, direction: 'in' });
+        } else if (direction === 'in' && connection.prev_block_id) {
+            deleteConnection({ block_id: connection.prev_block_id, role_id, direction: 'out' });
+        }
         deleteConnection({ block_id: block.block_id, role_id, direction });
 
 
         var move = (e) => {
-            // updateRoleBlock({ block: _updating.block, role_id: _updating.role_id, direction: _updating.direction, data: { x: e.clientX, y: e.clientY } });
             updateTemporaryConnection({ block_id: block.block_id, role_id: role_id, direction, position: { x: (e.clientX - origin.get().x) / zoom.get(), y: (e.clientY - origin.get().y) / zoom.get() } })
-            // updatedBlocks.push(block);
         }
 
         var end = (e) => {
             let this_id = _updating.block.block_id;
+
 
             document.body.removeEventListener("pointermove", move);
             document.body.removeEventListener("pointerup", end);
@@ -56,13 +78,13 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
                 let block = blocks.get().find(v => v.block_id === connecting_id);
                 updateRoleBlock({ block: block, role_id: _updating.role_id, direction: (_updating.direction === 'next' ? 'prev' : 'next'), data: _updating.block.block_id });
                 visualizeErrors();
-                let extendedBlockIds = [_updating.block.block_id, ...getExtendedBlockIds({ block_id: connecting_id })];
-                let _blocks = blocks.get().filter(block => extendedBlockIds.indexOf(block.block_id) != -1);
-                this.calculateConnections({ _blocks });
+
+                this.calculateConnections();
 
             } else {
+                console.log('this happens?');
                 updateRoleBlock({ block: _updating.block, role_id: _updating.role_id, direction: _updating.direction, data: null });
-                this.calculateConnections({});
+                this.calculateConnections();
             }
         }
 
@@ -86,27 +108,47 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         return [start_pos, out_pos];
     }
 
+    const deleteConnections = ({ block_id, connection }) => {
+        if (connection.prev_block_id) {
+            deleteConnection({ block_id: connection.prev_block_id, role_id: connection.role_id, direction: 'out' });
+            deleteConnection({ block_id, role_id: connection.role_id, direction: 'in' });
+        }
+        if (connection.next_block_id) {
+            deleteConnection({ block_id: connection.next_block_id, role_id: connection.role_id, direction: 'in' });
+            deleteConnection({ block_id, role_id: connection.role_id, direction: 'out' });
+        }
+    }
+
     const deleteConnection = ({ block_id, direction, role_id }) => {
-        let _connections = connections.get();
-        //console.log('delete temporary connection!!!!', _connections);
+        let _blocks = [...blocks.get()];
+        let _block = _blocks.find(_block => _block.block_id === block_id);
+        if (_block) {
+            let _block_connection = _block.connections.find(connection => connection.role_id === role_id);
+            if (!_block_connection) {
+                console.error('could not find connection of', JSON.parse(JSON.stringify(_block)), role_id);
+            } else {
+                if (direction === 'out') {
 
+                    _block_connection.next_block_id = null;
+
+                } else {
+                    _block_connection.prev_block_id = null;
+                }
+                blocks.set(_blocks);
+            }
+        } else {
+            console.error('could not find block ', block_id);
+        }
+
+        let _connections = [...connections.get()];
         if (direction === 'out') {
-
-            _connections = _connections.filter(c => {
-                //console.log(c, block_id, direction, role_id)
-                return !(c.in_block_id === block_id && c.role_id === role_id)
-            });
-
+            _connections = _connections.filter(c => !(c.out_block_id === block_id && c.role_id === role_id));
         } else {
             _connections = _connections.filter(c => {
-                //console.log(c, block_id, direction, role_id);
-                return !(c.out_block_id === block_id && c.role_id === role_id)
+                return !(c.in_block_id === block_id && c.role_id === role_id)
             })
-
         }
         connections.set(_connections);
-
-
     }
 
     const updateTemporaryConnection = ({ block_id, direction, role_id, position }) => {
@@ -114,52 +156,24 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         let data, pos;
         if (direction === 'out') {
             pos = [getCenterDOM(`out_${block_id}_${role_id}`), position];
-            data = { pos, out_block_id: null, in_block_id: block_id, role_id: role_id };
+            data = { pos, in_block_id: null, out_block_id: block_id, role_id: role_id };
 
         } else {
             pos = [position, getCenterDOM(`in_${block_id}_${role_id}`)];
-            data = { pos, out_block_id: block_id, in_block_id: null, role_id: role_id };
+            data = { pos, in_block_id: block_id, out_block_id: null, role_id: role_id };
         }
         let index = _connections.findIndex(c =>
             c.in_block_id === data.in_block_id && c.out_block_id === data.out_block_id && c.role_id === data.role_id);
         index === -1 ? _connections.push(data) : _connections[index] = data;
         connections.set(_connections);
-        // let pos = calculateBoundsConnection({ in_block_id: next_block_id, out_block_id: block.block_id, role_id: connection.role_id })
-
-
-        /*         _blocks.forEach((block) => {
-                    block.connections.forEach((connection) => {
-                        var next_block_id = connection.next_block_id;
-                        if (!next_block_id) return;
-                        let pos = calculateBoundsConnection({ in_block_id: next_block_id, out_block_id: block.block_id, role_id: connection.role_id })
-                        let data = { pos, in_block_id: block.block_id, out_block_id: next_block_id, role_id: connection.role_id };
-                        let index = _connections.findIndex(c =>
-                            c.in_block_id === data.in_block_id && c.out_block_id === data.out_block_id && c.role_id === data.role_id);
-                        index === -1 ? _connections.push(data) : _connections[index] = data;
-        
-                    })
-                }) */
     }
 
-    const removeConnection = (connecting_id, role_id, direction) => {
-        let _blocks = blocks.get();
-        ////console.log(connecting_id, role_id, direction);
-        let _block = _blocks.find((v) => v.block_id === connecting_id);
-        let _connection = _block.connections.find(v => v.role_id === role_id);
-        if (!_connection) return;
-        _connection[`${direction}_block_id`] = null;
 
 
-        blocks.set(_blocks);
-    }
-
-    this.calculateConnections = ({ _blocks }) => {
+    this.calculateConnections = (_blocks) => {
         _blocks = _blocks ? _blocks : [...blocks.get()];
         if (!_blocks) return;
         let _connections = [...connections.get()];
-
-
-
 
         _blocks.forEach((block) => {
             if (!block) return;
@@ -167,18 +181,39 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
                 var next_block_id = connection.next_block_id;
                 if (!next_block_id) return;
                 let pos = calculateBoundsConnection({ in_block_id: next_block_id, out_block_id: block.block_id, role_id: connection.role_id })
-                let data = { pos, in_block_id: block.block_id, out_block_id: next_block_id, role_id: connection.role_id };
+                let data = { pos, out_block_id: block.block_id, in_block_id: next_block_id, role_id: connection.role_id };
                 let index = _connections.findIndex(c =>
                     c.in_block_id === data.in_block_id && c.out_block_id === data.out_block_id && c.role_id === data.role_id);
                 index === -1 ? _connections.push(data) : _connections[index] = data;
-
             })
         })
         connections.set(_connections);
     }
 
-    this.offsetConnections = ({ _blocks, offset }) => {
+    this.offsetConnections = ({ block_ids, offset }) => {
+        let _connections = connections.get().map(_connection => {
+            let _pos = [..._connection.pos];
+            if (block_ids.includes(_connection.in_block_id)) {
+                if (!_pos[0]) {
+                    console.error('_connection.in_block_id', _connection.in_block_id, connections.get())
+                } else {
+                    _pos[0].x += offset.x;
+                    _pos[0].y += offset.y;
+                }
+            }
+            if (block_ids.includes(_connection.out_block_id)) {
+                if (!_pos[1]) {
+                    console.error('_connection.out_block_id', _connection.out_block_id, connections.get())
+                } else {
+                    _pos[1].x += offset.x;
+                    _pos[1].y += offset.y;
+                }
+            }
+            _connection.pos = _pos;
 
+            return _connection;
+        })
+        connections.set(_connections);
     }
 
 
@@ -187,13 +222,7 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
             let lastTick = performance.now();
 
             if (!e.target.classList.contains("block")) return;
-
             let coords = { x: e.clientX, y: e.clientY };
-            let position = block.position;
-
-            let selected_blocks = blocks.get().filter(block => block.selected);
-
-
 
             e.preventDefault();
             e.stopPropagation();
@@ -207,7 +236,7 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
                 };
                 let block_ids = [];
                 let positions = [];
-                selected_blocks.forEach(block => {
+                selectedBlocks.forEach(block => {
                     block_ids.push(block.block_id);
                     positions.push({
                         position: {
@@ -219,8 +248,7 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
                     updatedBlocks.push(block);
                 })
                 updateBlocks({ block_ids, datas: positions });
-                // this.offsetConnections({ _blocks: Object.values(extendedSelectedBlocks), offset })
-                this.calculateConnections({ _blocks: Object.values(extendedSelectedBlocks) });
+                this.offsetConnections({ block_ids: selectedBlocks.map(b => b.block_id), offset })
                 coords = { x: e.clientX, y: e.clientY };
             }
             const end = (e) => {
@@ -247,70 +275,15 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         updateBlock(block_id, { boundingBox });
     }
 
-    const getExtendedBlockIds = ({ block_id }) => {
-        let extendedBlockIds = [block_id];
-        let block = blocks.get().find(b => b.block_id === block_id);
-        //console.log(block);
 
-        block.connections.forEach(connection => {
-            //console.log(connection.prev_block_id, connection.next_block_id, 'cheeeeeck');
-            if (connection.prev_block_id) {
-                extendedBlockIds.push(connection.prev_block_id);
-            }
-            if (connection.next_block_id) {
-                extendedBlockIds.push(connection.next_block_id);
-            }
-        })
-        return extendedBlockIds;
+
+    const updateExtendedSelectedBlocks = (_block) => {
+        extendedSelectedBlocks = { ...extendedSelectedBlocks, ...getExtendedBlocks(_block) };
     }
 
-    const getExtendedBlocks = ({ block }) => {
-        let extendedBlocks = {};
-        extendedBlocks[block.block_id] = block;
-        block.connections.forEach(connection => {
-            if (connection.prev_block_id) {
-                extendedBlocks[connection.prev_block_id] = blocks.get().find(block => block.block_id === connection.prev_block_id);
-            }
-            if (connection.next_block_id) {
-                extendedBlocks[connection.next_block_id] = blocks.get().find(block => block.block_id === connection.next_block_id);
-            }
-        })
-        return extendedBlocks;
-    }
+    this.isSelected = ({ block_id }) => selectedBlocks.find(block => block.block_id === block_id)
 
-    const updateExtendedSelectedBlocks = ({ block_id }) => {
-        let block = this.getBlockFromBlockId({ block_id });
-        extendedSelectedBlocks = { ...extendedSelectedBlocks, ...getExtendedBlocks({ block }) };
-    }
 
-    this.isSelected = ({ block_id }) => selectedBlocks.indexOf(block_id) != -1
-
-    this.selectBlock = ({ block_id }) => {
-        if (selectedBlocks.indexOf(block_id) === -1) {
-            selectedBlocks.push(block_id);
-            updateBlock(block_id, { selected: true })
-        }
-        updateExtendedSelectedBlocks({ block_id });
-    }
-
-    this.selectBlocks = ({ block_ids }) => {
-        let datas = [];
-        block_ids.forEach(block_id => {
-            if (selectedBlocks.indexOf(block_id) === -1) {
-                selectedBlocks.push(block_id);
-                datas.push({ selected: true });
-            }
-            updateExtendedSelectedBlocks({ block_id });
-        })
-        updateBlocks({ block_ids, datas })
-    }
-
-    this.deselectBlock = ({ block_id }) => {
-        selectedBlocks = selectedBlocks.filter(_block_id => _block_id !== block_id);
-        updateBlock(block_id, { selected: false });
-        extendedSelectedBlocks = {};
-        selectedBlocks.forEach(block_id => updateExtendedSelectedBlocks({ block_id }));
-    }
 
 
 
@@ -327,19 +300,11 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
 
 
     this.errorBlock = ({ block_id }) => {
-        // updateBlock(block_id, { error: true })
-
         erroredBlocks.push(block_id);
 
     };
     this.hasErrors = ({ block_id }) => {
         return erroredBlocks.indexOf(block_id) != -1;
-    };
-    // this.emptyDeletedBlocks = () => deletedBlocks = []
-    this.getSelectedBlocks = () => {
-        // //console.log([...selectedBlocks]);
-        // //console.log(blocks.get().filter(block => block.selected));
-        return blocks.get().filter(block => block.selected)
     };
 
     this.duplicateSelectedBlocks = function ({ cursor, zoom }) {
@@ -347,24 +312,24 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
 
         updatedBlocks = [];
         duplicatedBlocks = [];
-        let _blocks = blocks.get();
-        let _selectedBlocks = JSON.parse(JSON.stringify(selectedBlocks.map(block_id =>
-            _blocks.find(_block => _block.block_id === block_id)
-        )));
+
+        var _selectedBlocks = JSON.parse(JSON.stringify(selectedBlocks));
 
         for (let _selectedBlock of _selectedBlocks) {
+            _selectedBlock.selected = false;
             // remove all connections that are not a part of the selection
-            _selectedBlock.connections.forEach(_connection => {
-                if (selectedBlocks.indexOf(_connection.next_block_id) == -1) {
-                    _connection.next_block_id = '';
+            for (let _connection of _selectedBlock.connections) {
+                if (!_selectedBlocks.find(b => b.block_id === _connection.next_block_id)) {
+                    _connection.next_block_id = null;
                 }
-                if (selectedBlocks.indexOf(_connection.prev_block_id) == -1) {
-                    _connection.prev_block_id = '';
+                if (!_selectedBlocks.find(b => b.block_id === _connection.prev_block_id)) {
+                    _connection.prev_block_id = null;
                 }
-            })
+            }
         }
 
         let lowestValues = { x: null, y: null }
+        var _instructions = JSON.parse(JSON.stringify(instructions.get()));
 
         for (let _selectedBlock of _selectedBlocks) {
             // give a new id for each block and change all the connections to the new id
@@ -372,9 +337,12 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
             let new_block_id = uniqid();
             duplicatedBlocks.push(new_block_id);
             _selectedBlock.block_id = new_block_id;
-            _selectedBlocks.forEach(_selectedBlock => {
-                _selectedBlock.connections.forEach(_connection => {
-                    _connection.block_id = _selectedBlock.block_id;
+
+            _selectedBlocks.forEach(_s => {
+                _s.connections.forEach(_connection => {
+                    // _connection.block_id = _selectedBlock.block_id;
+
+
                     if (_connection.next_block_id === old_block_id)
                         _connection.next_block_id = new_block_id;
                     if (_connection.prev_block_id === old_block_id)
@@ -389,14 +357,13 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
                 lowestValues.y = _selectedBlock.position.y;
 
             // change all instruction ids and add them to the instruction
-            let _instructions = JSON.parse(JSON.stringify(instructions.get()));
             _selectedBlock.instructions = _selectedBlock.instructions.map(instruction_id => {
                 let new_id = uniqid();
                 _instructions[new_id] = JSON.parse(JSON.stringify(_instructions[instruction_id]));
                 return new_id;
             })
-            instructions.set(_instructions);
         }
+        instructions.set(_instructions);
 
 
         _selectedBlocks.forEach(_selectedBlock => {
@@ -406,40 +373,58 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
 
         updatedBlocks = _selectedBlocks;
 
-        this.deselectAllBlocks();
-        // add to blocks
         blocks.set([...blocks.get(), ..._selectedBlocks]);
-        this.selectBlocks({ block_ids: _selectedBlocks.map(_s => _s.block_id) });
+        this.deselectAllBlocks();
+        this.calculateConnections(_selectedBlocks);
+        this.selectBlocks(_selectedBlocks);
+    }
+
+    this.selectBlock = ({ block_id, block }) => {
+
+        block_id = block_id ? block_id : block.block_id;
+        block = block ? block : blocks.get().find(b => b.block_id === block_id);
+
+
+
+        if (!selectedBlocks.find(b => b.block_id === block_id)) {
+
+            selectedBlocks.push(block);
+            updateBlock(block_id, { selected: true })
+        }
+
+
+        updateExtendedSelectedBlocks(block);
+    }
+
+    this.selectBlocks = (_blocks) => {
+
+        _blocks.forEach(_block => {
+            if (!selectedBlocks.find(b => b.block_id === _block.block_id)) {
+                selectedBlocks.push(_block);
+                updateBlock(_block.block_id, { selected: true })
+            }
+            updateExtendedSelectedBlocks(_block);
+        })
+    }
+
+    this.deselectBlock = (_block) => {
+        selectedBlocks = selectedBlocks.filter(b => b.block_id !== _block.block_id);
+        extendedSelectedBlocks = {};
+        selectedBlocks.forEach(block => updateExtendedSelectedBlocks(block));
+        updateBlock(_block.block_id, { selected: false })
 
     }
 
-
-
     this.deselectAllBlocks = () => {
-        let _blocks = blocks.get();
-        let _block;
-        selectedBlocks.forEach(block_id => {
-            _block = _blocks.find(_block => _block.block_id === block_id);
-            if (_block)
-                _block.selected = false
-        }
-        );
-        blocks.set(_blocks);
+        selectedBlocks.forEach(_selectedBlock => {
+            this.deselectBlock(_selectedBlock);
+        })
         selectedBlocks = [];
         extendedSelectedBlocks = {};
     }
 
     this.deselectAllBlocksExcept = ({ block_id }) => {
-        let _blocks = blocks.get();
-        let _block;
-        selectedBlocks.filter(selectedBlock => selectedBlock != block_id).forEach(selectedBlock => {
-            _block = _blocks.find(_block => _block.block_id === selectedBlock);
-            if (_block)
-                _block.selected = false
-        }
-        );
-        blocks.set(_blocks);
-        selectedBlocks = [];
+        selectedBlocks = selectedBlocks.filter(b => b.block_id !== block_id);
     }
 
     this.initializeConnection = ({ block_id }) => {
@@ -470,28 +455,26 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
 
     const convertRoles = async ({ block }) => {
         // get all different roles of selection
-        let _blocks = blocks.get();
-        let _selectedBlocks = _blocks.filter(b => selectedBlocks.indexOf(b.block_id) != -1);
-        if (_selectedBlocks.length == 0) _selectedBlocks = [block];
+        var _blocks = [...blocks.get()];
+        var _roles = roles.get();
+
+        if (selectedBlocks.length === 0) selectedBlocks = [block];
         let _selectedRoles = [];
 
-        _selectedBlocks.forEach(_s => {
-            let _roles = _s.connections.map(_c => _c.role_id);
-            _roles.forEach(_r => {
-                if (_selectedRoles.indexOf(_r) === -1)
-                    _selectedRoles.push(_r);
+        selectedBlocks.forEach(selectedBlock => {
+            let role_ids = selectedBlock.connections.map(connection => connection.role_id);
+            role_ids.forEach(role_id => {
+                if (!_selectedRoles.includes(role_id))
+                    _selectedRoles.push(role_id);
             })
         })
 
-        let _roles = roles.get();
 
         let options = {};
 
         _selectedRoles.forEach(_selectedRole => {
-            options[_selectedRole] = _roles.filter(_r => _r != _selectedRole);
+            options[_selectedRole] = _roles.filter(_r => _r !== _selectedRole);
         })
-        //console.log(options);
-
 
         // to do open overlay where you can convert the roles
         let result = await openOverlay(
@@ -507,113 +490,131 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         let old_role_id = result.title;
         let new_role_id = result.option;
 
-        let _instructions = instructions.get();
+        var _instructions = { ...instructions.get() };
+        var _connections = [...connections.get()];
 
-        let _connections = connections.get();
+        for (let block of selectedBlocks) {
 
-
-        _selectedBlocks.forEach(block => {
             // check if it already has a connection with this role_id
-            if (block.connections.find(_c => _c.role_id === new_role_id)) {
+            let new_connection = block.connections.find(_c => _c.role_id === new_role_id);
+            let old_connection = block.connections.find(_c => _c.role_id === old_role_id);
+
+            if (new_connection) {
                 // if yes: delete old_role_id from connection
                 block.connections = block.connections.filter(_c => _c.role_id !== old_role_id);
-            } else {
-                // if not: get the block connected to it with old_role_id
-                let connection = block.connections.find(_c => _c.role_id === old_role_id);
-                let next_block_id = connection.next_block_id;
-                connection.role_id = new_role_id;
-                // is this block also part of the selection?
-                if (next_block_id && !_selectedBlocks.includes(next_block_id)) {
-                    let next_block = _blocks.find(block => block.block_id === next_block_id);
-                    console.log(next_block, _blocks, next_block_id);
-                    //// if not: check if block has a  connection w new_role_id 
-                    if (!next_block.connections.find(connection => connection.role_id === new_role_id)) {
-                        ////// if not: convert the role and connection.next_block_id = null
+                // if (!old_connection) return;
 
-                        connection.next_block_id = null;
+                if (old_connection && old_connection.next_block_id) {
 
-                        // remove the connection
-                        _connections = _connections.filter(connection => {
-                            return !(connection.in_block_id === block.block_id &&
-                                connection.out_block_id === next_block_id &&
-                                connection.role_id === old_role_id)
-                        });
-                    }
-                }
-            }
-
-            /* if (block.connections.find(connection => connection.role_id === new_role_id)) {
-
-            } */
-            // check if it already has a connection with this role_id
-            /* if (_s.connections.find(_c => _c.role_id === new_role_id)) {
-                // delete old_role_id from connection
-                _s.connections = _s.connections.filter(_c => _c.role_id !== old_role_id);
-
-            } else {
-                // convert 
-                let connectionToConvert = _s.connections.find(_c => {
-                    //console.log(_c, _c.role_id, old_role_id);
-                    return _c.role_id === old_role_id
-                });
-                if (!connectionToConvert) return;
-
-                //console.log('connectionToConvert', connectionToConvert);
-                if (connectionToConvert.next_block_id) {
-                    // check if next_block has the new_role_id in its connections
-
-                    _connections = _connections.filter(_c => {
-                        return !(_c.in_block_id === block.block_id &&
-                            _c.out_block_id === connectionToConvert.next_block_id &&
-                            _c.role_id === old_role_id)
+                    _connections = _connections.filter(connection => {
+                        return !(connection.out_block_id === block.block_id &&
+                            connection.in_block_id === old_connection.next_block_id &&
+                            connection.role_id === old_role_id)
                     });
 
-                    
 
-                    let next_block = this.getBlockFromBlockId({ block_id: connectionToConvert.next_block_id });
 
-                    let next_block_connection_old = next_block.connections.find(c => c.role_id === old_role_id);
+                    if (!new_connection.next_block_id) {
 
-                    if (next_block_connection_old) {
-                        // console.log(old_connection);
-                        next_block_connection_old.prev_block_id = null;
-                        console.log(next_block_connection_old);
-                        // old_connection
-                        // next_block.connections[old_role_id] = null;
+                        let next_block = _blocks.find(block => block.block_id === old_connection.next_block_id);
+                        // check if next_block_id of new_connection is a part of selectedBlocks;
+                        if (selectedBlocks.find(selectedBlock => selectedBlock.block_id === new_connection.next_block_id)) {
+                            // check if next_block has a connection with the new_role_id + that connection does not yet have a connection
+                            // or with old_role_id (as it will be converted later on)
+                            let next_block_connection = next_block.connections.find(connection =>
+                                ((connection.role_id === new_role_id && !connection.prev_block_id) || connection.role_id === old_role_id)
+                            );
+                            if (next_block_connection) {
+                                new_connection.next_block_id = old_connection.next_block_id;
+                                next_block_connection.prev_block_id = block.block_id;
+                            }
+                        } else {
+                            let next_block_connection = next_block.connections.find(connection =>
+                                connection.role_id === new_role_id && !connection.prev_block_id
+                            );
+                            if (next_block_connection) {
+
+                                new_connection.next_block_id = old_connection.next_block_id;
+                                next_block_connection.prev_block_id = block.block_id;
+
+                            }
+                        }
+
                     }
-                    if (next_block.connections[new_role_id] && !next_block.connections[new_role_id].prev_block_id) {
-                        next_block.connections[new_role_id].prev_block_id = block.block_id;
+                }
+                if (old_connection && old_connection.prev_block_id) {
+                    _connections = _connections.filter(connection =>
+                        !(connection.out_block_id === block.block_id &&
+                            connection.in_block_id === old_connection.prev_block_id &&
+                            connection.role_id === old_role_id)
+                    );
+                }
+
+                // check if old_connection had a connection to another block
+                // and if the new_connection does not yet have a connection with another block
+
+            } else {
+                // if not: get the block connected to it with old_role_id
+                let connection = block.connections.find(connection => {
+
+                    return connection.role_id === old_role_id;
+                });
+                let next_block_id = connection.next_block_id;
+                let prev_block_id = connection.prev_block_id;
+
+                connection.role_id = new_role_id;
+                // is next_block_id defined?
+                if (next_block_id) {
+                    // remove the connection from the connections-state
+                    _connections = _connections.filter(connection => {
+                        return !(connection.out_block_id === block.block_id &&
+                            connection.in_block_id === next_block_id &&
+                            connection.role_id === old_role_id)
+                    });
+
+                    // check if this block is (not) part of the selection
+                    if (!selectedBlocks.find(selectedBlock => selectedBlock.block_id === next_block_id)) {
+                        let next_block = _blocks.find(block => block.block_id === next_block_id);
+                        //// if not: check if block has a  connection w new_role_id 
+                        let next_block_connection = next_block.connections.find(connection =>
+                            connection.role_id === new_role_id && !connection.prev_block_id);
+                        if (!next_block_connection) {
+                            ////// if not: connection.next_block_id = null
+                            connection.next_block_id = null;
+                            next_block.connections.find(connection => connection.role_id === old_role_id).prev_block_id = null;
+                        }
+                    }
+                }
+                // check if block has prev_block_id and if it is not included in selectedBlocks
+                // as we only calculate connections to next_block_id to prevent double calc
+                // we should process these blocks as well
+                if (prev_block_id && !selectedBlocks.find(selectedBlock => selectedBlock.block_id === prev_block_id)) {
+                    // remove the connection from the co    nnections-state
+                    _connections = _connections.filter(connection => {
+                        return !(connection.out_block_id === prev_block_id &&
+                            connection.in_block_id === block.block_id &&
+                            connection.role_id === old_role_id)
+                    });
+
+                    let prev_block = _blocks.find(block => block.block_id === prev_block_id);
+                    let prev_block_connection = prev_block.connections.find(connection =>
+                        connection.role_id === new_role_id && !connection.next_block_id);
+                    if (!prev_block_connection) {
+                        connection.prev_block_id = null;
+                        prev_block.connections.find(connection => connection.role_id === old_role_id).next_block_id = null;
                     }
                 }
 
-                // if (connectionToConvert.prev_block_id) {
+            }
+        }
 
-                //     // check if next_block has the new_role_id in its connections
-                //     let prev_block = this.getBlockFromBlockId({ block_id: connectionToConvert.prev_block_id });
+        console.log(_blocks);
 
-                //     _connections = _connections.filter(_c => {
-                //         console.log('prev_block_id', _c.role_id, old_role_id, _c.role_id === old_role_id);
-                //         return !(_c.out_block_id === block.block_id &&
-                //             _c.in_block_id === connectionToConvert.next_block_id &&
-                //             _c.role_id === old_role_id)
-                //     });
-
-                //     if (prev_block.connections[new_role_id] ) {
-                //         prev_block.connections[new_role_id].next_block_id = block.block_id;
-                //     }
-                // }
-
-
-                connectionToConvert.role_id = new_role_id;
-
-
-            } */
-        })
-        blocks.set({ ..._blocks });
-        connections.set({ ..._connections });
+        blocks.set([..._blocks]);
+        connections.set([..._connections]);
 
         // convert instructions from old to new role
-        _selectedBlocks.forEach(block => {
+        selectedBlocks.forEach(block => {
             block.instructions.forEach(instruction_id => {
                 if (_instructions[instruction_id].role_id === old_role_id) {
                     _instructions[instruction_id].role_id = new_role_id;
@@ -621,6 +622,13 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
             })
         })
         instructions.set({ ..._instructions });
+
+        setTimeout(() => {
+            this.calculateConnections();
+        }, 100);
+        setTimeout(() => {
+            this.calculateConnections();
+        }, 1000);
     }
 
     this.confirmDelete = async (e, block) => {
@@ -632,16 +640,16 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
                 type: 'options',
                 data: {
                     text: ``,
-                    options: ['delete blocks', 'convert roles']
+                    options: ['delete blocks'/* , 'convert roles' */]
                 }
             });
-        //console.log(result);
+
         if (result === 'delete blocks') {
             if (this.getSelectedBlocks().length > 1)
-                deleteSelectedBlocks();
+                this.deleteSelectedBlocks();
             else
                 deleteBlock({ block })
-        } else {
+        } else if (result === 'convert roles') {
             convertRoles({ block })
         }
     }
@@ -649,18 +657,18 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
     this.openRoleOverlay = async (e, block) => {
         e.preventDefault();
         e.stopPropagation();
-        //////console.log('eeeeeeeeeeeeeee', roles.get());
+
 
         let _roles = roles.get().filter(r_role => {
             let foundRole = block.connections.find(connection => {
-                //////console.log(connection.role_id, r_role, connection.role_id === r_role);
+
                 return connection.role_id === r_role
             })
-            //////console.log('did i find the role? ', foundRole);
+
             return !foundRole;
         });
         if (_roles.length === 0) return;
-        //////console.log('openROleOverlay ', roles);
+
         let result = await openOverlay({ type: 'role', data: { block: block, roles: _roles } });
         //overlay.set(false);
 
@@ -669,6 +677,9 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         setTimeout(() => {
             visualizeErrors();
         }, 10)
+        setTimeout(() => {
+            this.calculateConnections();
+        }, 100)
     }
 
     this.removeRole = async (e, role_id, block) => {
@@ -684,20 +695,20 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         //overlay.set(false);
         if (!result) return;
 
-        let t_blocks = blocks.get();
-        let t_block = t_blocks.find(v => v.block_id === block.block_id);
+        let _blocks = [...blocks.get()];
+        let _block = _blocks.find(v => v.block_id === block.block_id);
 
-        let _connection = t_block.connections.find(v => v.role_id === role_id);
-        removeConnections(_connection);
-        let _connections = t_block.connections.filter(v => v.role_id !== role_id);
+        let _connection = _block.connections.find(v => v.role_id === role_id);
+        deleteConnections({ block_id: _block.block_id, connection: _connection });
+        let _connections = _block.connections.filter(v => v.role_id !== role_id);
 
-        if (t_block.connections.length == 0) {
+        if (_block.connections.length === 0) {
             deleteBlock({ block });
             return
         }
         let _instructions = instructions.get();
 
-        let hasInstructionsWithRole = t_block.instructions.find(v => _instructions[v].role_id === role_id)
+        let hasInstructionsWithRole = _block.instructions.find(v => _instructions[v].role_id === role_id)
         if (hasInstructionsWithRole) {
             result = await openOverlay(
                 {
@@ -711,26 +722,29 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
             if (!result) {
                 return;
             } else if (result === 'convert') {
-                let convertTo = t_block.connections[0];
-                t_block.instructions.forEach(v => {
+                let convertTo = _block.connections[0];
+                _block.instructions.forEach(v => {
                     if (_instructions[v].role_id === role_id) {
                         _instructions[v].role_id = convertTo.role_id
                     }
                 });
             } else if (result === 'delete') {
-                t_block.instructions = t_block.instructions.filter(
+                _block.instructions = _block.instructions.filter(
                     v => _instructions[v].role_id !== role_id);
-                if (t_block.instructions.length == 0)
-                    deleteBlock({ block: t_block });
+                if (_block.instructions.length == 0)
+                    deleteBlock({ block: _block });
             }
             instructions.set(_instructions);
         }
 
-        t_block.connections = _connections;
-        blocks.set(t_blocks);
+        _block.connections = _connections;
+        blocks.set(_blocks);
+
+        setTimeout(() => {
+            this.calculateConnections(Object.values(getExtendedBlocks(_block)));
+        }, 100)
     }
 
-    // this.setSelectedBlocks = () => selectedBlocks;
 
 
     const getDefaultInstruction = (block_id, role_id) => {
@@ -744,38 +758,38 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         }
     }
 
-    const removeConnections = (c) => {
-        if (c.prev_block_id) {
-            removeConnection(c.prev_block_id, c.role_id, 'next');
-        }
-        if (c.next_block_id) {
-            removeConnection(c.next_block_id, c.role_id, 'prev');
-        }
-    }
 
-    const deleteSelectedBlocks = () => {
-        // let 
-        let deleting_blocks = blocks.get().filter(block => selectedBlocks.find(s => s === block.block_id));
+    this.deleteSelectedBlocks = () => {
+        // remove instructions 
+        let t_instructions = { ...instructions.get() };
 
-        let t_instructions = instructions.get();
-        deleting_blocks.forEach(deleting_block => {
-            deleting_block.instructions.forEach(instruction => {
+        selectedBlocks.forEach(selectedBlock => {
+            selectedBlock.instructions.forEach(instruction => {
                 delete t_instructions[instruction];
             })
-            deleting_block.connections.forEach(c => removeConnections(c))
-
+            selectedBlock.connections.forEach(connection => deleteConnections({ block_id: selectedBlock.block_id, connection }))
         })
         instructions.set(t_instructions);
 
-        let _blocks = blocks.get().filter(block => !selectedBlocks.find(s => s === block.block_id))
-        blocks.set(_blocks);
-        deletedBlocks.push([...deleting_blocks.map(b => b.block_id)]);
+        let selectedBlockIds = selectedBlocks.map(selectedBlock => selectedBlock.block_id);
 
+        // remove blocks
+        let _blocks = [...blocks.get()];
+        _blocks = _blocks.filter(_block => !selectedBlockIds.includes(_block.block_id));
+        blocks.set(_blocks);
+        deletedBlocks.push([...selectedBlocks.map(selectedBlock => selectedBlock.block_id)]);
+
+        // remove connections
+        let _connections = [...connections.get()];
+        _connections = _connections.filter(_connection =>
+            !(selectedBlockIds.includes(_connection.in_block_id) ||
+                selectedBlockIds.includes(_connection.out_block_id)))
+        connections.set(_connections);
     }
 
     const deleteBlock = ({ block }) => {
         // remove from selection
-        selectedBlocks = selectedBlocks.filter(block_id => block_id !== block.id);
+        selectedBlocks = selectedBlocks.filter(selectedBlock => selectedBlock.block_id !== block.id);
 
         // remove all instructions that are a part of block
         let t_instructions = instructions.get();
@@ -787,12 +801,17 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         // remove block
         let t_blocks = blocks.get();
 
-        block.connections.forEach(c => removeConnections(c))
+        // block.connections.forEach(c => removeConnections(c))
         t_blocks = t_blocks.filter(v => v.block_id !== block.block_id);
         blocks.set(t_blocks);
         deletedBlocks.push(block.block_id);
 
-
+        // remove connections
+        let _connections = [...connections.get()];
+        _connections = _connections.filter(_connection =>
+            !(_connection.in_block_id === block.block_id ||
+                _connection.out_block_id === block.block_id))
+        connections.set(_connections);
     }
 
     const addDefaultInstruction = (block_id, role_id) => {
@@ -828,29 +847,33 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
 
 
     const updateRoleBlock = async ({ block, role_id, direction, data }) => {
-        //console.log('updateRoleBlock', data);
-        let t_blocks = blocks.get();
-        let _block = t_blocks.find(b => b.block_id === block.block_id);
 
-        let startConnection = _block.connections.find(v => v.role_id === role_id);
-        if (!startConnection) {
+        let _blocks = [...blocks.get()];
+        let _block = _blocks.find(_block => _block.block_id === block.block_id);
+
+        let connection = _block.connections.find(v => v.role_id === role_id);
+        if (!connection) {
             let result = await openOverlay({ type: 'confirm', data: { text: 'add role to block' } });
             if (!result) return;
             addRoleToConnections({ block: block, role_id: role_id });
-            startConnection = _block.connections.find(v => v.role_id === role_id);
+            connection = _block.connections.find(v => v.role_id === role_id);
         }
-        let prev_data = startConnection[`${direction}_block_id`];
+
+
+        /* let prev_data = startConnection[`${direction}_block_id`];
+
         if (prev_data && typeof prev_data !== 'object') {
             let _direction = direction === 'next' ? 'prev' : 'next';
             let connecting_id = prev_data;
             removeConnection(connecting_id, role_id, _direction);
-        }
-        startConnection[`${direction}_block_id`] = data;
+        } */
 
-        blocks.set(t_blocks);
+        connection[`${direction}_block_id`] = data;
+
+        blocks.set(_blocks);
         setTimeout(() => {
-            this.calculateConnections({});
-        }, 0)
+            this.calculateConnections(Object.values(getExtendedBlocks(_block)));
+        }, 100)
 
     }
 
@@ -861,9 +884,12 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
             let t_block = t_blocks.find(v => v.block_id === block_id);
             if (!t_block) return;
             Object.keys(datas[index]).forEach((key) => {
+
                 t_block[key] = datas[index][key];
             })
         })
+
+
 
         blocks.set(t_blocks);
     }
@@ -893,7 +919,7 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         let instruction_id = uniqid();
         let t_instructions = { ...instructions.get() };
 
-        //console.log('instructions ', t_instructions, instructions);
+
 
         t_instructions[instruction_id] = new_instr;
         instructions.set(t_instructions);
@@ -907,9 +933,9 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         blocks.set(_blocks);
 
 
-        let extendedBlocks = getExtendedBlocks({ block: _block });
+        let extendedBlocks = getExtendedBlocks(_block);
         setTimeout(() => {
-            this.calculateConnections({ blocks: Object.values(extendedBlocks) });
+            this.calculateConnections(Object.values(extendedBlocks));
         }, 0)
 
 
@@ -930,9 +956,9 @@ function BlockManager({ blocks, roles, instructions, connections, origin, zoom, 
         delete t_instructions[instruction_id];
         instructions.set(t_instructions);
 
-        let extendedBlocks = getExtendedBlocks({ block: _block });
+        let extendedBlocks = getExtendedBlocks(_block);
         setTimeout(() => {
-            this.calculateConnections({ blocks: Object.values(extendedBlocks) });
+            this.calculateConnections(Object.values(extendedBlocks));
         }, 0)
     };
 }

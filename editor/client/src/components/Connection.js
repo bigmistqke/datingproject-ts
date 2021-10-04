@@ -29,12 +29,12 @@ const Connection = (props) => {
 
     useEffect(() => {
         let poses = props.pos;
-        if (!poses[0] || !poses[1]) return
+        if (!poses || !poses[0] || !poses[1]) return
         let t_bounds = getBoundsFromPoses(poses[0], poses[1]);
         boundaries.set(t_bounds);
         let t_SVG = getSVGFromPoses(poses[0], poses[1]);
         SVG.set(t_SVG);
-    }, [props.pos[0], props.pos[1]]);
+    }, [props.pos]);
 
     return boundaries.get() && props.origin ? <svg className="connectionLine"
         width={Math.abs(boundaries.get()[1].x - boundaries.get()[0].x)}

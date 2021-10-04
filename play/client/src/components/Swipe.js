@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import Tweener from "../helpers/tweener.js";
 
-const cTweener = React.createContext(new Tweener());
+// const cTweener = React.createContext(new Tweener());
 
 const Swipe = forwardRef((props, ref) => {
     // const tweener = useContext(cTweener);
@@ -40,6 +40,7 @@ const Swipe = forwardRef((props, ref) => {
     }
 
     const onSwipeStart = (e) => {
+        e.preventDefault();
         current.prevTime = new Date().getTime();
 
         let coords = getCoords(e);
@@ -47,7 +48,7 @@ const Swipe = forwardRef((props, ref) => {
         current.swiping = true;
 
         if (!props.canSwipe) {
-            props.waitYourTurn(!props.flip ? 'Wait For Your Turn' : 'Wait For Timespan To Be Completed')
+            props.waitYourTurn(!props.flip ? 'Your Turn' : 'Wacht tot je beurt gedaan is!')
         }
 
         window.addEventListener('mousemove', onSwipeMove);
@@ -66,7 +67,11 @@ const Swipe = forwardRef((props, ref) => {
         }
         let coords = getCoords(e);
         delta.current = { x: coords.x - posStart.x, y: coords.y - posStart.y };
-        card.current.style.transform = getTransform(delta.current, transform.current);
+        if (card.current) {
+            card.current.style.transform = getTransform(delta.current, transform.current);
+        } else {
+            console.error('does not have a reference to the card');
+        }
     }
     const onSwipeMove = (e) => {
         // throttledMove(e);
@@ -80,7 +85,7 @@ const Swipe = forwardRef((props, ref) => {
 
 
     useImperativeHandle(ref, () => ({
-        videoDone() {
+        swipeAnimation() {
             delta.current = { x: Math.random() - 0.5, y: Math.random() - 0.5 };
             let deltaSnap = { x: parseFloat(delta.current.x), y: parseFloat(delta.current.y) };
             let angle = Math.atan2(delta.current.y, delta.current.x);
@@ -94,6 +99,7 @@ const Swipe = forwardRef((props, ref) => {
                     };
                     if (!card.current) return;
                     transform.current = delta.current;
+
                     card.current.style.transform = `translateX(${transform.current.x}px) translateY(${transform.current.y}px) rotateZ(${2 * (transform.current.x) / r_screen.current.x * 30}deg)`;
                 },
                 () => {
@@ -181,7 +187,7 @@ const Swipe = forwardRef((props, ref) => {
             className="swipe flip"
             onTouchStart={onSwipeStart}
             onMouseDown={onSwipeStart}
-        > { props.children}</div >
+        > {props.children}</div >
     )
 })
 

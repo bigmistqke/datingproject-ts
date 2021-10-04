@@ -3,7 +3,7 @@ const MongoClient = require('mongodb').MongoClient;
 // import { MongoClient } from 'mongodb';
 
 const _Mongo = function ({ url }) {
-    const client = new MongoClient(url);
+    const client = new MongoClient(url, { useUnifiedTopology: true });
     let db;
 
 

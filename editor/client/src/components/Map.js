@@ -12,10 +12,9 @@ function Map(props) {
 
     // let [origin, setOrigin] = useState({ x: 0, y: 0 });
     // let r_origin = useRef({ x: 0, y: 0 });
+    let [zoomedOut, setZoomedOut] = useState(false);
 
     let r_map = useRef();
-
-    let zoomValue = new State(1);
 
     let [render, setRender] = useState();
 
@@ -53,7 +52,7 @@ function Map(props) {
     }
 
     const zoomIn = useCallback((e) => {
-        console.log('zoom in!');
+        ////console.log('zoom in!');
         let new_zoom = props.getZoom() * 1.3;
         let _origin = props.getOrigin();
 
@@ -66,14 +65,12 @@ function Map(props) {
 
         props.setZoom(new_zoom);
 
-
-        setTimeout(() => {
-            setRender(performance.now());
-        }, 0)
-    }, [r_map, props.zoom, props.origin])
+        if (new_zoom > 0.4) {
+            setZoomedOut(false);
+        }
+    }, [props])
 
     const zoomOut = useCallback((e) => {
-        console.log('zoom out!');
         let new_zoom = props.getZoom() * 0.7;
         let _origin = props.getOrigin();
 
@@ -86,7 +83,11 @@ function Map(props) {
 
         props.setOrigin(new_origin);
         props.setZoom(new_zoom);
-    }, [r_map, props.zoom, props.getOrigin])
+
+        if (new_zoom < 0.4) {
+            setZoomedOut(true);
+        }
+    }, [props])
 
     const zoom = (e) => {
         let normalized = normalizeWheel(e);
@@ -141,8 +142,14 @@ function Map(props) {
 
                 collisions.forEach(({ block_id }) => props.blockManager.selectBlock({ block_id }));
                 if (!r_ctrlPressed.current) {
-                    const deselectBlocks = props.blockManager.getSelectedBlocks().filter(v => !collisions.find(c => c.block_id === v.block_id));
-                    deselectBlocks.forEach(({ block_id }) => { props.blockManager.deselectBlock({ block_id }) })
+                    const selectedBlocks = props.blockManager.getSelectedBlocks();
+                    const deselectBlocks = selectedBlocks.filter(v => !collisions.find(c => c.block_id === v.block_id));
+                    ////console.log(selectedBlocks, deselectBlocks, collisions);
+                    if (deselectBlocks.length > 0) {
+                        ////console.log('deselectBlocks', deselectBlocks);
+                        deselectBlocks.forEach(({ block_id }) => { props.blockManager.deselectBlock({ block_id }) })
+
+                    }
                 }
             } else {
                 origin_delta = { x: (startCoords.x - e.clientX) * -1, y: (startCoords.y - e.clientY) * -1 };
@@ -187,12 +194,12 @@ function Map(props) {
         })
         document.body.addEventListener('keydown', (e) => {
             // e.stopPropagation();
-            console.log('keydown', e.code, e.key, e.ctrlKey, e.shiftKey, r_ctrlPressed.current);
-
-
+            console.log(e.code);
+            if (e.code === 'Delete') {
+                props.blockManager.deleteSelectedBlocks();
+            }
             if (e.code === 'ArrowUp' && r_ctrlPressed.current) {
                 e.preventDefault();
-
                 zoomIn();
             }
             if (e.code === 'ArrowDown' && r_ctrlPressed.current) {
@@ -207,7 +214,7 @@ function Map(props) {
             if (e.ctrlKey || e.key === "Meta") {
                 r_ctrlPressed.current = true;
                 setCtrlPressed(true);
-                console.log('set ctrl to true');
+                ////console.log('set ctrl to true');
             }
             if (e.shiftKey || e.key === "Shift") {
                 r_shiftPressed.current = true;
@@ -216,12 +223,12 @@ function Map(props) {
 
         });
         window.addEventListener('keyup', (e) => {
-            console.log('keyup', e.code, e.key, e.ctrlKey, e.shiftKey, r_ctrlPressed.current);
+            ////console.log('keyup', e.code, e.key, e.ctrlKey, e.shiftKey, r_ctrlPressed.current);
 
 
             if (r_ctrlPressed.current && (!e.ctrlKey || e.code === "Meta")) {
                 r_ctrlPressed.current = false;
-                console.log('set ctrl to false');
+                ////console.log('set ctrl to false');
 
                 setCtrlPressed(false);
             }
@@ -249,11 +256,11 @@ function Map(props) {
         if (props.blockManager && props.blocks.get() && !r_init.current) {
             setTimeout(() => {
                 r_init.current = true;
-                props.blockManager.calculateConnections({});
+                props.blockManager.calculateConnections();
             }, 500)
             setTimeout(() => {
                 r_init.current = true;
-                props.blockManager.calculateConnections({});
+                props.blockManager.calculateConnections();
             }, 0)
         }
 
@@ -267,7 +274,7 @@ function Map(props) {
 
 
     return <div className="map-container" onPointerDown={processNavigation} onContextMenu={createBlock}>
-        <div className={`map ${props.connecting ? 'connecting' : ''}`}
+        <div className={`map ${zoomedOut ? 'zoomedOut' : ''} ${props.connecting ? 'connecting' : ''}`}
             ref={r_map} style={{ transform: `translateX(${props.origin.x}px) translateY(${props.origin.y}px)` }}>
             <div className="zoom" style={{ transform: `scale(${props.zoom})` }}>
 

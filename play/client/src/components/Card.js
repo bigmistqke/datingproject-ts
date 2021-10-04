@@ -1,210 +1,83 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Swipe from "./Swipe";
-import memoize from "fast-memoize";
-
 // import do from '../svg/do.png';
 
 
 import { ReactComponent as Do } from '../svg/do.svg';
 import { ReactComponent as Say } from '../svg/say.svg';
 import { ReactComponent as Think } from '../svg/do.svg';
-import { ReactComponent as Back } from '../svg/wait.svg';
 import { ReactComponent as Idle } from '../svg/do.svg';
+
+import { ReactComponent as Back } from '../svg/wait.svg';
+
+import { ReactComponent as SwipeLabel } from '../svg/swipe_label.svg';
+import { ReactComponent as ChoiceLabel } from '../svg/choice_label.svg';
+
+import { ReactComponent as DoTimer } from '../svg/do_timer.svg';
+import { ReactComponent as SayTimer } from '../svg/say_timer.svg';
+import { ReactComponent as ThinkTimer } from '../svg/do_timer.svg';
+import { ReactComponent as IdleTimer } from '../svg/do_timer.svg';
+
+import { ReactComponent as Frame } from '../svg/frame.svg';
+
 
 import decodeSingleQuotes from "../helpers/decodeSingleQuotes"
 
-import enableInlineVideo from 'iphone-inline-video';
-import videojs from 'video.js'
 
-/* const CardMasks = () => {
-    return (
-        <div style={{ position: 'absolute', display: 'none' }}>
-            <Do id="do_mask"></Do>
-            <Say id="say_mask"></Say>
-            <Think id="think_mask"></Think>
-            <Idle id="idle_mask"></Idle>
-            <Back id="back_mask"></Back>
-        </div>
-    )
-} */
 
-const CardTimer = ({ timespan }) => {
-    let timer = useRef(false);
-    let r_animationEnd = useRef();
+
+
+const Card = ({ instruction_id, type, waitYourTurn, text, timespan, flip, canPlay, swipeAction, zIndex, dataurl, video, alarm }) => {
+    const [spanCompleted, setSpanCompleted] = useState(false);
+    let r_swipe = useRef();
+    let r_stopVideo = useRef(false);
+    let r_stopTimespan = useRef(false);
+    let r_swipeAnimation = useRef(false);
+    const [formattedText, setFormattedText] = useState();
+    const [hasChoices, setHasChoices] = useState();
 
     useEffect(() => {
-        timer.current.style.transition = `height ${timespan}s linear`;
-        timer.current.classList.add('start');
-
-        r_animationEnd.current = setTimeout(() => {
-            if (timer.current) {
-                timer.current.classList.remove('class', 'start');
-                timer.current.classList.add('class', 'end');
+        if (flip) {
+            try {
+                window.navigator.vibrate(100)
+            } catch (e) {
+                console.error(e);
             }
-        }, 125);
-
-    }, [timespan])
-    return <div className='timer' ref={timer}></div>
-}
-
-
-const CardType = ({ type, animate }) => {
-    let card = useRef(false);
-
-    switch (type) {
-        case 'do':
-            return <Do ref={card}></Do>
-        case 'say':
-            return <Say ref={card} ></Say>
-        case 'think':
-            return <Think ref={card} ></Think>
-        case 'back':
-            return <Back ref={card}></Back>
-        case 'idle':
-            return <Idle ref={card}></Idle>
-        default:
-            return <div></div>
-    }
-}
-
-const AnimatedCardType = ({ type, timespan }) => {
-    return (
-        <div>
-            <CardTimer timespan={timespan} animate={true}></CardTimer>
-            <CardType type={type}></CardType>
-        </div>
-    )
-}
-
-
-const VideoSide = ({ text, flip, swipeAction, dataurl, stop, instruction_id }) => {
-    const r_video = useRef(false);
-    const [url, setUrl] = useState();
-
-
-    const play = useCallback((e) => {
-        console.log('this happens');
-        let video = r_video.current;
-        if (!(video.currentTime > 0 && !video.paused && !video.ended && video.readyState > 2))
-            video.play();
-        setTimeout(() => {
-            video.removeAttribute('muted');
-        }, 0)
-    }, [])
-
-    useEffect(() => {
-        if (!stop) return;
-        r_video.current.pause();
-    }, [stop])
-
-    useEffect(() => {
-        if (!flip) return;
-
-        r_video.current.addEventListener('ended', () => {
-            swipeAction();
-
-        })
-
-        r_video.current.classList.remove('hidden');
-        setTimeout(() => {
-            r_video.current.play();
-        }, 0)
-        /*         setTimeout(() => {
-                    r_video.current.removeAttribute('muted');
-                    r_video.current.volume = 1;
-                }, 50) */
-
-
-        setUrl(dataurl)
+        };
     }, [flip])
-    return (
-        <div className="front"
-            onClick={play}
-        >
-            {text != '' ?
-                <video
-                    className="video hidden"
-                    id={`${instruction_id}_video`}
-                    ref={r_video}
-                    // muted
-                    playsInline
-                    src={dataurl.src}
-                >
-                </video> : null
-            }
-        </div>
-    )
-}
 
-
-function FrontSide({ text, type, flip, timespan, stopTimespan }) {
-
-    const [remainingTime, setRemainingTime] = useState(0);
-    const stopwatch = useRef(false);
-    const [formattedText, setFormattedText] = useState()
-
-    useEffect(() => {
-        if (stopTimespan && stopwatch.current) {
-            clearInterval(stopwatch.current);
-        }
-
-    }, [stopTimespan])
-
-
-    useEffect(() => {
-        if (!flip || !timespan) return;
+    const timedSwipe = useCallback(async () => {
+        setSpanCompleted(true);
         try {
-            window.navigator.vibrate(200);
+            window.navigator.vibrate(200)
         } catch (e) {
             console.error(e);
         }
-
-        let count = 0;
-        stopwatch.current = setInterval(() => {
-            let remaining_time = timespan - count;
-            if (remaining_time > 60) {
-                let minutes = Math.floor(remaining_time / 60);
-                let seconds = remaining_time % 60;
-                setRemainingTime(`${minutes}m${seconds}`);
-            } else {
-                setRemainingTime(remaining_time);
-            }
-            if (count == timespan) {
-                setRemainingTime();
-                clearInterval(stopwatch.current);
-                return;
-            };
-            count++;
-        }, 1000);
-
-        return function cleanup() {
-            clearInterval(stopwatch.current);
+        if (alarm) {
+            alarm();
         }
-    }, [flip])
+        if (r_swipe.current) {
+            r_swipe.current.swipeAnimation()
+        }
+
+        setTimeout(() => {
+            swipeAction();
+        }, 250);
+    }, [alarm, swipeAction])
 
     useEffect(() => {
-        let _formattedText = formatText(text);
-        console.log(_formattedText);
-        setFormattedText(_formattedText);
-
+        if (text) {
+            let _formattedText = formatText(text);
+            setHasChoices(_formattedText.find(el => el.type === 'choice' && el.text.length > 1));
+            setFormattedText(_formattedText);
+        }
     }, [text])
 
 
     const formatText = (_text) => {
         let _formattedText = [{ type: 'normal', text: _text }];
-        /* let split = _formattedText[0].text.split(`Swipe`);
 
-        // find Swipe-recommendations
-
-        if (split.length > 1 && split[0] != '') {
-
-            _formattedText = [
-                { type: 'normal', text: split[0] },
-                { type: 'swipe', text: `Swipe${split[1]}` }
-            ];
-        } */
-
-        const regex = /[\["](.*?)[\]"][.!?\\-]?/g
+        const regex = /[["](.*?)[\]"][.!?\\-]?/g
 
         let matches = _text.match(regex);
 
@@ -227,90 +100,6 @@ function FrontSide({ text, type, flip, timespan, stopTimespan }) {
 
         return _formattedText;
     }
-
-    return (
-        <div className="front">
-            {/* <div className="type">
-                {type}
-            </div> */}
-            {/* <div class='swipe_reminder'>swipe when you finished your action</div> */}
-            <div className="text">
-
-                <div>{formattedText ? formattedText.map(
-                    ({ type, text }) => {
-                        console.log(type, text);
-                        return type === 'normal' ?
-                            text :
-                            <div className='choice' key={text.toString()}>
-                                {
-                                    text.map(choice =>
-                                        <div key={choice}>
-                                            <span>{choice}</span>
-
-                                        </div>
-                                    )
-                                }
-                            </div>
-                    }
-                ) : null}</div>
-            </div>
-            {
-                timespan == 0 ? null :
-                    <div className="stopwatch">
-                        {remainingTime}
-                    </div>
-            }
-            {timespan == 0 ?
-                <CardType type={type} ></CardType> :
-                <AnimatedCardType type={type} animate={flip && timespan} timespan={timespan}></AnimatedCardType>
-            }
-
-        </div>
-    )
-}
-const BackSide = () => {
-    return (
-        <div className="back">
-            {/* <div className="wait">
-                <div>wait</div>
-            </div> */}
-            <CardType type="back"></CardType>
-        </div>
-    )
-}
-
-
-
-const Card = ({ instruction_id, type, waitYourTurn, text, timespan, flip, canPlay, swipeAction, zIndex, dataurl, video }) => {
-    const [spanCompleted, setSpanCompleted] = useState(false);
-    let r_swipe = useRef();
-    let r_stopVideo = useRef(false);
-    let r_stopTimespan = useRef(false);
-
-    useEffect(() => {
-        if (flip) {
-            try {
-                window.navigator.vibrate(100)
-            } catch (e) {
-                console.error(e);
-            }
-        };
-
-        if (!flip || !timespan) return;
-        let timer = setTimeout(() => {
-            setSpanCompleted(true);
-            try {
-                window.navigator.vibrate(200)
-            } catch (e) {
-                console.error(e);
-            }
-            swipeAction();
-        }, timespan * 1000);
-
-        return function cleanup() {
-            clearTimeout(timer);
-        }
-    }, [flip])
 
     return (
         <Swipe
@@ -336,7 +125,7 @@ const Card = ({ instruction_id, type, waitYourTurn, text, timespan, flip, canPla
                         flip={flip}
                         instruction_id={instruction_id}
                         swipeAction={() => {
-                            if (type === 'video') { r_swipe.current.videoDone() };
+                            if (type === 'video') { r_swipe.current.swipeAnimation() };
                             swipeAction()
                         }}
                         dataurl={dataurl}
@@ -345,14 +134,288 @@ const Card = ({ instruction_id, type, waitYourTurn, text, timespan, flip, canPla
                         text={text}
                         type={type}
                         timespan={timespan}
+                        timedSwipe={timedSwipe}
                         flip={flip}
                         stop={r_stopTimespan.current}
+                        formattedText={formattedText}
+                        hasChoices={hasChoices}
                     ></FrontSide>
                 }
                 <BackSide></BackSide>
             </div>
         </Swipe>);
 }
+
+function TimerLabel({ type, remainingTime }) {
+    const getType = useCallback((type) => {
+        switch (type) {
+            case 'do':
+                return <DoTimer style={{ zIndex: 2 }}></DoTimer>
+            case 'say':
+                return <SayTimer style={{ zIndex: 2 }}></SayTimer>
+            case 'think':
+                return <ThinkTimer style={{ zIndex: 2 }}></ThinkTimer>
+            case 'idle':
+                return <IdleTimer style={{ zIndex: 2 }}></IdleTimer>
+            default:
+                return <div></div>
+        }
+    }, [])
+    return <>
+        <div className='stopwatch'>
+            {remainingTime}
+        </div>
+        {getType(type)}
+    </>
+}
+
+function CardType({ type, children }) {
+    const getType = (type) => {
+        switch (type) {
+            case 'do':
+                return <Do style={{ zIndex: 2 }}></Do>
+            case 'say':
+                return <Say style={{ zIndex: 2 }}></Say>
+            case 'think':
+                return <Think style={{ zIndex: 2 }}></Think>
+            case 'back':
+                return <Back style={{ zIndex: 2 }}></Back>
+            case 'idle':
+                return <Idle style={{ zIndex: 2 }}></Idle>
+            default:
+                return <div></div>
+        }
+    }
+    return <div className='card'>
+        {children}
+        {getType(type)}
+        <Frame style={{ zIndex: 1 }}></Frame>
+    </div>
+}
+
+function Timer({ timespan, remainingTime, children }) {
+    let timer = useRef(false);
+
+    useEffect(() => {
+        if (!timer.current) return
+        let percentage = (timespan - remainingTime) / (timespan) * 100;
+        timer.current.style.clipPath = `polygon(0% 0%, 100% 0%, 100% ${percentage}%, 0% ${percentage}%)`;
+    }, [timespan, remainingTime])
+
+    return (
+        <div className='timer' ref={timer}>
+            {children}
+        </div>
+    )
+}
+
+
+function VideoSide({ text, flip, swipeAction, dataurl, stop, instruction_id }) {
+    const r_video = useRef(false);
+    const [url, setUrl] = useState();
+    const r_previousTime = useRef();
+    const r_nextCheck = useRef();
+    const checkVideo = useCallback(() => {
+        if (!r_video.current) return;
+        console.log('cheeeeeeeeck', r_previousTime.current, r_video.current.currentTime);
+        if (r_previousTime.current === r_video.current.currentTime && r_video.current.currentTime !== 0) {
+            console.error('video stopped playing????');
+        } else {
+            // console.info('all good');
+        }
+        r_previousTime.current = r_video.current.currentTime;
+        r_nextCheck.current = setTimeout(checkVideo, 500);
+
+
+    }, [])
+
+    useEffect(() => {
+        return function cleanup() {
+            console.info('cleanUP!!!!!');
+            clearTimeout(r_nextCheck.current);
+        }
+    }, [])
+
+
+    const play = useCallback((e) => {
+        let video = r_video.current;
+        if (!(video.currentTime > 0 && !video.paused && !video.ended && video.readyState > 2)) {
+            video.play();
+        }
+        setTimeout(() => {
+            video.removeAttribute('muted');
+        }, 0)
+    }, [])
+
+
+    useEffect(() => {
+        if (!stop) return;
+        r_video.current.pause();
+    }, [stop])
+
+    useEffect(() => {
+        if (!flip) return;
+
+        r_video.current.addEventListener('ended', () => {
+            swipeAction();
+
+        })
+
+        r_video.current.classList.remove('hidden');
+        setTimeout(() => {
+            r_previousTime.current = 0;
+            r_video.current.play();
+            // checkVideo();
+        }, 0)
+        /*         setTimeout(() => {
+                    r_video.current.removeAttribute('muted');
+                    r_video.current.volume = 1;
+                }, 50) */
+
+
+        // setUrl(dataurl)
+    }, [checkVideo, dataurl, flip, swipeAction])
+    return (
+        <div className="front"
+            onClick={play}
+        >
+            {text !== '' ?
+                <video
+                    className="video hidden"
+                    id={`${instruction_id}_video`}
+                    ref={r_video}
+                    // muted
+                    playsInline
+                    src={dataurl ? dataurl.src : null}
+                >
+                </video> : null
+            }
+        </div>
+    )
+}
+
+function Text({ formattedText }) {
+    return <div className='text'>
+        {
+            formattedText ? formattedText.map(
+                ({ type, text }) => {
+                    return type === 'normal' ?
+                        text :
+                        <div className='choice' key={text.toString()}>
+                            {
+                                text.map(choice =>
+                                    <div key={choice}>
+                                        <span>{choice}</span>
+
+                                    </div>
+                                )
+                            }
+                        </div>
+                }
+            ) : null
+        }
+    </div>
+}
+
+function FrontSide({ text, type, flip, timespan, stopTimespan, timedSwipe, formattedText, hasChoices }) {
+
+    const [remainingTime, setRemainingTime] = useState(0);
+    const stopwatch = useRef(false);
+    const r_animating = useRef(false);
+    const r_flip = useRef(false);
+    const r_startTime = useRef();
+    const r_shouldStop = useRef(false);
+
+    useEffect(() => {
+        if (!flip || !timespan) return;
+        try {
+            window.navigator.vibrate(200);
+        } catch (e) {
+            console.error(e);
+        }
+    }, [flip, timespan])
+
+    useEffect(() => {
+        return () => {
+            r_shouldStop.current = true;
+        }
+    }, [])
+
+    let animate = useCallback(() => {
+        if (r_shouldStop.current) return;
+        let remaining_time = ((timespan * 1000) - (performance.now() - r_startTime.current)) / 1000;
+
+        if (remaining_time < 0) {
+            timedSwipe();
+            return;
+        };
+        setTimeout(animate, 30);
+        setRemainingTime(remaining_time);
+    }, [])
+
+    useEffect(() => {
+        if (!flip || !timespan || timespan === 0 || r_animating.current) return;
+        r_startTime.current = performance.now();
+
+        r_animating.current = true;
+        animate();
+    }, [flip, timedSwipe, timespan])
+
+
+
+    return (
+        <div className="front">
+            {
+                timespan === 0 ?
+                    <div>
+                        <CardType type={type}>
+                            {
+                                hasChoices ?
+                                    <ChoiceLabel style={{ zIndex: 3 }}></ChoiceLabel> :
+                                    null
+                            }
+                            <SwipeLabel style={{ zIndex: 2 }}></SwipeLabel>
+                            <Text formattedText={formattedText}></Text>
+                        </CardType>
+                    </div> :
+                    <>
+                        <CardType type={type}>
+                            {
+                                hasChoices ?
+                                    <ChoiceLabel style={{ zIndex: 3 }}></ChoiceLabel> :
+                                    null
+                            }
+                            <TimerLabel type={type} remainingTime={Math.floor(remainingTime)}></TimerLabel>
+                            <Text formattedText={formattedText}></Text>
+                        </CardType>
+                        <Timer timespan={timespan} remainingTime={remainingTime}>
+                            <CardType type={type}>
+                                {
+                                    hasChoices ?
+                                        <ChoiceLabel style={{ zIndex: 3 }}></ChoiceLabel> :
+                                        null
+                                }
+                                <TimerLabel type={type} remainingTime={Math.floor(remainingTime)}></TimerLabel>
+                                <Text formattedText={formattedText}></Text>
+                            </CardType>
+                        </Timer>
+                    </>
+            }
+
+        </div>
+    )
+}
+function BackSide() {
+    return (
+        <div className="back">
+            {/* <div className="wait">
+                <div>wait</div>
+            </div> */}
+            <CardType type="back"></CardType>
+        </div>
+    )
+}
+
 
 
 export default Card

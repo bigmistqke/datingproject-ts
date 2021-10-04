@@ -118,6 +118,10 @@ body {
     pointer-events: none;
 }
 
+.zoomedOut .block>div{
+    pointer-events: none !important;
+}
+
 .block>div {
     border-radius: 17px;
     overflow: hidden;
@@ -150,8 +154,9 @@ header h1 {
 }
 
 .error {
-    border: 1px solid red;
-    color: red;
+    /* border: 1px solid red; */
+    color: white;
+    background:red !important;
 }
 
 .fixed {

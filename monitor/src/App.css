@@ -1,0 +1,144 @@
+body {
+  padding: 0px;
+  margin: 25px;
+  background: lightgrey;
+}
+
+* {
+  font-family: arial;
+}
+
+:root {
+  --light: rgb(242, 242, 242);
+}
+
+.room {
+  width: 100%;
+  background: var(--light);
+  display: inline-block;
+  padding: 25px;
+  box-sizing: border-box;
+  margin-bottom: 25px;
+  border-radius: 37.5px;
+}
+
+.roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(160px, 1fr));
+}
+
+.role {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: white;
+  margin: 5px;
+  /* margin-right: 0px; */
+  padding: 5px;
+  padding: 15px;
+  border-radius: 25px;
+  line-height: 10pt;
+  font-size:8pt;
+}
+
+.instruction{
+  flex:1;
+}
+
+.role .margin {
+  margin-left: 5px;
+  margin-right: -5px;
+}
+
+.role .marginBottom {
+  margin-bottom: 5px;
+}
+
+.role label {
+  color: lightgrey
+}
+
+.italic{
+  font-style:italic;
+}
+
+.row {
+  display: flex;
+}
+
+.row>span, .row>label {
+  flex: 1
+}
+
+/* .role:first-child {
+  margin-left: 0px;
+}
+ */
+.room button {
+  background: var(--light);
+  border: 0px;
+  border-radius: 15px;
+  line-height: 10pt;
+  cursor: pointer;
+  font-size: 8pt;
+}
+
+.role button:not(:first-child) {
+  margin-left: 5px;
+}
+
+.room .top>h1, .room .top>button {
+  padding: 5px;
+  padding-right: 5px;
+  padding-left: 5px;
+  border-radius: 25px;
+  background: white;
+  display: inline-block;
+  margin-top: 0px;
+  margin: 5px;
+  font-weight: normal;
+  padding-right: 25px;
+  padding-left: 25px;
+  border: none;
+}
+
+.room h1 {
+  font-size: 24pt;
+}
+
+/* .room button {
+  font-size: 12pt;
+  cursor: pointer;
+} */
+
+.room button:hover {
+  background: black;
+  color: white;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex>* {
+  flex: 1
+}
+
+.qr{
+  position: fixed;
+  left: 50vw;
+  top: 50vh;
+  transform: translate(-50%,-50%);
+  width:128px;
+  z-index:3;
+  background:white;
+}
+
+.close{
+  position: fixed;
+  left: 0px;
+  top: 0px;
+  height:100vh;
+  width:100vw;
+  z-index:2
+}
