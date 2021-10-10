@@ -1,0 +1,33 @@
+.block {
+  display: block;
+  padding: 25px;
+  background: #ffffff65;
+  cursor: grab;
+  border-radius: 45px;
+  position: absolute;
+  /* box-shadow: var(--light-shadow); */
+  /* transform: translateX(-50%) */
+}
+
+.block.selected * {
+  pointer-events: none;
+}
+
+.selected {
+  background: rgba(0, 0, 200, 0.1);
+  z-index: 50 !important;
+}
+
+.block.isConnecting > div,
+.block.isTranslating > div {
+  pointer-events: none;
+}
+
+.zoomedOut .block > div {
+  pointer-events: none !important;
+}
+
+.block > div {
+  border-radius: 17px;
+  overflow: hidden;
+}

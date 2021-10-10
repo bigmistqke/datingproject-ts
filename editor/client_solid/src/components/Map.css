@@ -1,0 +1,20 @@
+.map-container {
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  transform: translateX(0px) translateY(0px);
+  background: rgb(225, 225, 225);
+}
+
+.map {
+  /*     position: absolute;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden; */
+  height: 0px;
+  width: 0px;
+}
+
+.map.connecting .block > * {
+  pointer-events: none;
+}

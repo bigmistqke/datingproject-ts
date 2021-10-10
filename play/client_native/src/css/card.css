@@ -1,0 +1,23 @@
+.card img {
+    height: 100%;
+    width: 100%
+}
+
+.element {
+    position: absolute;
+    cursor: move;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* border: 1px solid black; */
+}
+
+.element img {
+    height: 100%;
+    width: 100%
+}
+
+.element span {
+    flex: 1;
+    /* font-size: 4vh; */
+}

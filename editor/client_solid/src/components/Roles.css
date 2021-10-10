@@ -1,0 +1,21 @@
+.role {
+  /* border:var(--border); */
+  border-radius: 20px;
+  background: white;
+  text-align: center;
+  /* flex: 0 0; */
+  padding-right: 25px;
+  padding-left: 25px;
+  line-height: var(--r-height);
+  cursor: pointer;
+  color: black;
+  z-index: 50;
+}
+
+.roles-container {
+  text-align: center;
+}
+
+.roles button {
+  color: white;
+}

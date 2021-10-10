@@ -1,6 +1,22 @@
 import { render } from "solid-js/web";
+import { Router, Routes, Route } from "solid-app-router";
 
-import "./index.css";
-import App from "./App";
+import './css/general.css';
 
-render(App, document.getElementById("root"));
+
+import Editor from './routes/Editor';
+import List from './routes/List';
+
+
+render(
+    () => (
+        <Router>
+            <Routes>
+                <Route path="/:script_id" element={<Editor />} />
+                <Route path="/scripts" element={<List />} />
+
+            </Routes>
+        </Router >
+    ),
+    document.getElementById("root")
+);
