@@ -93,14 +93,11 @@ const Instruction = (props) => {
   const getClassByRole = () => (props.role_id === "a" ? "type_a" : "type_b");
   const getClassByError = () => (error_ref ? "error" : "");
 
-  createEffect(() => {
-    console.log("ROLE_ID IS ", props.role_id);
-  }, [props.role_id]);
-
   const InstructionValue = () => {
     if (props.type === "video") {
       if (props.text) {
         return (
+          // <div></div>
           <video
             className="flexing"
             src={props.urls.fetch + props.text}
@@ -134,10 +131,6 @@ const Instruction = (props) => {
     }
   };
 
-  createEffect(() => {
-    console.log("every render?");
-  });
-
   const getRoleId = () => props.role_id;
 
   return (
@@ -147,7 +140,7 @@ const Instruction = (props) => {
     >
       <div
         className="instruction-border"
-        style={{ background: `hsl(${props.role_hue}, 100%, 50%)` }}
+        style={{ background: `hsl(${props.role_hue}, 100%, 65%)` }}
       ></div>
 
       {/* <span>{props.role_id}</span> */}
