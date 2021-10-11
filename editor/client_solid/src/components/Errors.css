@@ -1,0 +1,24 @@
+.errors-container {
+  position: fixed;
+  bottom: 0px;
+  left: 0px;
+  z-index: 5;
+  padding: 5px;
+}
+.error {
+  position: relative;
+  padding: 5px;
+  padding-right: 10px;
+  padding-left: 10px;
+  padding-left: 0px;
+}
+.error > span {
+  color: red;
+  background-color: white;
+  border: 1px solid red;
+  border-radius: 10px;
+  margin-bottom: 5px;
+  font-size: 8pt;
+  padding: 5px;
+  max-width: 150px;
+}

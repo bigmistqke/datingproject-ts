@@ -78,6 +78,11 @@ function Block(props) {
     container_ref.style.transform = `translateX(${props.position.x}px) translateY(${props.position.y}px)`;
   }, [props.position]);
 
+  /*   createEffect(() => {
+    console.log(props.errored_block_ids);
+    console.log(props.errored_block_ids.indexOf(props.block_id) != -1);
+  }, [props.errored_block_ids]); */
+
   return (
     <div
       id={`block_${props.block_id}`}
@@ -86,6 +91,7 @@ function Block(props) {
         isConnecting: props.isConnecting,
         selected: props.isSelected,
         isTranslating: props.isTranslating,
+        isErrored: props.isErrored,
       }}
       onPointerDown={initTranslation}
       onContextMenu={contextMenu}

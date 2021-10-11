@@ -13,7 +13,7 @@
 } */
 .overlay > span {
   margin: 5px;
-  background: hsl(var(--hue), 100%, 50%);
+  background: hsl(var(--hue), 100%, 65%);
 }
 
 .overlay-container {

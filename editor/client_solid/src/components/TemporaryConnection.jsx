@@ -3,9 +3,6 @@ import Connection from "./Connection";
 import { createEffect, onMount } from "solid-js";
 
 function TemporaryConnection(props) {
-  onMount(() => {
-    console.log(props.direction);
-  });
   return (
     <>
       {props.direction === "in" ? (
@@ -43,7 +40,7 @@ function TemporaryConnection(props) {
           in_role_offset={{
             ...props.role_offset,
             x: props.role_offset.x + props.role_offset.width / 2,
-            y: props.role_offset.y + props.role_offset.height / 2,
+            y: props.role_offset.y + props.role_offset.height,
           }}
         ></Connection>
       )}

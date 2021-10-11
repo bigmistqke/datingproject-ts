@@ -16,7 +16,7 @@ const OverlayTypes = {
                   props.resolve(role_id);
                 }}
                 style={{
-                  background: `hsl(${role.hue}, 100%, 50%)`,
+                  background: `hsl(${role.hue}, 100%, 65%)`,
                   color: "white",
                 }}
                 className="role_id"

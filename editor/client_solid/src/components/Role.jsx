@@ -4,8 +4,8 @@ import cursorEventHandler from "../helpers/cursorEventHandler";
 
 function Role(props) {
   let role_dom;
-  //   console.log("ROOOOOOOOOOOOOOOOOOOLES");
   const startConnection = async (e, role_id) => {
+    if (e.buttons != 1) return;
     props.storeManager.editor.setConnecting(true);
     props.storeManager.script.blocks.removeConnection({
       block_id: props.block_id,
@@ -43,7 +43,6 @@ function Role(props) {
         role_id: props.role_id,
       })
     ) {
-      console.log("add connection!", target.id.replace("block_", ""));
       props.storeManager.script.blocks.addConnection({
         block_id: props.block_id,
         connecting_block_id: target.id.replace("block_", ""),
@@ -62,7 +61,6 @@ function Role(props) {
           role_id: props.role_id,
         });
       }
-      //   console.log("ADD THE ROLE!");
       props.storeManager.script.blocks.addConnection({
         block_id: props.block_id,
         connecting_block_id: target.id.replace("add_", ""),
@@ -70,6 +68,8 @@ function Role(props) {
         direction: props.direction,
       });
     }
+
+    props.storeManager.controlRole(props.role_id);
   };
 
   const updateRoleOffset = () =>
@@ -86,21 +86,18 @@ function Role(props) {
     });
 
   createEffect(() => {
-    console.info(
+    /* console.info(
       "necessary reference to props to trigger update",
       role_dom,
       props.instructions
-    );
-    updateRoleOffset();
+    ); */
+    updateRoleOffset(role_dom, props.instructions);
   }, [role_dom, props.instructions]);
 
   onMount(() => {
     updateRoleOffset();
     setTimeout(updateRoleOffset, 250);
   });
-  /*   createEffect(() => {
-    console.log("INSTRUCTIONS ARE UPDATED, FROM ROLE", props.instructions);
-  }, [props.instructions]); */
 
   const removeRole = async (e) => {};
 
@@ -110,10 +107,9 @@ function Role(props) {
 
     let option_array = Object.entries(remaining_roles).map(
       ([role_id, role]) => {
-        console.log("HUE IS ", props.all_roles[role_id]);
         return {
           value: role_id,
-          background: `hsl(${props.all_roles[role_id].hue}, 100%, 50%)`,
+          background: `hsl(${props.all_roles[role_id].hue}, 100%, 65%)`,
           color: "white",
         };
       }
@@ -130,7 +126,7 @@ function Role(props) {
               convert role
               <span
                 className="role_id"
-                style={{ background: `hsl(${props.role_hue}, 100%, 50%)` }}
+                style={{ background: `hsl(${props.role_hue}, 100%, 65%)` }}
               >
                 {props.role_id}
               </span>
@@ -146,8 +142,6 @@ function Role(props) {
     });
 
     if (!!!target_role_id) return;
-
-    console.log(target_role_id);
 
     props.storeManager.script.blocks.convertRole({
       block_id: props.block_id,
@@ -173,7 +167,7 @@ function Role(props) {
               remove or convert role{" "}
               <span
                 className="role_id"
-                style={{ background: `hsl(${props.role_hue}, 100%, 50%)` }}
+                style={{ background: `hsl(${props.role_hue}, 100%, 65%)` }}
               >
                 {props.role_id}
               </span>
@@ -225,7 +219,7 @@ function Role(props) {
   return (
     <span className="flexing role-container">
       <span
-        style={{ "background-color": `hsl(${props.role_hue}, 100%, 50%)` }}
+        style={{ "background-color": `hsl(${props.role_hue}, 100%, 65%)` }}
         ref={role_dom}
         onPointerDown={(e) => {
           startConnection(e, props.role_id);

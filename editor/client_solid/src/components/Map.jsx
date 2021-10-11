@@ -78,8 +78,6 @@ function Map(props) {
     let coords = { x: e.clientX, y: e.clientY };
     let now = performance.now();
 
-    console.log(now);
-
     await cursorEventHandler((e) => {
       now = performance.now();
       if (props.isShiftPressed) {

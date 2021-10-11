@@ -14,6 +14,7 @@ import Instruction from "../components/Instruction";
 import Roles from "../components/Roles";
 import Connection from "../components/Connection";
 import TemporaryConnection from "../components/TemporaryConnection";
+import Errors from "../components/Errors";
 
 import NumericInput from "../components/NumericInput";
 import SelectionBox from "../components/SelectionBox";
@@ -37,7 +38,6 @@ window.flatten = flatten;
 
 function Editor(props) {
   const { script_id } = useParams();
-  //console.log("script_id", script_id);
 
   const isDev = window.location.href.indexOf("localhost") != -1;
 
@@ -77,6 +77,7 @@ function Editor(props) {
       isCtrlPressed: false,
     },
     errors: {},
+    errored_block_ids: [],
     selected_block_ids: [],
     role_offsets: {},
     block_dimensions: {},
@@ -97,6 +98,7 @@ function Editor(props) {
         const [getInitialized, setInitialized] = createSignal(false); */
 
   // const [getSelectedBlockIds, setSelectedBlockIds] = createSignal([]);
+  const dataProcessor = new DataProcessor({ scriptState });
 
   const storeManager = new StoreManager({
     scriptState,
@@ -104,9 +106,9 @@ function Editor(props) {
     editorState,
     setEditorState,
     script_id,
+    dataProcessor,
   });
 
-  const dataProcessor = new DataProcessor({});
   const videoUploader = new VideoUploader({
     script_id,
   });
@@ -251,10 +253,9 @@ function Editor(props) {
     const l = () => parseInt(Math.random() * 200 + 100); */
 
     for (let role_id in roles) {
-      //console.log(role_index);
       roles[role_id] = {
         instruction_ids: roles[role_id],
-        hue: role_index * 375 * Math.PI,
+        hue: (role_index * 785) / Math.PI,
       };
       role_index++;
     }
@@ -287,29 +288,11 @@ function Editor(props) {
           return Promise.reject("error fetching data ", res);
         }
 
-        // //console.log(res.blocks);
-        //console.log();
         let blocks = reformatBlocks(res.blocks);
         blocks = arrayOfObjectsToObject(blocks, "block_id");
-        //console.log(res.instructions);
         setScriptState("roles", reformatRoles(res.roles));
         setScriptState("instructions", res.instructions);
         setScriptState("blocks", blocks);
-        //console.log("roles: ", scriptState.roles);
-
-        /*  let blocks = {};
-        res.blocks.forEach((b) => (blocks[b.block_id] = b));
-        setScriptState("blocks", blocks); */
-
-        /*         let blocks = {};
-        res.blocks.forEach((b) => (blocks[b.block_id] = b));
-        setScriptState("instructions", res.instructions);
-        setScriptState("blocks", blocks);
-        setScriptState("roles", res.roles);
-        // setScriptState("roles", ["1", "2"]);
-
-        setEditorState("bools", "isInitialized", true);
-        console.info("yeeeeeha"); */
       })
       .catch((err) => {
         console.error(err);
@@ -344,6 +327,10 @@ function Editor(props) {
           closeOverlay={storeManager.editor.closeOverlay}
         ></Overlay>
       ) : null}
+      <Errors
+        errors={[].concat.apply([], Object.values(editorState.errors))}
+        storeManager={storeManager}
+      ></Errors>
       <div className="viewport" onMouseMove={mousemove}>
         <header className="flex">
           <h1 className="flexing">editor for script {script_id}</h1>
@@ -374,8 +361,6 @@ function Editor(props) {
         >
           <For each={Object.values(scriptState.blocks)}>
             {(block, i) => {
-              console.log("block ");
-
               return (
                 <Block
                   block_id={block.block_id}
@@ -385,6 +370,9 @@ function Editor(props) {
                   }}
                   isSelected={
                     editorState.selected_block_ids.indexOf(block.block_id) != -1
+                  }
+                  isErrored={
+                    editorState.errored_block_ids.indexOf(block.block_id) != -1
                   }
                   isConnecting={editorState.bools.isConnecting}
                   errors={editorState.errors[block.block_id]}
@@ -477,11 +465,9 @@ function Editor(props) {
 
           <For each={Object.values(scriptState.blocks)}>
             {(block) => {
-              console.log("yes");
               return (
                 <For each={Object.entries(block.roles)}>
                   {([role_id, role]) => {
-                    console.log(role.next_block_id);
                     return role.next_block_id ? (
                       <Connection
                         next_block_id={role.next_block_id}

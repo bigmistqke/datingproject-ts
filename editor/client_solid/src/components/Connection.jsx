@@ -28,10 +28,6 @@ const Connection = (props) => {
   });
 
   createEffect(() => {
-    console.log("I KEEP  TRACK OF", props.next_block_id);
-  }, [props.next_block_id]);
-
-  createEffect(() => {
     if (!props.out_role_offset) return false;
     setPositions("prev", {
       x:
@@ -121,7 +117,7 @@ const Connection = (props) => {
       }}
     >
       <path
-        style={{ stroke: `hsl(${props.role_hue}, 100%, 50%)` }}
+        style={{ stroke: `hsl(${props.role_hue}, 100%, 65%)` }}
         d={`M${state.SVG.out.x},${state.SVG.out.y} C${state.SVG.out.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.center.y}`}
       ></path>
     </svg>
