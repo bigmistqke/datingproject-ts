@@ -73,11 +73,8 @@ function Map(props) {
   };
 
   const processNavigation = async (e) => {
-    console.info("process navigation!");
-
     if (!e.target.classList.contains("map-container")) return;
     if (e.buttons === 2) return;
-    console.info("process navigation!");
     let coords = { x: e.clientX, y: e.clientY };
     let now = performance.now();
 

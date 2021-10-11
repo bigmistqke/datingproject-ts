@@ -5,38 +5,41 @@ import "./Roles.css";
 import Role from "./Role.jsx";
 
 const Roles = (props) => {
-  const ordered_roles = createMemo(
+  /*   const ordered_roles = createMemo(
     () =>
       props.roles
         ? [...props.roles].sort(
             (a, b) => parseInt(a.role_id) - parseInt(b.role_id)
           )
         : null,
-    [props.roles]
-  );
+    [props.roles, props.all_roles]
+  ); */
 
-  const role_positions = createMemo(
+  /*   const role_positions = createMemo(
     () => ordered_roles().map((v) => v),
     [ordered_roles]
-  );
+  ); */
 
   const addRoleMaybe = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    let role_values = !Object.values(props.block.roles);
-    let remaining_roles = props.all_roles.filter((role) =>
-      role_values.find((role) => role.role_id === role.role_id)
-    );
-    if (remaining_roles.length === 0) return;
+    let remaining_roles = { ...props.all_roles };
 
-    let role_id = await this.openOverlay({
-      type: "role",
+    Object.entries(remaining_roles).forEach(([role_id, role]) => {
+      if (role_id in props.roles) {
+        delete remaining_roles[role_id];
+      }
+    });
+    if (Object.keys(remaining_roles).length === 0) return;
+
+    let role_id = await props.storeManager.editor.openOverlay({
+      type: "addRole",
       data: { block: props.block, roles: remaining_roles },
     });
     if (!role_id) return;
 
-    props.storeManager.blocks.addRole({
+    props.storeManager.script.blocks.addRole({
       block_id: props.block_id,
       role_id,
     });
@@ -57,14 +60,18 @@ const Roles = (props) => {
       <div className="row flex">
         <div className="flex flexing roles-container">
           {
-            <For each={ordered_roles()}>
-              {(role, i) => {
+            <For each={Object.entries(props.roles)}>
+              {([role_id, role]) => {
                 return (
                   <Role
-                    role_id={role.role_id}
+                    // role_color={props.all_roles[role.role_id].color}
+                    role_hue={props.all_roles[role_id].hue}
+                    role_id={role_id}
+                    all_roles={props.all_roles}
+                    roles={props.roles}
                     block_id={props.block_id}
                     direction={props.direction}
-                    hasError={checkErrors(role.role_id)}
+                    hasError={checkErrors(role_id)}
                     instructions={
                       props.direction === "out" ? props.instructions : null
                     }
@@ -76,8 +83,15 @@ const Roles = (props) => {
             </For>
           }
         </div>
-        {!props.roles || props.block.roles.length != props.roles.length ? (
-          <button onClick={addRoleMaybe}>add role</button>
+        {Object.keys(props.roles).length <
+        Object.keys(props.all_roles).length ? (
+          <button
+            className="add_role"
+            id={`add_${props.block_id}`}
+            onClick={addRoleMaybe}
+          >
+            add role
+          </button>
         ) : (
           <span></span>
         )}

@@ -1,0 +1,80 @@
+.instruction-role {
+  flex: 0 0 40px !important;
+  margin-left: 4px;
+}
+
+.instructions {
+  min-height: var(--r-height);
+  background: white;
+}
+
+.instruction-border {
+  flex: 0 3px !important;
+  font-size: 8pt !important;
+  color: white;
+  text-align: center;
+  /* border-radius: 5px;
+  margin-top: 1px; */
+  /* margin-bottom: 1px; */
+  /*   padding-left: 5px;
+  padding-right: 5px; */
+}
+
+.instruction {
+  background: white;
+}
+
+.instruction:not(:last-child) {
+  transition: background 0.5s;
+  border-bottom: 1px solid var(--light-grey);
+}
+
+.instruction.error {
+  border: none;
+  background: #ffc6c6;
+}
+
+.instruction > *:not(.instruction-text) {
+  color: darkgrey;
+}
+.instruction > * {
+  border-right: 2px solid var(--light-grey);
+}
+
+.instruction-text {
+  font-size: 12pt;
+  padding-left: 20px;
+}
+
+.instruction .timer-container {
+  margin-left: 5px;
+  display: flex;
+  align-items: baseline;
+}
+
+.instruction .timer-container input {
+  padding-right: 0px;
+}
+.instruction .timer-container .timespan,
+.instruction .timer-container > *,
+.instruction .timer-container > * > input {
+  height: 100%;
+  width: 100%;
+}
+
+.timer-sound {
+  margin-right: 15px;
+  align-self: center;
+  display: flex;
+  align-items: center;
+}
+
+.timer-sound > * {
+  flex: 1;
+  text-align: center;
+  color: lightgrey;
+}
+
+.timer-sound.on label {
+  color: black;
+}

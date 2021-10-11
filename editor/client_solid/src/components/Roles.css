@@ -3,13 +3,16 @@
   border-radius: 20px;
   background: white;
   text-align: center;
+  box-sizing: border-box;
   /* flex: 0 0; */
   padding-right: 25px;
   padding-left: 25px;
   line-height: var(--r-height);
   cursor: pointer;
-  color: black;
+  color: white;
   z-index: 50;
+  /*   border-width: 1px;
+  border-style: solid; */
 }
 
 .roles-container {
@@ -18,4 +21,8 @@
 
 .roles button {
   color: white;
+}
+
+.add_role {
+  pointer-events: all;
 }

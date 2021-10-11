@@ -1,6 +1,6 @@
 import Emitter from "./Emitter"
 
-function cursorEventHandler(move_callback, end_callback = () => { }) {
+function cursorEventHandler(move_callback = () => { }, end_callback = () => { }) {
     return new Promise((resolve) => {
 
         const end = (e) => {
@@ -9,10 +9,10 @@ function cursorEventHandler(move_callback, end_callback = () => { }) {
             try {
                 dom.releasePointerCapture(e.pointerId);
             } catch (e) {
-                console.info('no releasePointerCapture');
+                // console.info('no releasePointerCapture');
             }
             // end_callback();
-            resolve();
+            resolve(e);
         }
 
         window.addEventListener("pointermove", move_callback);
@@ -20,7 +20,7 @@ function cursorEventHandler(move_callback, end_callback = () => { }) {
         try {
             dom.setPointerCapture(e.pointerId);
         } catch (e) {
-            console.info('no setPointerCapture');
+            // console.info('no setPointerCapture');
         }
     })
 }

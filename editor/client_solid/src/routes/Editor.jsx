@@ -8,11 +8,12 @@ import postData from "../helpers/postData";
 
 import Map from "../components/Map";
 import ProgressBars from "../components/ProgressBars";
-import Overlays from "../components/Overlays";
+import Overlay from "../components/Overlay";
 import Block from "../components/Block.jsx";
 import Instruction from "../components/Instruction";
 import Roles from "../components/Roles";
 import Connection from "../components/Connection";
+import TemporaryConnection from "../components/TemporaryConnection";
 
 import NumericInput from "../components/NumericInput";
 import SelectionBox from "../components/SelectionBox";
@@ -36,7 +37,7 @@ window.flatten = flatten;
 
 function Editor(props) {
   const { script_id } = useParams();
-  console.log("script_id", script_id);
+  //console.log("script_id", script_id);
 
   const isDev = window.location.href.indexOf("localhost") != -1;
 
@@ -79,6 +80,7 @@ function Editor(props) {
     selected_block_ids: [],
     role_offsets: {},
     block_dimensions: {},
+    temporary_connections: [],
   });
 
   /*     
@@ -241,9 +243,28 @@ function Editor(props) {
     return object;
   };
 
+  let role_index = 0;
+
+  const reformatRoles = (roles) => {
+    /*     const h = () => parseInt(Math.random() * 250);
+    const s = () => parseInt(Math.random() * 200 + 100);
+    const l = () => parseInt(Math.random() * 200 + 100); */
+
+    for (let role_id in roles) {
+      //console.log(role_index);
+      roles[role_id] = {
+        instruction_ids: roles[role_id],
+        hue: role_index * 375 * Math.PI,
+      };
+      role_index++;
+    }
+    return roles;
+  };
+
   const reformatBlocks = (blocks) =>
     blocks.map((block) => {
       block = renameKeyOfObject(block, "connections", "roles");
+      block.roles = arrayOfObjectsToObject(block.roles, "role_id");
       return block;
     });
 
@@ -266,13 +287,15 @@ function Editor(props) {
           return Promise.reject("error fetching data ", res);
         }
 
-        // console.log(res.blocks);
-        console.log();
+        // //console.log(res.blocks);
+        //console.log();
         let blocks = reformatBlocks(res.blocks);
         blocks = arrayOfObjectsToObject(blocks, "block_id");
-        console.log(res.instructions);
+        //console.log(res.instructions);
+        setScriptState("roles", reformatRoles(res.roles));
         setScriptState("instructions", res.instructions);
         setScriptState("blocks", blocks);
+        //console.log("roles: ", scriptState.roles);
 
         /*  let blocks = {};
         res.blocks.forEach((b) => (blocks[b.block_id] = b));
@@ -308,17 +331,19 @@ function Editor(props) {
       : null;
   };
 
+  const GRID_SIZE = 1;
+
   return (
     <>
-      {/* {
-                        editorState.gui.overlay ?
-                            <div
-                                className="overlay-container"
-                                onMouseDown={(e) => { if (Array.from(e.target.classList).indexOf('overlay-container') != -1) overlay.get().resolve(false) }}
-                            >
-                                {getOverlay(overlay.get())}
-                            </div> : null
-            } */}
+      {editorState.gui.overlay ? (
+        <Overlay
+          type={editorState.gui.overlay.type}
+          data={editorState.gui.overlay.data}
+          position={editorState.gui.overlay.position}
+          resolve={editorState.gui.overlay.resolve}
+          closeOverlay={storeManager.editor.closeOverlay}
+        ></Overlay>
+      ) : null}
       <div className="viewport" onMouseMove={mousemove}>
         <header className="flex">
           <h1 className="flexing">editor for script {script_id}</h1>
@@ -349,11 +374,15 @@ function Editor(props) {
         >
           <For each={Object.values(scriptState.blocks)}>
             {(block, i) => {
-              console.log("blokcoke");
+              console.log("block ");
+
               return (
                 <Block
                   block_id={block.block_id}
-                  position={block.position}
+                  position={{
+                    x: parseInt(block.position.x / GRID_SIZE) * GRID_SIZE,
+                    y: parseInt(block.position.y / GRID_SIZE) * GRID_SIZE,
+                  }}
                   isSelected={
                     editorState.selected_block_ids.indexOf(block.block_id) != -1
                   }
@@ -399,6 +428,9 @@ function Editor(props) {
                             role_id={instruction.role_id}
                             sound={instruction.sound}
                             block_id={block.block_id}
+                            role_hue={
+                              scriptState.roles[instruction.role_id].hue
+                            }
                             roles={block.roles}
                             storeManager={storeManager}
                             videoUploader={videoUploader}
@@ -417,6 +449,7 @@ function Editor(props) {
                     zoom={editorState.navigation.zoom}
                     origin={editorState.navigation.origin}
                     storeManager={storeManager}
+                    instructions={block.instructions}
                     //   errors={getConnectionError("end", props.errors)} // TODO: UPDATE ERROR HANDLING OF ROLE_PORTS
                     direction="out"
                   ></Roles>
@@ -424,36 +457,55 @@ function Editor(props) {
               );
             }}
           </For>
-          <For each={Object.values(scriptState.blocks)}>
-            {(block) => (
-              <For each={block.roles}>
-                {(role, index) =>
-                  role.next_block_id ? (
-                    <Connection
-                      prev_block_position={block.position}
-                      role_offsets={editorState.role_offsets}
-                      prev_block_id={block.block_id}
-                      next_block_id={role.next_block_id}
-                      role_id={role.role_id}
-                      prev_role_offset={getRoleOffset({
-                        block_id: block.block_id,
-                        role_id: role.role_id,
-                        direction: "out",
-                      })}
-                      next_block_position={
-                        scriptState.blocks[role.next_block_id].position
-                      }
-                      next_role_offset={getRoleOffset({
-                        block_id: role.next_block_id,
-                        role_id: role.role_id,
-                        direction: "in",
-                      })}
-                      cursor={editorState.navigation.cursor}
-                    ></Connection>
-                  ) : null
-                }
-              </For>
+
+          <For each={editorState.temporary_connections}>
+            {(t_c) => (
+              <TemporaryConnection
+                role_hue={scriptState.roles[t_c.role_id].hue}
+                block_position={scriptState.blocks[t_c.block_id].position}
+                role_offset={getRoleOffset({
+                  block_id: t_c.block_id,
+                  role_id: t_c.role_id,
+                  direction: t_c.direction,
+                })}
+                direction={t_c.direction}
+                origin={editorState.navigation.origin}
+                cursor={editorState.navigation.cursor}
+              ></TemporaryConnection>
             )}
+          </For>
+
+          <For each={Object.values(scriptState.blocks)}>
+            {(block) => {
+              console.log("yes");
+              return (
+                <For each={Object.entries(block.roles)}>
+                  {([role_id, role]) => {
+                    console.log(role.next_block_id);
+                    return role.next_block_id ? (
+                      <Connection
+                        next_block_id={role.next_block_id}
+                        role_hue={scriptState.roles[role_id].hue}
+                        out_block_position={block.position}
+                        out_role_offset={getRoleOffset({
+                          block_id: block.block_id,
+                          role_id,
+                          direction: "out",
+                        })}
+                        in_block_position={
+                          scriptState.blocks[role.next_block_id].position
+                        }
+                        in_role_offset={getRoleOffset({
+                          block_id: role.next_block_id,
+                          role_id,
+                          direction: "in",
+                        })}
+                      ></Connection>
+                    ) : null;
+                  }}
+                </For>
+              );
+            }}
           </For>
           {editorState.gui.selectionBox ? (
             <SelectionBox data={editorState.gui.selectionBox}></SelectionBox>

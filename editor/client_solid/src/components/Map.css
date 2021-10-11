@@ -3,7 +3,7 @@
   width: 100%;
   overflow: hidden;
   transform: translateX(0px) translateY(0px);
-  background: rgb(225, 225, 225);
+  background: linear-gradient(var(--dark-grey), var(--light-grey));
 }
 
 .map {

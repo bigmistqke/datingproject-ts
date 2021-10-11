@@ -1,7 +1,12 @@
 import { createMemo, createEffect, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
+import "./Connection.css";
 
 const Connection = (props) => {
+  const PADDING = 10;
+  const MARGIN = 15;
+  const ROLE_HEIGHT = 15;
+
   let [positions, setPositions] = createStore({
     prev: {
       x: null,
@@ -18,34 +23,42 @@ const Connection = (props) => {
     SVG: {
       in: { x: 0, y: 0 },
       center: { x: 0, y: 0 },
-      out: { y: 0 },
+      out: { x: 0, y: 0 },
     },
   });
 
   createEffect(() => {
-    if (!props.prev_role_offset) return false;
-    setPositions("prev", {
-      x:
-        props.prev_block_position.x +
-        props.prev_role_offset.width / 2 +
-        props.prev_role_offset.x,
-      y: props.prev_block_position.y + props.prev_role_offset.y + 15,
-    });
-  }, [props.prev_block_position, props.prev_role_offset]);
+    console.log("I KEEP  TRACK OF", props.next_block_id);
+  }, [props.next_block_id]);
 
   createEffect(() => {
-    if (!props.next_role_offset) return false;
+    if (!props.out_role_offset) return false;
+    setPositions("prev", {
+      x:
+        props.out_block_position.x +
+        props.out_role_offset.width / 2 +
+        props.out_role_offset.x +
+        MARGIN,
+      y:
+        props.out_block_position.y +
+        props.out_role_offset.y +
+        ROLE_HEIGHT +
+        MARGIN,
+    });
+  }, [props.out_block_position, props.out_role_offset]);
+
+  createEffect(() => {
+    if (!props.in_role_offset) return false;
 
     setPositions("next", {
       x:
-        props.next_block_position.x +
-        props.prev_role_offset.width / 2 +
-        props.next_role_offset.x,
-      y: props.next_block_position.y + props.next_role_offset.y,
+        props.in_block_position.x +
+        props.out_role_offset.width / 2 +
+        props.in_role_offset.x +
+        MARGIN,
+      y: props.in_block_position.y + props.in_role_offset.y + MARGIN,
     });
-  }, [props.next_block_position, props.next_role_offset]);
-
-  let PADDING = 10;
+  }, [props.in_block_position, props.in_role_offset]);
 
   const getBoundaries = (start, end) => {
     let bounds = {
@@ -81,14 +94,9 @@ const Connection = (props) => {
   };
 
   createEffect(() => {
-    console.log("PREV_ROLE_OFFSET_HEGIHT:", props.prev_role_offset.height);
     if (!positions.prev.x || !positions.next.x) return;
-    // console.log(positions.prev.x, positions.next.x);
-    // console.log("getBoundaries", getBoundaries(positions.prev, positions.next));
     setState("boundaries", getBoundaries(positions.prev, positions.next));
     setState("SVG", getSVG(positions.prev, positions.next));
-
-    /*     */
   }, [positions.prev, positions.next]);
   return (
     <svg
@@ -112,10 +120,8 @@ const Connection = (props) => {
           }px`, */
       }}
     >
-      <span>
-        {props.prev_block_id} - {props.next_block_id} - {props.role_id}
-      </span>
       <path
+        style={{ stroke: `hsl(${props.role_hue}, 100%, 50%)` }}
         d={`M${state.SVG.out.x},${state.SVG.out.y} C${state.SVG.out.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.center.y}`}
       ></path>
     </svg>
