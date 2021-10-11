@@ -16,7 +16,7 @@ function Block(props) {
 
   const initTranslation = async function (e) {
     if (e.button !== 0) return;
-    if (!e.target.classList.contains("block")) return;
+    if (!e.target.classList.contains("block-drag")) return;
     e.preventDefault();
     e.stopPropagation();
 
@@ -38,7 +38,7 @@ function Block(props) {
         y: ((last_position.y - e.clientY) * -1) / props.zoom,
       };
 
-      props.storeManager.scripts.blocks.translateSelectedBlocks({ offset });
+      props.storeManager.script.blocks.translateSelectedBlocks({ offset });
 
       last_position = {
         x: e.clientX,
@@ -53,7 +53,7 @@ function Block(props) {
   };
 
   const contextMenu = async (e) => {
-    let result = await props.storeManager.editor.openOverlay({
+    /*     let result = await props.storeManager.editor.openOverlay({
       type: "options",
       data: {
         options: ["delete blocks", "convert roles"],
@@ -70,7 +70,7 @@ function Block(props) {
       }
     } else if (result === "convert roles") {
       //   props.storeManager.blocks.convertRoles({ block });
-    }
+    } */
   };
 
   createEffect(() => {
@@ -85,13 +85,19 @@ function Block(props) {
         block: true,
         isConnecting: props.isConnecting,
         selected: props.isSelected,
-        isTranslating,
+        isTranslating: props.isTranslating,
       }}
       onPointerDown={initTranslation}
       onContextMenu={contextMenu}
       ref={container_ref}
     >
-      <div>{props.children}</div>
+      <div className="block-drag"></div>
+      <div
+        className="block-children"
+        style={{ "pointer-events": props.isConnecting ? "none" : "all" }}
+      >
+        {props.children}
+      </div>
     </div>
   );
 }

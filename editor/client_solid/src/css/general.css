@@ -9,6 +9,10 @@
   --light: #fafafa;
   --dark-shadow: 0px 0px 25px #99999944;
   --light-shadow: 0px 0px 50px #ffffff4f;
+  --dark-grey: rgb(230, 230, 230);
+  --light-grey: rgb(250, 250, 250);
+  --border-color: rgb(245, 245, 245);
+  --selected-color: yellow;
 }
 body,
 html {
@@ -38,24 +42,6 @@ body {
 
 .hidden {
   display: none;
-}
-
-.overlay {
-  position: absolute;
-  top: 50vh;
-  left: 50vw;
-  transform: translate(-50%, -50%);
-  background: grey;
-  font-family: serif;
-  border-radius: 50px;
-  line-height: 100px;
-  padding-left: 25px;
-  padding-right: 25px;
-  font-size: 12pt;
-}
-
-.overlay > span {
-  margin: 5px;
 }
 
 .cards {
@@ -106,17 +92,18 @@ body {
   user-select: none;
 }
 
-header {
+.viewport header {
   position: absolute;
   display: flex;
   top: 0px;
   z-index: 99;
   box-shadow: var(--light-shadow);
   width: 100%;
-  background: #e3e3e3;
+  background: var(--light-grey);
+  box-shadow: 0px 0px 25px rgba(200, 200, 200, 25);
 }
 
-header h1 {
+.viewport header h1 {
   font-size: 10pt;
   padding-left: 10pt;
   font-weight: normal;
@@ -165,64 +152,32 @@ video {
   margin: auto;
   overflow: hidden;
   /* border-bottom: var(--border); */
-  background: #e3e3e3;
+  background: var(--dark-grey);
+
   cursor: default;
 }
 
 .row > div,
 .row > input,
 .row > select,
-.row > span {
+.row > span,
+.row > textarea {
   font-size: 10pt;
   line-height: var(--r-height);
+
   /* padding-left: 10px; */
 }
-
-.instruction {
-  transition: background 0.5s;
-}
-
-.instruction.error {
+.row > textarea {
+  line-height: 12pt;
+  padding-left: 0px;
+  padding-bottom: 5pt;
+  margin-left: 15pt;
+  margin-top: 12pt;
+  resize: none;
+  background: transparent;
   border: none;
-  background: #ffc6c6;
-}
-
-.instruction > *:not(.instruction-text) {
-  color: darkgrey;
-}
-
-.instruction-text {
-  font-size: 12pt;
-  padding-left: 20px;
-}
-
-.instruction .timer-container {
-  display: flex;
-  align-items: baseline;
-}
-
-.instruction .timer-container .timespan,
-.instruction .timer-container > *,
-.instruction .timer-container > * > input {
-  height: 100%;
-  width: 100%;
-}
-
-.timer-sound {
-  flex: 0 50px !important;
-  align-self: center;
-  display: flex;
-  align-items: center;
-}
-
-.timer-sound label {
-  flex: 1;
-  text-align: center;
-  color: lightgrey;
-}
-
-.timer-sound.on label {
-  color: black;
+  outline: none;
+  /* background:white; */
 }
 
 .gray {
@@ -267,19 +222,15 @@ button.focus {
   min-width: 0;
 }
 
-.instruction-role {
-  flex: 0 0 40px !important;
-}
-
-.flex:not(header) > .tiny {
+/* .flex:not(header) > .tiny {
   font-size: 8pt;
   color: #e0e0e0;
-}
+} */
 
 .flex > .tiny {
-  flex: 0 0 40px;
-  padding-left: 0px;
-  text-align: center;
+  flex: 0 0 50px;
+  /* padding-left: 0px; */
+  /* text-align: center; */
 }
 
 select,
@@ -298,28 +249,8 @@ i {
   /* border-color: transparent transparent rgba(0, 0, 0, 1) !important */
 }
 
-.type_b {
-  background: var(--light);
-}
-
-.type_a {
-  background: var(--medium);
-}
-
 ::placeholder {
   color: lightgrey;
-}
-
-.overlay button {
-  font-size: 8pt;
-  border-radius: 20px;
-  background: white;
-  text-align: center;
-  /* flex: 0 0; */
-  padding-right: 5px;
-  padding-left: 5px;
-  /* line-height: var(--r-height); */
-  cursor: pointer;
 }
 
 .center {
@@ -359,56 +290,19 @@ i {
   margin-bottom: 10px;
 }
 
-.overlay-container {
-  position: fixed;
-  z-index: 2;
-  width: 100vw;
-  height: 100vh;
-}
-
-.overlay {
-  position: fixed;
-  z-index: 2;
-  background: var(--medium);
-  padding-left: 2.5px;
-  padding-right: 2.5px;
-  transform: translate(-50%, -50%);
-  min-width: 150px;
-  line-height: var(--r-height);
-  border-radius: calc(var(--r-height) / 2);
-  box-shadow: var(--dark-shadow);
-  padding: 12.5px;
-  box-shadow: 0px 0px 50px gray;
-  /* display: none; */
-}
-
-.overlay header {
-  font-size: 12pt;
-}
-
-.overlay.visible {
-  display: inline-block;
-}
-
 .line {
   position: absolute;
   z-index: 10;
   pointer-events: none;
 }
 
-line,
-path {
-  stroke: white;
-  stroke-width: 1;
-  fill: none;
-}
-
-.connectionLine {
-  /* background:yellow; */
-  position: absolute;
-  pointer-events: none;
-  z-index: 50;
-  color: red;
+@keyframes dash {
+  from {
+    stroke-dashoffset: 8;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .progressBars {
@@ -465,11 +359,6 @@ path {
   position: absolute;
   border: 2px dashed white;
   background: #ffffff41;
-}
-
-.instructions {
-  min-height: var(--r-height);
-  background: var(--light);
 }
 
 .selected {
