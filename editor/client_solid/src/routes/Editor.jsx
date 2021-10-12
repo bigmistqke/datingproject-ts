@@ -8,13 +8,15 @@ import postData from "../helpers/postData";
 
 import Map from "../components/Map";
 import ProgressBars from "../components/ProgressBars";
-import Overlay from "../components/Overlay";
+import Prompt from "../components/Prompt";
 import Block from "../components/Block.jsx";
 import Instruction from "../components/Instruction";
 import Roles from "../components/Roles";
 import Connection from "../components/Connection";
 import TemporaryConnection from "../components/TemporaryConnection";
 import Errors from "../components/Errors";
+import TextArea from "../components/TextArea";
+import Menu from "../components/Menu";
 
 import NumericInput from "../components/NumericInput";
 import SelectionBox from "../components/SelectionBox";
@@ -24,8 +26,10 @@ import StoreManager from "../managers/StoreManager";
 
 import VideoUploader from "../managers/VideoUploader";
 
-import flatten, { unflatten } from "flat";
+import getRandomHue from "../helpers/getRandomHue";
 
+import flatten, { unflatten } from "flat";
+import RoleAdmin from "../components/RoleAdmin";
 import "./Editor.css";
 
 window.cursorPosition = {};
@@ -57,6 +61,7 @@ function Editor(props) {
     blocks: {},
     roles: {},
     instructions: {},
+    description: "",
   });
 
   const [editorState, setEditorState] = createStore({
@@ -67,14 +72,16 @@ function Editor(props) {
       zoomedOut: false,
     },
     gui: {
-      overlay: null,
+      prompt: null,
       selectionBox: null,
+      role_admin: null,
     },
     bools: {
       isConnecting: false,
       isInitialized: false,
       isShiftPressed: false,
       isCtrlPressed: false,
+      isMenuOpened: false,
     },
     errors: {},
     errored_block_ids: [],
@@ -84,20 +91,6 @@ function Editor(props) {
     temporary_connections: [],
   });
 
-  /*     
-
-    /*     const [getBlocks, setBlocks] = createStore({});
-        const [getRoles, setRoles] = createSignal(["1", "2"]);
-        const [getInstructions, setInstructions] = createStore({}); */
-
-  // editor-specific state
-  /*     
-        //
-
-        const [getSelectionBox, setSelectionBox] = createSignal(false);
-        const [getInitialized, setInitialized] = createSignal(false); */
-
-  // const [getSelectedBlockIds, setSelectedBlockIds] = createSignal([]);
   const dataProcessor = new DataProcessor({ scriptState });
 
   const storeManager = new StoreManager({
@@ -174,7 +167,7 @@ function Editor(props) {
     } else {
       switch (e.key) {
         case "Backspace":
-          storeManager.blocks.deleteSelectedBlocks();
+          // storeManager.blocks.deleteSelectedBlocks();
           break;
         case "Control":
           setEditorState("bools", "isCtrlPressed", true);
@@ -255,7 +248,8 @@ function Editor(props) {
     for (let role_id in roles) {
       roles[role_id] = {
         instruction_ids: roles[role_id],
-        hue: (role_index * 785) / Math.PI,
+        hue: getRandomHue(role_index).toString(),
+        description: "",
       };
       role_index++;
     }
@@ -280,6 +274,7 @@ function Editor(props) {
   onMount(() => {
     window.addEventListener("keydown", keydown);
     window.addEventListener("keyup", keyup);
+    window.addEventListener("mousemove", mousemove);
 
     getData(`${urls.fetch}/api/script/get/${script_id}`)
       .then((res) => res.json())
@@ -287,7 +282,7 @@ function Editor(props) {
         if (!res) {
           return Promise.reject("error fetching data ", res);
         }
-
+        console.log(res);
         let blocks = reformatBlocks(res.blocks);
         blocks = arrayOfObjectsToObject(blocks, "block_id");
         setScriptState("roles", reformatRoles(res.roles));
@@ -316,42 +311,52 @@ function Editor(props) {
 
   const GRID_SIZE = 1;
 
+  const toggleMenu = () => {
+    setEditorState("bools", "isMenuOpened", !editorState.bools.isMenuOpened);
+  };
+
   return (
     <>
-      {editorState.gui.overlay ? (
-        <Overlay
-          type={editorState.gui.overlay.type}
-          data={editorState.gui.overlay.data}
-          position={editorState.gui.overlay.position}
-          resolve={editorState.gui.overlay.resolve}
-          closeOverlay={storeManager.editor.closeOverlay}
-        ></Overlay>
+      {editorState.gui.prompt ? (
+        <Prompt
+          type={editorState.gui.prompt.type}
+          data={editorState.gui.prompt.data}
+          header={editorState.gui.prompt.header}
+          position={editorState.navigation.cursor}
+          resolve={editorState.gui.prompt.resolve}
+          closePrompt={storeManager.editor.closePrompt}
+          scriptState={scriptState}
+          storeManager={storeManager}
+        ></Prompt>
       ) : null}
-      <Errors
+
+      {editorState.gui.role_admin ? (
+        <RoleAdmin
+          scriptState={scriptState}
+          storeManager={storeManager}
+        ></RoleAdmin>
+      ) : null}
+
+      {/*     <Errors
         errors={[].concat.apply([], Object.values(editorState.errors))}
         storeManager={storeManager}
-      ></Errors>
-      <div className="viewport" onMouseMove={mousemove}>
-        <header className="flex">
-          <h1 className="flexing">editor for script {script_id}</h1>
-
-          <NumericInput
-            type="number"
-            onChange={changeRoles}
-            min={2}
-            step={1}
-            precision={0}
-            strict={true}
-            value={roles ? roles.length : 2}
-            format={format}
-          />
-
-          <button onClick={play}>play</button>
-
-          <button onClick={save} ref={r_saveButton}>
-            save
-          </button>
-        </header>
+      ></Errors> */}
+      <Menu
+        editorState={editorState}
+        scriptState={scriptState}
+        storeManager={storeManager}
+        script_id={script_id}
+      ></Menu>
+      <div className="viewport">
+        <button
+          classList={{
+            "menu-button": true,
+            selected: editorState.bools.isMenuOpened,
+          }}
+          onMouseDown={toggleMenu}
+        >
+          +
+        </button>
 
         <Map
           origin={editorState.navigation.origin}
@@ -368,12 +373,8 @@ function Editor(props) {
                     x: parseInt(block.position.x / GRID_SIZE) * GRID_SIZE,
                     y: parseInt(block.position.y / GRID_SIZE) * GRID_SIZE,
                   }}
-                  isSelected={
-                    editorState.selected_block_ids.indexOf(block.block_id) != -1
-                  }
-                  isErrored={
-                    editorState.errored_block_ids.indexOf(block.block_id) != -1
-                  }
+                  selected_block_ids={editorState.selected_block_ids}
+                  errored_block_ids={editorState.errored_block_ids}
                   isConnecting={editorState.bools.isConnecting}
                   errors={editorState.errors[block.block_id]}
                   zoom={editorState.navigation.zoom}

@@ -97,13 +97,24 @@ function Map(props) {
     }
   };
 
-  const createBlock = (e) => {
+  const createBlock = async (e) => {
     e.preventDefault();
-    const coords = {
+
+    let type = await props.storeManager.editor.openPrompt({
+      type: "options",
+      header: "create a new block",
+      data: {
+        options: ["instruction", "trigger"],
+      },
+    });
+
+    if (!type) return;
+
+    const position = {
       x: (e.clientX - props.origin.x) / props.zoom,
       y: (e.clientY - props.origin.y) / props.zoom,
     };
-    props.storeManager.blocks.addBlockAtPosition(coords);
+    props.storeManager.script.blocks.add({ position, type });
   };
 
   return (

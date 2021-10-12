@@ -1,50 +1,43 @@
-import Connection from "./Connection";
-
-import { createEffect, onMount } from "solid-js";
+import Bezier from "./Bezier";
+import { createMemo, createEffect } from "solid-js";
+import getColorFromHue from "../helpers/getColorFromHue";
 
 function TemporaryConnection(props) {
+  const PADDING = 10;
+  const MARGIN = 15;
+  const ROLE_HEIGHT = 15;
+
+  const getPositionPort = createMemo(() => {
+    // if (!props.role_offset) return { x: 0, y: 0 };
+    return {
+      x:
+        props.block_position.x +
+        props.role_offset.width / 2 +
+        props.role_offset.x +
+        MARGIN,
+      y:
+        props.direction === "in"
+          ? props.block_position.y + props.role_offset.y + MARGIN
+          : props.block_position.y + props.role_offset.y + ROLE_HEIGHT + MARGIN,
+    };
+  }, [props.out_block_position, props.out_role_offset, props.direction]);
+
+  const getPositionCursor = createMemo(() => {
+    return {
+      x: props.cursor.x - props.origin.x,
+      y: props.cursor.y - props.origin.y,
+    };
+  }, [props.cursor, props.origin]);
+
+  /*   createEffect(() => {
+    console.log("every render: ", getPositionCursor(), getPositionPort());
+  }, [getPositionCursor(), getPositionPort()]); */
+
   return (
-    <>
-      {props.direction === "in" ? (
-        <Connection
-          role_hue={props.role_hue}
-          out_block_position={props.block_position}
-          out_role_offset={props.role_offset}
-          in_block_position={{
-            x:
-              props.cursor.x -
-              props.origin.x -
-              props.role_offset.width / 2 -
-              15,
-            y: props.cursor.y - props.origin.y - props.role_offset.height / 2,
-          }}
-          in_role_offset={{ x: 0, y: 0, width: 0 }}
-        ></Connection>
-      ) : (
-        <Connection
-          role_hue={props.role_hue}
-          out_block_position={{
-            x:
-              props.cursor.x -
-              props.origin.x -
-              props.role_offset.width / 2 +
-              15,
-            y: props.cursor.y - props.origin.y - props.role_offset.height / 2,
-          }}
-          out_role_offset={{
-            x: 0,
-            y: props.role_offset.height * -1,
-            width: 0,
-          }}
-          in_block_position={props.block_position}
-          in_role_offset={{
-            ...props.role_offset,
-            x: props.role_offset.x + props.role_offset.width / 2,
-            y: props.role_offset.y + props.role_offset.height,
-          }}
-        ></Connection>
-      )}
-    </>
+    <Bezier
+      points={[getPositionCursor(), getPositionPort()]}
+      style={{ stroke: getColorFromHue(props.role_hue) }}
+    ></Bezier>
   );
 }
 export default TemporaryConnection;

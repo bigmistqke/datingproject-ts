@@ -4,7 +4,7 @@ path {
   fill: none;
   stroke-dasharray: 5 3;
   stroke-linecap: butt;
-  animation: dash 3s linear infinite;
+  /* animation: dash 3s linear infinite; */
 }
 
 .connectionLine {

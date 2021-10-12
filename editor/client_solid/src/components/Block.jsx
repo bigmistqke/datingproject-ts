@@ -1,30 +1,19 @@
 import "./Block.css";
-
-import { createSignal, createEffect } from "solid-js";
-import Roles from "./Roles";
-
+import DragBox from "./DragBox";
 import cursorEventHandler from "../helpers/cursorEventHandler";
-
+import { createMemo } from "solid-js";
 function Block(props) {
-  let container_ref;
-
-  const [isTranslating, setIsTranslating] = createSignal(false);
-
-  const getConnectionError = (direction, errors) => {
-    return errors && direction in errors ? errors[direction] : false;
-  };
-
   const initTranslation = async function (e) {
-    if (e.button !== 0) return;
-    if (!e.target.classList.contains("block-drag")) return;
     e.preventDefault();
     e.stopPropagation();
+    if (!props.isShiftPressed) {
+      props.storeManager.editor.emptySelectedBlockIds();
+    }
 
     // props.storeManager.blocks.selectBlock({ block: props.block });
     props.storeManager.editor.addToSelectedBlockIds(props.block_id);
 
     let lastTick = performance.now();
-    setIsTranslating(true);
 
     // await props.storeManager.blocks.processPosition(e, props.block, props.zoom);
 
@@ -49,41 +38,72 @@ function Block(props) {
     if (!props.isShiftPressed) {
       props.storeManager.editor.emptySelectedBlockIds();
     }
-    setIsTranslating(false);
+  };
+
+  const pointerDown = () => {
+    if (!props.isShiftPressed) {
+      props.storeManager.editor.emptySelectedBlockIds();
+    }
+    props.storeManager.editor.addToSelectedBlockIds(props.block_id);
+  };
+
+  const translate = (offset) => {
+    props.storeManager.script.blocks.translateSelectedBlocks({ offset });
+  };
+
+  const pointerUp = () => {
+    if (!props.isShiftPressed) {
+      props.storeManager.editor.emptySelectedBlockIds();
+    }
   };
 
   const contextMenu = async (e) => {
-    /*     let result = await props.storeManager.editor.openOverlay({
-      type: "options",
-      data: {
-        options: ["delete blocks", "convert roles"],
-      },
-    });
+    e.stopPropagation();
+    e.preventDefault();
+    if (!props.isShiftPressed) {
+      props.storeManager.editor.emptySelectedBlockIds();
+    }
 
+    props.storeManager.editor.addToSelectedBlockIds(props.block_id);
+
+    let result = await props.storeManager.editor.openPrompt({
+      type: "confirm",
+      header: "delete selected block(s)",
+    });
     if (!result) return;
 
-    if (result === "delete blocks") {
-      if (props.editorState.selected_block_ids.length > 1) {
-        this.deleteSelectedBlocks();
-      } else {
-        deleteBlock(props.block_id);
-      }
-    } else if (result === "convert roles") {
-      //   props.storeManager.blocks.convertRoles({ block });
-    } */
+    props.storeManager.script.blocks.removeSelectedBlocks();
   };
 
-  createEffect(() => {
-    if (!container_ref) return;
-    container_ref.style.transform = `translateX(${props.position.x}px) translateY(${props.position.y}px)`;
-  }, [props.position]);
+  const isErrored = createMemo(
+    () => props.errored_block_ids.indexOf(props.block_id) != -1,
+    [props.errored_block_ids]
+  );
 
-  /*   createEffect(() => {
-    console.log(props.errored_block_ids);
-    console.log(props.errored_block_ids.indexOf(props.block_id) != -1);
-  }, [props.errored_block_ids]); */
+  const isSelected = createMemo(
+    () => props.selected_block_ids.indexOf(props.block_id) != -1,
+    [props.selected_block_ids]
+  );
 
   return (
+    <DragBox
+      classList={{
+        isConnecting: props.isConnecting,
+        isTranslating: props.isTranslating,
+        selected: isSelected(),
+        isErrored: isErrored(),
+      }}
+      onPointerDown={pointerDown}
+      onPointerUp={pointerUp}
+      onTranslate={translate}
+      onContextMenu={contextMenu}
+      position={props.position}
+    >
+      {props.children}
+    </DragBox>
+  );
+
+  /*  (
     <div
       id={`block_${props.block_id}`}
       classList={{
@@ -93,19 +113,15 @@ function Block(props) {
         isTranslating: props.isTranslating,
         isErrored: props.isErrored,
       }}
-      onPointerDown={initTranslation}
+      pointerDown={initTranslation}
       onContextMenu={contextMenu}
-      ref={container_ref}
+      style={{
+        transform: `translateX(${props.position.x}px) translateY(${props.position.y}px)`,
+      }}
     >
-      <div className="block-drag"></div>
-      <div
-        className="block-children"
-        style={{ "pointer-events": props.isConnecting ? "none" : "all" }}
-      >
-        {props.children}
-      </div>
+      
     </div>
-  );
+  ); */
 }
 
 export default Block;

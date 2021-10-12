@@ -1,0 +1,46 @@
+.role_admin {
+  width: 600px !important;
+  box-shadow: 0px 0px 50px var(--role_admin);
+}
+
+.role_admin input {
+  width: 50px;
+}
+
+.role_admin .side_panel {
+  display: flex;
+  flex-direction: column;
+  row-gap: 5px;
+}
+
+.role_admin .overlay-body {
+  gap: 5px;
+  padding: 0px;
+}
+.role_admin header {
+  padding: 0px;
+  background: var(--role_admin);
+  color: white;
+}
+
+.role_admin header .title {
+  padding-left: 25px;
+  padding-right: 25px;
+}
+.roles_container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 500px;
+  overflow: auto;
+}
+
+.role_admin .role_row {
+  width: 100%;
+  background: white;
+}
+
+.role_admin .role_row:not(:last-child) {
+  transition: background 0.5s;
+  border-bottom: 1px solid var(--light-grey);
+}

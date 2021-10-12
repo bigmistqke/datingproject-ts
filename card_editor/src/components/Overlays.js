@@ -30,6 +30,7 @@ const Overlays = {
         )
     },
     options: (props) => {
+        console.log(props.data);
         return (
             <div style={{ left: `${parseInt(window.cursorPosition.x)}px`, top: `${parseInt(window.cursorPosition.y)}px` }}
                 className="overlay text_center">

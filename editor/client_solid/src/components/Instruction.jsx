@@ -6,6 +6,7 @@ import NumericInput from "./NumericInput";
 import "./Instruction.css";
 import { createSignal, onMount, createEffect } from "solid-js";
 import Select from "./Select";
+import getColorFromHue from "../helpers/getColorFromHue";
 
 const Instruction = (props) => {
   let role_ref;
@@ -140,7 +141,7 @@ const Instruction = (props) => {
     >
       <div
         className="instruction-border"
-        style={{ background: `hsl(${props.role_hue}, 100%, 65%)` }}
+        style={{ background: getColorFromHue(props.role_hue) }}
       ></div>
 
       {/* <span>{props.role_id}</span> */}

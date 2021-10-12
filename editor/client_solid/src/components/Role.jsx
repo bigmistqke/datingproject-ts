@@ -1,6 +1,7 @@
 import { createMemo, For, createEffect, onMount } from "solid-js";
-import "./Roles.css";
+import "./Role.css";
 import cursorEventHandler from "../helpers/cursorEventHandler";
+import getColorFromHue from "../helpers/getColorFromHue";
 
 function Role(props) {
   let role_dom;
@@ -19,6 +20,7 @@ function Role(props) {
       direction: props.direction,
       cursor: { x: e.clientX, y: e.clientY },
     });
+
     let { target } = await cursorEventHandler();
 
     props.storeManager.editor.setConnecting(false);
@@ -105,40 +107,36 @@ function Role(props) {
     let remaining_roles = { ...props.roles };
     delete remaining_roles[props.role_id];
 
-    let option_array = Object.entries(remaining_roles).map(
-      ([role_id, role]) => {
-        return {
-          value: role_id,
-          background: `hsl(${props.all_roles[role_id].hue}, 100%, 65%)`,
-          color: "white",
-        };
-      }
-    );
+    let options = Object.entries(remaining_roles).map(([role_id, role]) => {
+      return {
+        value: role_id,
+        background: getColorFromHue(props.all_roles[role_id].hue),
+        color: "white",
+      };
+    });
 
     if (Object.keys(remaining_roles).length === 0) return;
 
-    let target_role_id = await props.storeManager.editor.openOverlay({
+    let target_role_id = await props.storeManager.editor.openPrompt({
       type: "options",
-      data: {
-        text: (
-          <>
-            <div>
-              convert role
-              <span
-                className="role_id"
-                style={{ background: `hsl(${props.role_hue}, 100%, 65%)` }}
-              >
-                {props.role_id}
-              </span>
-            </div>
-            <div>and its associated instructions</div>
-            <div>
-              from <span className="selected_blocks">selected block</span> into:
-            </div>
-          </>
-        ),
-        options: option_array,
-      },
+      header: (
+        <>
+          <div>
+            convert role
+            <span
+              className="role_id"
+              style={{ background: getColorFromHue(props.role_hue) }}
+            >
+              {props.role_id}
+            </span>
+          </div>
+          <div>and its associated instructions</div>
+          <div>
+            from <span className="selected_blocks">selected block</span> into:
+          </div>
+        </>
+      ),
+      data: { options },
     });
 
     if (!!!target_role_id) return;
@@ -158,27 +156,27 @@ function Role(props) {
 
     props.storeManager.editor.addToSelectedBlockIds(props.block_id);
 
-    let result = await props.storeManager.editor.openOverlay({
+    let result = await props.storeManager.editor.openPrompt({
       type: "options",
+      header: (
+        <>
+          <div>
+            remove or convert role{" "}
+            <span
+              className="role_id"
+              style={{ background: getColorFromHue(props.role_hue) }}
+            >
+              {props.role_id}
+            </span>
+          </div>
+          <div>and its associated instructions</div>
+          <div>
+            {" "}
+            from <span className="selected_blocks">selected block</span>
+          </div>
+        </>
+      ),
       data: {
-        text: (
-          <>
-            <div>
-              remove or convert role{" "}
-              <span
-                className="role_id"
-                style={{ background: `hsl(${props.role_hue}, 100%, 65%)` }}
-              >
-                {props.role_id}
-              </span>
-            </div>
-            <div>and its associated instructions</div>
-            <div>
-              {" "}
-              from <span className="selected_blocks">selected block</span>
-            </div>
-          </>
-        ),
         options: ["remove", "convert"],
       },
     });
@@ -196,7 +194,7 @@ function Role(props) {
 
     props.storeManager.editor.emptySelectedBlockIds();
 
-    /*     let result = await props.storeManager.editor.openOverlay({
+    /*     let result = await props.storeManager.editor.openPrompt({
       type: "confirm",
       data: {
         text: `remove role ${role_id} from block?`,
@@ -219,7 +217,7 @@ function Role(props) {
   return (
     <span className="flexing role-container">
       <span
-        style={{ "background-color": `hsl(${props.role_hue}, 100%, 65%)` }}
+        style={{ "background-color": getColorFromHue(props.role_hue) }}
         ref={role_dom}
         onPointerDown={(e) => {
           startConnection(e, props.role_id);

@@ -33,8 +33,9 @@ const Roles = (props) => {
     });
     if (Object.keys(remaining_roles).length === 0) return;
 
-    let role_id = await props.storeManager.editor.openOverlay({
+    let role_id = await props.storeManager.editor.openPrompt({
       type: "addRole",
+      header: "add role to block",
       data: { block: props.block, roles: remaining_roles },
     });
     if (!role_id) return;

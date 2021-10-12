@@ -1,56 +1,51 @@
-/* .overlay {
-  position: absolute;
-  top: 50vh;
-  left: 50vw;
-  transform: translate(-50%, -50%);
-  background: grey;
-  font-family: serif;
-  border-radius: 50px;
-  line-height: 100px;
-  padding-left: 25px;
-  padding-right: 25px;
-  font-size: 12pt;
-} */
+.overlay {
+  font-size: 10pt;
+  line-height: 12pt;
+}
 .overlay > span {
   margin: 5px;
-  background: hsl(var(--hue), 100%, 65%);
+  /* background: hsl(var(--hue), 100%, 65%); */
 }
 
 .overlay-container {
   position: fixed;
-  z-index: 2;
+  z-index: 60;
   width: 100vw;
   height: 100vh;
 }
 
 .overlay {
   position: fixed;
-  z-index: 2;
   background: var(--medium);
-  padding-left: 2.5px;
-  padding-right: 2.5px;
   transform: translate(-50%, -50%);
   min-width: 150px;
-  line-height: var(--r-height);
-  border-radius: calc(var(--r-height) / 2);
+  border-radius: var(--border-radius);
   box-shadow: var(--dark-shadow);
-  padding: 12.5px;
-  box-shadow: 0px 0px 50px gray;
+  overflow: hidden;
   /* display: none; */
+}
+.overlay-body {
+  padding: 15px;
+  text-align: center;
+  padding-bottom: 18px;
+  display: flex;
+  gap: 5px;
 }
 
 .overlay header {
-  font-size: 10pt;
   display: block;
   line-height: 12pt;
   text-align: center;
+  padding: 15px;
+  padding-right: 25px;
+  padding-left: 25px;
+  background-color: white;
+  color: var(--dark);
+  padding-top: 18px;
 }
 
 .overlay.visible {
   display: inline-block;
-}
-.overlay .flex * {
-  text-align: center;
 }
 
 .overlay .role_id {
@@ -69,15 +64,4 @@
   text-decoration-color: var(--selected-color);
   text-decoration-thickness: 4px;
   /* background: var(--selected-color); */
-}
-
-.overlay button {
-  font-size: 10pt;
-  border-radius: 20px;
-  background: white;
-  border-radius: 20px;
-  padding-right: 25px;
-  padding-left: 25px;
-  margin-left: 5px;
-  margin-right: 5px;
 }

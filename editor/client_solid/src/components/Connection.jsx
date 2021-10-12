@@ -1,6 +1,8 @@
 import { createMemo, createEffect, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 import "./Connection.css";
+import Bezier from "./Bezier";
+import getColorFromHue from "../helpers/getColorFromHue";
 
 const Connection = (props) => {
   const PADDING = 10;
@@ -56,71 +58,37 @@ const Connection = (props) => {
     });
   }, [props.in_block_position, props.in_role_offset]);
 
-  const getBoundaries = (start, end) => {
-    let bounds = {
-      out: {
-        x: null,
-        y: null,
-      },
-      in: {
-        x: null,
-        y: null,
-      },
-    };
-
-    bounds.out.x = start.x < end.x ? start.x : end.x;
-    bounds.out.y = start.y < end.y ? start.y : end.y;
-    bounds.in.x = start.x > end.x ? start.x : end.x;
-    bounds.in.y = start.y > end.y ? start.y : end.y;
-    return bounds;
-  };
-
-  const getSVG = (start, end) => {
-    let coords = {
-      in: { x: 0, y: 0 },
-      center: { x: 0, y: 0 },
-      out: { x: 0, y: 0 },
-    };
-    coords.out.x = start.x < end.x ? PADDING : start.x - end.x + PADDING;
-    coords.out.y = start.y < end.y ? PADDING - 1 : start.y - end.y + PADDING;
-    coords.center.x = start.x > end.x ? PADDING : end.x - start.x + PADDING;
-    coords.center.y = start.y > end.y ? PADDING - 1 : end.y - start.y + PADDING;
-    coords.in.y = Math.abs(start.y - end.y) / 2;
-    return coords;
-  };
-
-  createEffect(() => {
-    if (!positions.prev.x || !positions.next.x) return;
-    setState("boundaries", getBoundaries(positions.prev, positions.next));
-    setState("SVG", getSVG(positions.prev, positions.next));
-  }, [positions.prev, positions.next]);
   return (
-    <svg
-      className="connectionLine"
-      width={
-        Math.abs(state.boundaries.out.x - state.boundaries.in.x) + PADDING * 2
-      }
-      height={
-        Math.abs(state.boundaries.out.y - state.boundaries.in.y) + PADDING * 2
-      }
-      style={{
-        left: `${state.boundaries.out.x - PADDING}px`,
-        top: `${state.boundaries.out.y - PADDING}px`,
-        position: "absolute",
-        /* height: `${Math.abs(
-            state.boundaries.out.y - state.boundaries.in.y
-          )}px`,
-          width: `${
-            Math.abs(state.boundaries.out.x - state.boundaries.in.x) +
-            PADDING * 2
-          }px`, */
-      }}
-    >
-      <path
-        style={{ stroke: `hsl(${props.role_hue}, 100%, 65%)` }}
-        d={`M${state.SVG.out.x},${state.SVG.out.y} C${state.SVG.out.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.center.y}`}
-      ></path>
-    </svg>
+    <Bezier
+      points={Object.values(positions)}
+      style={{ stroke: getColorFromHue(props.role_hue) }}
+    ></Bezier>
+    // <svg
+    //   className="connectionLine"
+    //   width={
+    //     Math.abs(state.boundaries.out.x - state.boundaries.in.x) + PADDING * 2
+    //   }
+    //   height={
+    //     Math.abs(state.boundaries.out.y - state.boundaries.in.y) + PADDING * 2
+    //   }
+    //   style={{
+    //     left: `${state.boundaries.out.x - PADDING}px`,
+    //     top: `${state.boundaries.out.y - PADDING}px`,
+    //     position: "absolute",
+    //     /* height: `${Math.abs(
+    //         state.boundaries.out.y - state.boundaries.in.y
+    //       )}px`,
+    //       width: `${
+    //         Math.abs(state.boundaries.out.x - state.boundaries.in.x) +
+    //         PADDING * 2
+    //       }px`, */
+    //   }}
+    // >
+    //   <path
+    //     style={{ stroke: getColorFromHue(props.role_hue) }}
+    //     d={`M${state.SVG.out.x},${state.SVG.out.y} C${state.SVG.out.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.center.y}`}
+    //   ></path>
+    // </svg>
   );
 };
 
