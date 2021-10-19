@@ -4,7 +4,7 @@ import NumericInput from "./NumericInput";
 // import
 // import Select from 'react-select';
 import "./Instruction.css";
-import { createSignal, onMount, createEffect } from "solid-js";
+import { createSignal, onMount, createEffect, createMemo } from "solid-js";
 import Select from "./Select";
 import getColorFromHue from "../helpers/getColorFromHue";
 
@@ -14,7 +14,9 @@ const Instruction = (props) => {
   let error_ref;
 
   const removeRow = () => {
-    props.storeManager.script.instructions.remove(props.instruction_id);
+    props.storeManager.script.instructions.removeInstruction(
+      props.instruction_id
+    );
     props.storeManager.script.blocks.removeInstructionId({
       block_id: props.block_id,
       instruction_id: props.instruction_id,
@@ -22,13 +24,13 @@ const Instruction = (props) => {
   };
 
   const addRow = () => {
-    let { instruction_id } = props.storeManager.script.instructions.add(
-      props.role_id
-    );
+    let { instruction_id } =
+      props.storeManager.script.instructions.addInstruction(props.role_id);
     props.storeManager.script.blocks.addInstructionId({
       block_id: props.block_id,
       instruction_id: instruction_id,
       prev_instruction_id: props.instruction_id,
+      index: props.index,
     });
   };
 
@@ -134,10 +136,15 @@ const Instruction = (props) => {
 
   const getRoleId = () => props.role_id;
 
+  const getRoleOptions = createMemo(() =>
+    Object.entries(props.roles).map(([role_id, role]) => {
+      return { label: role.name, value: role_id };
+    })
+  );
+
   return (
     <div
       className={`row flex instruction ${getClassByRole()} ${getClassByError()}`}
-      // style={{ background: `hsl(${props.role_hue}, 100%, 97%)` }}
     >
       <div
         className="instruction-border"
@@ -146,10 +153,10 @@ const Instruction = (props) => {
 
       {/* <span>{props.role_id}</span> */}
       <Select
-        options={Object.keys(props.roles)}
-        value={props.role_id}
+        options={getRoleOptions()}
+        value={props.roles[props.role_id].name}
         onInput={changeRole}
-        className="tiny"
+        // className="tiny"
       ></Select>
       <Select
         options={["do", "say", "think", "video"]}

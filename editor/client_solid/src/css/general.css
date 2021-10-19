@@ -25,19 +25,19 @@
   width: 5px;
 }
 
-.role_admin * {
+* {
   scrollbar-width: thin;
-  scrollbar-color: var(--light-grey) var(--dark);
+  scrollbar-color: var(--dark) var(--light-grey);
 }
 
-.role_admin *::-webkit-scrollbar-track {
+*::-webkit-scrollbar-track {
   background: var(dark);
 }
 
-.role_admin *::-webkit-scrollbar-thumb {
-  background-color: var(--dark);
+*::-webkit-scrollbar-thumb {
+  background-color: white;
   /* border-radius: 6px; */
-  border: 3px solid var(--role_admin);
+  border: 3px solid white;
 }
 
 @font-face {
@@ -70,6 +70,7 @@ h1 {
   padding-left: 10pt;
   font-weight: normal;
   line-height: normal;
+  margin-top: 0px;
 }
 
 #root {
@@ -161,10 +162,8 @@ video {
   min-height: var(--r-height);
   margin: auto;
   overflow: hidden;
-  /* border-bottom: var(--border); */
-  background: var(--dark-grey);
-
   cursor: default;
+  width: 100%;
 }
 
 .row > div,
@@ -173,7 +172,7 @@ video {
 .row > span,
 .row > textarea {
   font-size: 10pt;
-  line-height: var(--r-height);
+  /* line-height: var(--r-height); */
 
   /* padding-left: 10px; */
 }
@@ -212,7 +211,8 @@ button {
 }
 
 button:hover,
-button.focus {
+button.focus,
+button.selected {
   background: var(--dark) !important;
   color: white !important;
 }
@@ -222,9 +222,13 @@ button.focus {
   flex-direction: row;
 }
 
+.flex > * {
+  align-self: stretch;
+}
+
 .row.flex > *:not(.flexing) {
   flex: 0 0 auto;
-  width: 80px;
+  /* width: 80px; */
 }
 
 .flex > *:not(.flexing) {
@@ -234,7 +238,6 @@ button.focus {
 
 .flex > .flexing {
   flex: 1;
-  min-width: 0;
 }
 
 /* .flex:not(header) > .tiny {
@@ -375,13 +378,6 @@ i {
   position: absolute;
   border: 2px dashed white;
   background: #ffffff41;
-}
-
-.selected {
-  /* border: 2px dashed white; */
-  background: blue;
-  /* background: red; */
-  /* margin: -2px; */
 }
 
 /* 

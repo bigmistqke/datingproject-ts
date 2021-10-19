@@ -5,6 +5,7 @@ import { useParams } from "solid-app-router";
 
 import getData from "../helpers/getData";
 import postData from "../helpers/postData";
+import arrayOfObjectsToObject from "../helpers/arrayOfObjectsToObject";
 
 import Map from "../components/Map";
 import ProgressBars from "../components/ProgressBars";
@@ -17,6 +18,7 @@ import TemporaryConnection from "../components/TemporaryConnection";
 import Errors from "../components/Errors";
 import TextArea from "../components/TextArea";
 import Menu from "../components/Menu";
+import Tooltip from "../components/Tooltip";
 
 import NumericInput from "../components/NumericInput";
 import SelectionBox from "../components/SelectionBox";
@@ -43,17 +45,6 @@ window.flatten = flatten;
 function Editor(props) {
   const { script_id } = useParams();
 
-  const isDev = window.location.href.indexOf("localhost") != -1;
-
-  const urls = {
-    mqtt: isDev ? "localhost:8883" : "socket.datingproject.net/mqtt",
-    fetch: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net",
-    play: isDev ? "http://localhost:3001" : "https://play.datingproject.net",
-    monitor: isDev
-      ? "http://localhost:3004"
-      : "https://monitor.datingproject.net",
-  };
-
   let r_saveButton;
 
   // game-integral state
@@ -72,16 +63,19 @@ function Editor(props) {
       zoomedOut: false,
     },
     gui: {
-      prompt: null,
-      selectionBox: null,
-      role_admin: null,
+      prompt: false,
+      selectionBox: false,
+      role_admin: false,
+      tooltip: false,
+      sub_menu: false,
     },
     bools: {
       isConnecting: false,
       isInitialized: false,
       isShiftPressed: false,
       isCtrlPressed: false,
-      isMenuOpened: false,
+      isMenuOpen: false,
+      isTranslating: false,
     },
     errors: {},
     errored_block_ids: [],
@@ -105,41 +99,6 @@ function Editor(props) {
   const videoUploader = new VideoUploader({
     script_id,
   });
-
-  const updateData = (data) => {
-    try {
-      data = JSON.parse(data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  /* const visualizeErrors = async () => {
-        
-    } */
-
-  const play = async () => {
-    try {
-      const processed_data = await dataProcessor.process({
-        safe: true,
-        ...scriptState,
-      });
-
-      if (!processed_data.success) return;
-
-      let result = await postData(
-        `${urls.fetch}/api/script/test/${script_id}`,
-        processed_data
-      );
-      const { roles: _roles, room_url, error } = await result.json();
-
-      if (error) console.error(error);
-
-      window.open(`${urls.monitor}/${script_id}`);
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const mousemove = (e) => {
     setEditorState("navigation", "cursor", { x: e.clientX, y: e.clientY });
@@ -189,44 +148,43 @@ function Editor(props) {
     }
   };
 
-  const save = async () => {
-    let data = await dataProcessor.process({
-      safe: false,
-      ...scriptState,
-    });
+  const saveScript = async () => {
+    let result = await dataProcessor.process();
+    // TODO: ALLOW UNSAFE GAME TO BE SAVED!
+    console.log("RESULT IS ", result);
+    if (!result.success) return;
 
-    if (!data.success) {
-      return;
-    }
-    if (data.errors) {
-      setEditorState("errors", data.errors);
-    }
+    console.log({ ...result.roles }, { ...result.instructions });
 
-    r_saveButton.innerHTML = "saving...";
+    let response = await postData(
+      `${props.urls.fetch}/api/script/save/${script_id}`,
+      {
+        blocks: scriptState.blocks,
+        instructions: result.instructions,
+        roles: result.roles,
+      }
+    );
 
-    data = await postData(`${urls.fetch}/api/script/save/${script_id}`, {
-      ...data,
-    });
-
-    setTimeout(() => {
-      r_saveButton.innerHTML = "saved!";
-      setTimeout(() => {
-        r_saveButton.innerHTML = "save";
-      }, 2000);
-    }, 1000);
-    setHasChanged(false);
+    console.log(response);
   };
 
-  const changeRoles = (value) => {
-    console.error("not implemented");
-    /* let _roles = [];
-        for (let i = 0; i < value; i++) {
-            _roles.push(String(i + 1));
-        }
-        setRoles(_roles) */
-  };
+  const createGame = async () => {
+    let result = await dataProcessor.process();
+    console.log("RESULT IS ", result);
 
-  const format = (num) => num + " roles";
+    if (!result.success) return;
+
+    setScriptState("instructions", result.instructions);
+    setScriptState("roles", result.roles);
+
+    const { error } = await postData(
+      `${props.urls.fetch}/api/script/test/${script_id}`,
+      scriptState
+    );
+    if (error) console.error(error);
+    console.log("YEEEEEHAAA");
+    storeManager.editor.setSubMenu("monitor_menu");
+  };
 
   const renameKeyOfObject = (object, old_key, new_key) => {
     Object.defineProperty(
@@ -241,15 +199,12 @@ function Editor(props) {
   let role_index = 0;
 
   const reformatRoles = (roles) => {
-    /*     const h = () => parseInt(Math.random() * 250);
-    const s = () => parseInt(Math.random() * 200 + 100);
-    const l = () => parseInt(Math.random() * 200 + 100); */
-
     for (let role_id in roles) {
       roles[role_id] = {
         instruction_ids: roles[role_id],
         hue: getRandomHue(role_index).toString(),
         description: "",
+        name: role_id,
       };
       role_index++;
     }
@@ -259,35 +214,33 @@ function Editor(props) {
   const reformatBlocks = (blocks) =>
     blocks.map((block) => {
       block = renameKeyOfObject(block, "connections", "roles");
+      block.roles = block.roles.map((role) => {
+        if (!role.next_block_id) {
+          delete role.next_block_id;
+        }
+        if (!role.prev_block_id) {
+          delete role.prev_block_id;
+        }
+        return role;
+      });
       block.roles = arrayOfObjectsToObject(block.roles, "role_id");
       return block;
     });
-
-  const arrayOfObjectsToObject = (array, key) => {
-    let object = {};
-    array.forEach((element) => {
-      object[element[key]] = element;
-    });
-    return object;
-  };
 
   onMount(() => {
     window.addEventListener("keydown", keydown);
     window.addEventListener("keyup", keyup);
     window.addEventListener("mousemove", mousemove);
 
-    getData(`${urls.fetch}/api/script/get/${script_id}`)
+    getData(`${props.urls.fetch}/api/script/get/${script_id}`)
       .then((res) => res.json())
       .then((res) => {
         if (!res) {
           return Promise.reject("error fetching data ", res);
         }
-        console.log(res);
-        let blocks = reformatBlocks(res.blocks);
-        blocks = arrayOfObjectsToObject(blocks, "block_id");
-        setScriptState("roles", reformatRoles(res.roles));
+        setScriptState("roles", res.roles);
         setScriptState("instructions", res.instructions);
-        setScriptState("blocks", blocks);
+        setScriptState("blocks", res.blocks);
       })
       .catch((err) => {
         console.error(err);
@@ -312,7 +265,7 @@ function Editor(props) {
   const GRID_SIZE = 1;
 
   const toggleMenu = () => {
-    setEditorState("bools", "isMenuOpened", !editorState.bools.isMenuOpened);
+    setEditorState("bools", "isMenuOpen", !editorState.bools.isMenuOpen);
   };
 
   return (
@@ -330,28 +283,48 @@ function Editor(props) {
         ></Prompt>
       ) : null}
 
-      {editorState.gui.role_admin ? (
+      {editorState.gui.tooltip ? (
+        <Tooltip
+          text={editorState.gui.tooltip}
+          cursor={editorState.navigation.cursor}
+        ></Tooltip>
+      ) : null}
+
+      {/*       {editorState.gui.role_admin ? (
         <RoleAdmin
           scriptState={scriptState}
           storeManager={storeManager}
+          isTranslating={editorState.bools.isTranslating}
         ></RoleAdmin>
-      ) : null}
+      ) : null} */}
 
-      {/*     <Errors
-        errors={[].concat.apply([], Object.values(editorState.errors))}
-        storeManager={storeManager}
-      ></Errors> */}
+      {
+        <Errors
+          errors={[].concat.apply([], Object.values(editorState.errors))}
+          storeManager={storeManager}
+        ></Errors>
+      }
       <Menu
         editorState={editorState}
         scriptState={scriptState}
         storeManager={storeManager}
         script_id={script_id}
+        saveScript={saveScript}
+        createGame={createGame}
+        sub_menu={editorState.gui.sub_menu}
+        urls={props.urls}
       ></Menu>
-      <div className="viewport">
+      <div
+        classList={{
+          viewport: true,
+          isConnecting: editorState.bools.isConnecting,
+          isTranslating: editorState.bools.isTranslating,
+        }}
+      >
         <button
           classList={{
             "menu-button": true,
-            selected: editorState.bools.isMenuOpened,
+            selected: editorState.bools.isMenuOpen,
           }}
           onMouseDown={toggleMenu}
         >
@@ -363,6 +336,7 @@ function Editor(props) {
           zoom={editorState.navigation.zoom}
           isShiftPressed={editorState.bools.isShiftPressed}
           storeManager={storeManager}
+          sub_menu={editorState.gui.sub_menu}
         >
           <For each={Object.values(scriptState.blocks)}>
             {(block, i) => {
@@ -390,25 +364,27 @@ function Editor(props) {
                     zoom={editorState.navigation.zoom}
                     origin={editorState.navigation.origin}
                     storeManager={storeManager}
+                    isShiftPressed={editorState.bools.isShiftPressed}
                     //   errors={getConnectionError("start", props.errors)} // TODO: UPDATE ERROR HANDLING OF ROLE_PORTS
                     direction="in"
                   ></Roles>
                   <div className="instructions">
                     <For each={block.instructions}>
-                      {(instruction_id, i) => {
+                      {(instruction_id, index) => {
                         if (!(instruction_id in scriptState.instructions)) {
                           console.error(
+                            block.instructions,
+                            instruction_id,
                             "block contains instruction_id which is not present in scriptState.instructions"
                           );
                           return;
                         }
-
                         let instruction =
                           scriptState.instructions[instruction_id];
 
                         return (
                           <Instruction
-                            index={i}
+                            index={index() + 1}
                             key={instruction_id}
                             instruction_id={instruction_id}
                             timespan={instruction.timespan}
@@ -420,10 +396,10 @@ function Editor(props) {
                             role_hue={
                               scriptState.roles[instruction.role_id].hue
                             }
-                            roles={block.roles}
+                            roles={scriptState.roles}
                             storeManager={storeManager}
                             videoUploader={videoUploader}
-                            urls={urls}
+                            urls={props.urls}
                           />
                         );
                       }}
@@ -439,6 +415,7 @@ function Editor(props) {
                     origin={editorState.navigation.origin}
                     storeManager={storeManager}
                     instructions={block.instructions}
+                    isShiftPressed={editorState.bools.isShiftPressed}
                     //   errors={getConnectionError("end", props.errors)} // TODO: UPDATE ERROR HANDLING OF ROLE_PORTS
                     direction="out"
                   ></Roles>
@@ -457,6 +434,21 @@ function Editor(props) {
                   role_id: t_c.role_id,
                   direction: t_c.direction,
                 })}
+                next_block_id={t_c.next_block_id}
+                next_block_position={
+                  t_c.next_block_id
+                    ? scriptState.blocks[t_c.next_block_id].position
+                    : null
+                }
+                next_role_offset={
+                  t_c.next_block_id
+                    ? getRoleOffset({
+                        block_id: t_c.next_block_id,
+                        role_id: t_c.role_id,
+                        direction: t_c.direction,
+                      })
+                    : null
+                }
                 direction={t_c.direction}
                 origin={editorState.navigation.origin}
                 cursor={editorState.navigation.cursor}
@@ -468,8 +460,8 @@ function Editor(props) {
             {(block) => {
               return (
                 <For each={Object.entries(block.roles)}>
-                  {([role_id, role]) => {
-                    return role.next_block_id ? (
+                  {([role_id, role]) =>
+                    role.next_block_id ? (
                       <Connection
                         next_block_id={role.next_block_id}
                         role_hue={scriptState.roles[role_id].hue}
@@ -488,8 +480,8 @@ function Editor(props) {
                           direction: "in",
                         })}
                       ></Connection>
-                    ) : null;
-                  }}
+                    ) : null
+                  }
                 </For>
               );
             }}

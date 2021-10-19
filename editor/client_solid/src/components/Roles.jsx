@@ -44,6 +44,7 @@ const Roles = (props) => {
       block_id: props.block_id,
       role_id,
     });
+    props.storeManager.process.controlRole(role_id);
   };
 
   const checkErrors = (role_id) => {
@@ -66,8 +67,12 @@ const Roles = (props) => {
                 return (
                   <Role
                     // role_color={props.all_roles[role.role_id].color}
-                    role_hue={props.all_roles[role_id].hue}
+                    block_id={props.block_id}
+                    role={role}
                     role_id={role_id}
+                    role_hue={props.all_roles[role_id].hue}
+                    name={props.all_roles[role_id].name}
+                    description={props.all_roles[role_id].description}
                     all_roles={props.all_roles}
                     roles={props.roles}
                     block_id={props.block_id}
@@ -78,6 +83,7 @@ const Roles = (props) => {
                     }
                     roles={props.roles}
                     storeManager={props.storeManager}
+                    isShiftPressed={props.isShiftPressed}
                   ></Role>
                 );
               }}

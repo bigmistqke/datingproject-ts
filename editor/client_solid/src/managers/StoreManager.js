@@ -5,6 +5,10 @@ import arrayOfObjectsToObject from "../helpers/arrayOfObjectsToObject";
 
 import Bubble from "../components/Bubble";
 
+import { array_insert, array_remove_element } from "../helpers/Pure"
+
+
+
 // const uniqid = () => { };
 const prevOrNext = (direction) =>
   direction === "out" ? "next_block_id" : "prev_block_id";
@@ -39,11 +43,15 @@ const EditorManager = function ({
   this.setOrigin = (origin) => setEditorState("navigation", "origin", origin);
 
   this.setErrorsRoleId = ({ role_id, errors }) => {
-    console.log("setErrorsRoleId", errors);
-    // console.log([...editorState.errors]);
     setEditorState("errors", role_id, errors);
     updateErroredBlockIds();
   };
+
+
+  this.openGui = (type) => setEditorState("gui", type, true);
+  this.closeGui = (type) => setEditorState("gui", type, false);
+  this.toggleGui = (type) =>
+    setEditorState("gui", type, !editorState.gui[type]);
 
   this.openPrompt = async function ({ type, header, data }) {
     return new Promise((_resolve) => {
@@ -55,13 +63,12 @@ const EditorManager = function ({
       setEditorState("gui", "prompt", { type, header, data, resolve });
     });
   };
-  this.openGui = (type) => setEditorState("gui", type, true);
-  this.toggleGui = (type) =>
-    setEditorState("gui", type, !editorState.gui[type]);
-
-  this.closeGui = (type) => setEditorState("gui", type, false);
-
   this.closePrompt = () => setEditorState("gui", "prompt", false);
+
+  this.setTooltip = (tooltip) => {
+    setEditorState("gui", "tooltip", tooltip)
+  };
+
   this.closeRoleAdmin = () => setEditorState("gui", "role_admin", false);
 
   // navigation
@@ -132,13 +139,11 @@ const EditorManager = function ({
 
   this.setConnecting = (bool) => setEditorState("bools", "isConnecting", bool);
 
-  this.addTemporaryConnection = ({ block_id, role_id, direction, cursor }) => {
-    // //console.log(block_id, role_id, direction, cursor);
-    console.log(
-      scriptState.blocks[block_id].roles[role_id][prevOrNext(direction)]
-    );
-    let next_block_id =
-      scriptState.blocks[block_id].roles[role_id][prevOrNext(direction)];
+  this.addTemporaryConnection = ({ block_id, role_id, next_block_id = false, direction, cursor }) => {
+
+    /* let next_block_id =
+      scriptState.blocks[block_id].roles[role_id][prevOrNext(direction)]; */
+    console.log("NEXT_BLOCK_ID ", next_block_id);
     if (next_block_id) {
       setEditorState("temporary_connections", [
         ...editorState.temporary_connections,
@@ -179,7 +184,6 @@ const EditorManager = function ({
 
   this.navigateToBlockId = (block_id) => {
     let position = scriptState.blocks[block_id].position;
-    console.log(position.x);
     setEditorState("navigation", "origin", {
       x: position.x * -1 + window.innerWidth / 2 - 900 / 2,
       y: position.y * -1 + 200,
@@ -188,6 +192,12 @@ const EditorManager = function ({
     this.emptySelectedBlockIds();
     this.addToSelectedBlockIds(block_id);
   };
+
+  this.setBool = (bool_type, bool) => setEditorState("bools", bool_type, bool)
+
+  this.setSubMenu = (type) => setEditorState("gui", "sub_menu", type)
+  this.toggleSubMenu = (type) => editorState.gui.sub_menu === type ? this.setSubMenu(false) : this.setSubMenu(type);
+
 };
 
 const ScriptManager = function ({
@@ -209,17 +219,14 @@ const ScriptManager = function ({
       };
     };
 
-    this.add = (role_id) => {
+    this.addInstruction = (role_id) => {
       let instruction = getDefaultInstruction(role_id);
       let instruction_id = uniqid();
-      //console.log(scriptState.instructions);
-      //console.log(instruction_id);
       setScriptState("instructions", instruction_id, instruction);
-      //console.log(scriptState.instructions)
       return { instruction, instruction_id };
     };
 
-    this.remove = (instruction_id) => {
+    this.removeInstruction = (instruction_id) => {
       let instructions = scriptState.instructions;
       delete instructions[instruction_id];
       setScriptState("instructions", instructions);
@@ -288,54 +295,39 @@ const ScriptManager = function ({
     };
 
     const removeBlock = (block_id) => {
-      console.log("removeBlock", block_id);
-      /* // remove from selection
-            let index = editorState.selected_block_ids.indexOf(block_id);
-            if (index != -1) {
-                setEditorState("selected_block_ids", editorState.selected_block_ids.splice(index, 1));
-            } */
-      let blocks = { ...scriptState.blocks };
       let block = scriptState.blocks[block_id];
 
       // remove all instructions that are a part of block
-      let instructions = { ...scriptState.instructions };
       block.instructions.forEach((instruction_id) => {
-        delete instructions[instruction_id];
+        // delete instructions[instruction_id];
+        setScriptState("instructions", instruction_id, undefined);
       });
-      setScriptState("instructions", instructions);
 
-      let roles = block.roles;
+      let roles = { ...block.roles };
+      let role_ids = Object.keys(roles);
 
       // remove reference to block in connected blocks
       Object.entries(roles).forEach(([role_id, role]) => {
-        if (role.next_block_id != null) {
+        if (role.next_block_id != undefined) {
           setConnection({
             block_id: role.next_block_id,
-            connecting_block_id: null,
+            connecting_block_id: undefined,
             role_id,
             direction: "in",
           });
-          // setScriptState("blocks", role.next_block_id, "roles", role_id, "prev_block_id", null);
         }
-        if (role.prev_block_id != null) {
-          // setScriptState("blocks", role.prev_block_id, "roles", role_id, "next_block_id", null);
+        if (role.prev_block_id != undefined) {
           setConnection({
             block_id: role.prev_block_id,
-            connecting_block_id: null,
+            connecting_block_id: undefined,
             role_id,
             direction: "out",
           });
         }
-        console.log(role.next_block_id, role_id);
       });
 
-      // remove block
-      delete blocks[block_id];
-      let object = {};
-      setScriptState({ ...scriptState, blocks });
-      setTimeout(() => {
-        console.log(scriptState.blocks);
-      }, 500);
+      setScriptState("blocks", block_id, undefined);
+      return { role_ids }
     };
 
     const setConnection = ({
@@ -344,20 +336,15 @@ const ScriptManager = function ({
       role_id,
       direction,
     }) => {
-      setScriptState("blocks", block_id, "roles", {
-        ...scriptState.blocks[block_id].roles,
-        [role_id]: {
-          ...scriptState.blocks[block_id].roles[role_id],
-          [prevOrNext(direction)]: connecting_block_id,
-        },
-      });
-      // dataProcessor.controlRole(role_id);
-      // maybe better to call them in the methods instead of internal to optimize control-calls
+
+      setScriptState("blocks", block_id, "roles", role_id, prevOrNext(direction),
+        connecting_block_id);
+
     };
 
     // METHODS
 
-    this.add = () => {
+    this.addBlock = () => {
       let block = getDefaultBlock();
       block.position = {
         x:
@@ -367,107 +354,89 @@ const ScriptManager = function ({
         y: editorState.navigation.cursor.y - editorState.navigation.origin.y,
       };
       setScriptState("blocks", block.block_id, block);
+      return block.block_id;
     };
 
     this.removeSelectedBlocks = () => {
       // console.error("removeSelectedBlocks is not yet implemented");
+      let all_affected_role_ids = [];
       editorState.selected_block_ids.forEach((block_id) => {
-        removeBlock(block_id);
+        let { role_ids } = removeBlock(block_id);
+        role_ids.forEach(role_id => {
+          if (all_affected_role_ids.indexOf(role_id) !== -1) return;
+          all_affected_role_ids = [...all_affected_role_ids, ...role_id];
+        })
       });
+      return { role_ids: all_affected_role_ids }
     };
 
     this.addRole = ({ block_id, role_id }) => {
       if (Object.keys(scriptState.blocks[block_id].roles).length === 0) {
-        let instruction_id = scriptManager.instructions.add(role_id);
+        let { instruction_id } = scriptManager.instructions.addInstruction(role_id);
         this.addInstructionId({ block_id, instruction_id });
       }
 
       setScriptState("blocks", block_id, "roles", role_id, {
         role_id,
-        block_id,
-        prev_block_id: null,
-        next_block_id: null,
+        block_id
       });
       dataProcessor.controlRole(role_id);
     };
 
     this.removeRole = ({ block_id, role_id }) => {
-      let instruction_ids = scriptState.blocks[block_id].instructions;
-      let instructions = scriptState.instructions;
-
-      // remove from block.instructions
-      instruction_ids = instruction_ids.filter(
-        (instruction_id) => instructions[instruction_id].role_id !== role_id
+      let instruction_ids = scriptState.blocks[block_id].instructions.filter(instruction_id =>
+        scriptState.instructions[instruction_id].role_id === role_id
       );
-      setScriptState("blocks", block_id, {
-        ...scriptState.blocks[block_id],
-        instructions: instruction_ids,
-      });
+
+      // remove block_id from the roles' connected blocks
+      let roles = scriptState.blocks[block_id].roles;
+      let role = roles[role_id];
+
+      if (Object.keys(roles).length > 1) {
+        // null next_block_id from connected prev_block
+        if (role.prev_block_id) {
+          this.removeConnectionBothWays({
+            block_id,
+            role_id,
+            direction: "in"
+          })
+        }
+
+        // null prev_block_id from connected next_block
+        if (role.next_block_id) {
+          this.removeConnectionBothWays({
+            block_id,
+            role_id,
+            direction: "out"
+          })
+        }
+        // remove all instructions from block with role_id
+        setScriptState("blocks", block_id, "instructions",
+          scriptState.blocks[block_id].instructions.filter(instruction_id =>
+            scriptState.instructions[instruction_id].role_id !== role_id)
+        );
+
+        // remove role_id from roles
+        setScriptState("blocks", block_id, "roles", role_id, undefined);
+
+      } else {
+        // remove block completely
+        removeBlock(block_id);
+      }
 
       // remove from scriptState.instructions
       instruction_ids.forEach((instruction_id) => {
-        delete instructions[instruction_id];
+        setScriptState("instructions", instruction_id, undefined);
       });
-      setScriptState("instructions", { ...instructions });
-
-      // remove block_id from the roles' connected blocks
-      let roles = { ...scriptState.blocks[block_id].roles };
-      let role = { ...roles[role_id] };
-
-      // remove from roles
-      delete roles[role_id];
-      setScriptState("blocks", block_id, {
-        ...scriptState.blocks[block_id],
-        roles,
-      });
-
-      // null next_block_id from connected prev_block
-      if (role.prev_block_id) {
-        let prev_roles = { ...scriptState.blocks[role.prev_block_id].roles };
-        let prev_role = { ...prev_roles[role_id] };
-        prev_role.next_block_id = null;
-        setScriptState("blocks", role.prev_block_id, "roles", {
-          ...prev_roles,
-          [role_id]: prev_role,
-        });
-      }
-
-      // null prev_block_id from connected next_block
-      if (role.next_block_id) {
-        let next_roles = { ...scriptState.blocks[role.next_block_id].roles };
-        let next_role = { ...next_roles[role_id] };
-        next_role.prev_block_id = null;
-        setScriptState("blocks", role.next_block_id, "roles", {
-          ...next_roles,
-          [role_id]: next_role,
-        });
-      }
     };
 
     this.convertRole = ({ block_id, source_role_id, target_role_id }) => {
-      let instruction_ids = scriptState.blocks[block_id].instructions;
-      let instructions = { ...scriptState.instructions };
-
-      instruction_ids.forEach((instruction_id) => {
-        if (instructions[instruction_id].role_id !== source_role_id) return;
-        setScriptState(
-          "instructions",
-          instruction_id,
-          "role_id",
-          target_role_id
-        );
+      scriptState.blocks[block_id].instructions.forEach((instruction_id) => {
+        if (scriptState.instructions[instruction_id].role_id !== source_role_id) return;
+        setScriptState("instructions", instruction_id, "role_id", target_role_id);
       });
 
-      // remove block_id from the roles' connected blocks
-      let roles = { ...scriptState.blocks[block_id].roles };
-
-      // remove from roles
-      delete roles[source_role_id];
-      setScriptState("blocks", block_id, {
-        ...scriptState.blocks[block_id],
-        roles,
-      });
-      dataProcessor.controlRole(source_role_id);
+      this.removeRole({ block_id, role_id: source_role_id })
     };
 
     this.selectBlock = (block_id) => {
@@ -489,24 +458,22 @@ const ScriptManager = function ({
     this.addInstructionId = ({
       block_id,
       instruction_id,
-      prev_instruction_id = false,
+      index = false
     }) => {
       let instruction_ids = [...scriptState.blocks[block_id].instructions];
-      if (prev_instruction_id) {
-        let prev_instruction_index =
-          instruction_ids.indexOf(prev_instruction_id);
-        instruction_ids.splice(prev_instruction_index + 1, 0, instruction_id);
+      if (index) {
+        setScriptState("blocks", block_id, "instructions",
+          array_insert(instruction_ids, index, instruction_id)
+        );
       } else {
-        instruction_ids.push(instruction_id);
+        setScriptState("blocks", block_id, "instructions", [...instruction_ids, instruction_id]);
       }
-      setScriptState("blocks", block_id, "instructions", instruction_ids);
     };
 
-    this.removeInstructionId = ({ block_id, instruction_id }) => {
-      let instruction_ids = [...scriptState.blocks[block_id].instructions];
-      let instruction_index = instruction_ids.indexOf(instruction_id);
-      instruction_ids.splice(instruction_index, 1);
-      setScriptState("blocks", block_id, "instructions", instruction_ids);
+    this.removeInstructionId = ({ block_id, instruction_id, index }) => {
+      setScriptState("blocks", block_id, "instructions",
+        array_remove_element(scriptState.blocks[block_id].instructions, instruction_id)
+      );
     };
 
     // const GRID_SIZE = 10;
@@ -519,11 +486,6 @@ const ScriptManager = function ({
           x: block.position.x + offset.x,
           y: block.position.y + offset.y,
         };
-        /* position = {
-                    x: parseInt((block.position.x + offset.x) / GRID_SIZE) * GRID_SIZE,
-                    y: block.position.y + offset.y
-                } */
-
         updateBlock(block_id, { position });
       });
     };
@@ -536,30 +498,30 @@ const ScriptManager = function ({
     }) => {
       // check if connecting_block_id.roles[role_id][opposite_direction] is already connected to a block_id
       // if yes: remove reference to connecting_block_id from connecting_block_id.roles[role_id][opposite_direction]
-      let opposite_direction = oppositeDirection(direction);
+      const opposite_direction = oppositeDirection(direction);
 
-      if (
+      let block_id_initially_connected_to_connecting_block =
         scriptState.blocks[connecting_block_id].roles[role_id][
         prevOrNext(opposite_direction)
         ]
-      ) {
+
+      if (block_id_initially_connected_to_connecting_block) {
+        // dereference connecting_block at block initially connected to connecting_block
         setConnection({
-          block_id:
-            scriptState.blocks[connecting_block_id].roles[role_id][
-            prevOrNext(opposite_direction)
-            ],
-          connecting_block_id: null,
+          block_id: block_id_initially_connected_to_connecting_block,
+          connecting_block_id: undefined,
           role_id,
-          direction,
+          direction
         });
       }
-
+      // make reference to connecting_block_id at this block.roles[role_id]
       setConnection({
         block_id,
         connecting_block_id,
         role_id,
         direction,
       });
+      // make reference to block_id at connecting_block_id.roles[role_id]
       setConnection({
         block_id: connecting_block_id,
         connecting_block_id: block_id,
@@ -568,24 +530,23 @@ const ScriptManager = function ({
       });
     };
 
-    this.removeConnection = ({ block_id, role_id, direction }) => {
-      // //console.log(scriptState.blocks[block_id].roles[role_id]);
-      let prev_or_next = prevOrNext(direction);
+    this.removeConnectionBothWays = ({ block_id, role_id, direction }) => {
       let connecting_block_id =
-        scriptState.blocks[block_id].roles[role_id][prev_or_next];
-      //console.log(connecting_block_id);
+        scriptState.blocks[block_id].roles[role_id][prevOrNext(direction)];
+
       if (connecting_block_id) {
+        // dereference this block_id at initial_connecting_block.roles[role_id][opposite_direciton]
         setConnection({
           block_id: connecting_block_id,
-          connecting_block_id: null,
+          connecting_block_id: undefined,
           role_id,
-          direction: direction === "out" ? "in" : "out",
+          direction: oppositeDirection(direction),
         });
       }
-
+      // dereference block.roles[role_id][direction]
       setConnection({
         block_id,
-        connecting_block_id: null,
+        connecting_block_id: undefined,
         role_id,
         direction,
       });
@@ -593,45 +554,80 @@ const ScriptManager = function ({
 
     this.hasRoleId = ({ block_id, role_id }) =>
       role_id in scriptState.blocks[block_id].roles;
+
   })();
 
   this.roles = new (function () {
     const getRoleLength = () => Object.keys(scriptState.roles).length;
+
+    const getInitialName = () => {
+      let highest_integer = 0;
+      let is_name_an_int;
+      let parsed_name;
+      Object.entries(scriptState.roles).forEach(([role_id, role]) => {
+        parsed_name = parseInt(role.name);
+        is_name_an_int = parsed_name == role.name;
+        if (is_name_an_int && parsed_name > highest_integer) {
+          highest_integer = parsed_name;
+        }
+      })
+      return highest_integer + 1;
+    }
     const getDefaultRole = () => {
-      const hue = getRandomHue(getRoleLength() + 1).toString();
+      const name = getInitialName();
+      const hue = getRandomHue(name).toString();
       return {
         instruction_ids: [],
         description: "",
         hue,
+        name
       };
     };
 
-    this.add = () => {
-      let role_id = getRoleLength() + 1;
-      setScriptState("roles", role_id, getDefaultRole());
+    this.addRole = () => {
+      setScriptState("roles", uniqid(), getDefaultRole());
     };
 
     this.remove = async (role_id) => {
+
+
+      Object.entries(scriptState.blocks).forEach(([block_id, block]) => {
+        if (Object.keys(block.roles).indexOf(role_id) == -1) return;
+        scriptManager.blocks.removeRole({ block_id, role_id });
+      })
+
       // check if role has any instructions associated with it
-      let instructions_without_role = Object.entries(scriptState.instructions).map(
-        ([instruction_id, instruction]) => instruction.role_id !== role_id
-      );
-      if (instructions_without_role.length < scriptState.instructions.length) {
-        // remove instructions + references to role from blocks
-        Object.entries(scriptState.blocks).forEach(([block_id, block]) => {
-          if (Object.keys(block.roles).indexOf(role_id) != -1) return;
-          block = { ...block };
-          delete block.roles[role_id];
-          block.instructions = block.instructions.map((instruction_id, index) =>
-            scriptState.instructions[instruction_id].role_id != role_id
-          )
-          setScriptState("blocks", block_id, block);
-        })
-      }
 
-      // remove all instructions with role_id
-      // setScriptState("instructions", { ...arrayOfObjectsToObject(instructions_without_role) });
 
+
+      /*  let instructions_without_role = Object.entries(scriptState.instructions).filter(
+         ([instruction_id, instruction]) => instruction.role_id != role_id
+       );
+   
+       if (instructions_without_role.length < Object.keys(scriptState.instructions).length) {
+         // remove instructions + references to role from blocks
+         Object.entries(scriptState.blocks).forEach(([block_id, block]) => {
+           if (Object.keys(block.roles).indexOf(role_id) == -1) return;
+           scriptManager.blocks.removeRole({ block_id, role_id });
+         })
+       }
+   
+       // remove all instructions with role_id
+       setScriptState("instructions", { ...arrayOfObjectsToObject(instructions_without_role) }); */
+      // remove from roles
+      let roles = { ...scriptState.roles };
+      delete roles[role_id];
+
+      setScriptState({
+        blocks: scriptState.blocks,
+        instructions: scriptState.instructions,
+        roles: { ...roles }
+      });
+    }
+
+    this.setName = ({ role_id, name }) => {
+      if (name === "") return;
+      setScriptState("roles", role_id, "name", name);
     }
 
 
@@ -663,8 +659,9 @@ const StoreManager = function ({
   script_id,
   dataProcessor,
 }) {
+  let storeManager = this;
   this.editor = new EditorManager({
-    storeManager: this,
+    storeManager,
     scriptState,
     editorState,
     setEditorState,
@@ -679,11 +676,21 @@ const StoreManager = function ({
     dataProcessor,
   });
 
-  this.controlRole = async (role_id) =>
-    this.editor.setErrorsRoleId({
-      role_id,
-      errors: await dataProcessor.controlRole(role_id),
-    });
+  this.process = new (function () {
+    this.getEndBlockId = async ({ block_id, role_id }) => dataProcessor.getEndBlock({ block_id, role_id })
+    this.traverseRole = async ({ block_id, role_id }) => dataProcessor.traverseRole({ block_id, role_id })
+
+    this.controlRole = async (role_id) => {
+      let result = await dataProcessor.controlRole(role_id);
+      storeManager.editor.setErrorsRoleId({
+        role_id,
+        errors: result.success ? [] : result.errors,
+      })
+    };
+
+  })()
+
+
 };
 
 export default StoreManager;

@@ -226,7 +226,9 @@ function Room({ mqtt, script_id, rooms, room, room_url, openQR }) {
   return (
     <div className='room'>
       <div className='top'>
-        <h1>room {script_id} {room_url} </h1>
+        <div>
+          <h1>id: {room_url} </h1>
+        </div>
         <button onClick={deleteRoom}>delete</button>
         <button onClick={restartRoom}>restart</button>
         <button onClick={updateRoom}>update script</button>
@@ -285,7 +287,7 @@ function Role({ room_url, role, role_url, openQR, mqtt }) {
   return <div className='role' style={{ border: `1px solid ${role.status === 'connected' ? 'green' : role.status === 'finished' ? 'blue' : 'red'}` }}>
     {role ? <>
       <div className='marginBottom'>
-        <div className='row'><label>role</label><span>{role.role_id}</span></div>
+        <div className='row'><label>role</label><span>{role.name}</span></div>
         <div className='row'><label>status</label> <span style={{ color: role.status === 'connected' ? 'green' : role.status === 'finished' ? 'blue' : 'red' }}>{role.status ? role.status : 'never connected'}</span></div>
         {
           role.status === 'connected' ?
@@ -302,7 +304,7 @@ function Role({ room_url, role, role_url, openQR, mqtt }) {
         <div className='row'><label className='margin'>text</label> {role.card && role.card.type !== 'video' ? <span>{role.card.text}</span> : null}</div>
       </div>
 
-      <div className='flex'>
+      <div className='flex role_buttons'>
         <button onClick={openLink}>open </button>
         <button onClick={copyLink}>copy</button>
         <button onClick={() => { openQR({ url: r_url.current, role_id: role.role_id }) }}>qr</button>

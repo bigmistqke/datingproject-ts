@@ -1,21 +1,43 @@
-import MQTT from 'sp-react-native-mqtt';
-// import uuid from 'react-native-uuid';
+// import MQTT from 'sp-react-native-mqtt';
+import init from 'react_native_mqtt';
+import uuid from 'react-native-uuid';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 function MQTTManager() {
     let client;
     let subscriptions;
 
-    this.connect = ({ protocol = "ws", url, port = 1883 }) => new Promise(async (resolve, reject) => {
-        client = await MQTT.createClient({
-            uri: `ws://${url}:8883`,
-            clientId: "qekgqjegljqekgj"
-        })
+    init({
+        size: 10000,
+        storageBackend: AsyncStorage,
+        defaultExpires: 1000 * 3600 * 24,
+        enableCache: true,
+        reconnect: true,
+        sync: {
+        }
+    });
 
-        client.on('closed', () => console.error('mqtt.event.closed'))
-        client.on('error', (err) => reject)
-        client.on('message', processMessage);
-        client.on('connect', resolve);
-        client.connect();
+    this.connect = ({ protocol = "ws", url, port = 1883 }) => new Promise(async (resolve, reject) => {
+
+        function onConnect() {
+            console.log("onConnect");
+            client.subscribe("/test")
+        }
+
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log("onConnectionLost:" + responseObject.errorMessage);
+            }
+        }
+
+        function onMessageArrived(message) {
+            console.log("onMessageArrived:" + message.payloadString);
+        }
+
+        client = new Paho.MQTT.Client(url, 443, uuid.v4());
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+        client.connect({ onSuccess: onConnect, useSSL: true });
     })
 
 

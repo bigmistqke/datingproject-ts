@@ -1,13 +1,22 @@
 .bubble {
-  font-size: 10pt;
-  line-height: 10pt;
-  padding-left: 15px;
-  padding-right: 15px;
   padding-top: 2px;
-  padding-bottom: 2px;
+  padding-bottom: 1px;
   border-radius: 50px;
   color: white;
   display: inline-block;
   text-align: center;
   justify-content: center;
+  outline: none;
+  vertical-align: middle;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.bubble.role {
+  font-size: 7pt;
+  line-height: 8pt;
+}
+.bubble-container {
+  text-align: center;
+  align-self: center;
 }

@@ -8,7 +8,7 @@ import Bubble from "./Bubble";
 
 const PromptTypes = {
   addRole: (props) => (
-    <For each={Object.entries(props.roles)}>
+    <For each={Object.entries(props.data.roles)}>
       {([role_id, role]) => (
         <span className={"flexing"}>
           <button
@@ -22,7 +22,7 @@ const PromptTypes = {
             }}
             className="role_id"
           >
-            {role_id}
+            {role.name}
           </button>
         </span>
       )}
@@ -53,12 +53,12 @@ const PromptTypes = {
     </>
   ),
   options: (props) => (
-    <For each={props.options}>
+    <For each={props.data.options}>
       {(option, index) => {
         return (
-          <span className="">
-            <button
-              onMouseDown={(e) => {
+          <div className="flexing">
+            <Bubble
+              onClick={(e) => {
                 e.stopPropagation();
                 props.resolve(option.value ? option.value : option);
               }}
@@ -70,8 +70,8 @@ const PromptTypes = {
               }}
             >
               {option.value ? option.value : option}
-            </button>
-          </span>
+            </Bubble>
+          </div>
         );
       }}
     </For>
@@ -94,6 +94,7 @@ function Prompt(props) {
       position={getPosition()}
       onClose={closePrompt}
       header={props.header}
+      style={{ "max-width": props.type === "confirm" ? "250px" : "500px" }}
     >
       {PromptTypes[props.type](props)}
     </Overlay>

@@ -13,7 +13,7 @@ export default function DataProcessor({ scriptState, setEditorState }) {
 
     // INTERNALS
 
-    const traverseRole = ({ role_id, block_id }) => new Promise((resolve, reject) => {
+    this.traverseRole = ({ role_id, block_id }) => new Promise((resolve, reject) => {
 
         if (!block_id) {
             console.error("ERROR: block_id is incorrect");
@@ -22,6 +22,7 @@ export default function DataProcessor({ scriptState, setEditorState }) {
 
         let traversed_block_ids = [];
         function iterateRole(block_id) {
+
             if (traversed_block_ids.indexOf(block_id) != -1) {
                 resolve({
                     success: false,
@@ -67,29 +68,33 @@ export default function DataProcessor({ scriptState, setEditorState }) {
 
     this.controlRole = async (role_id) => {
         let start = performance.now();
-        // return
+        let instruction_ids = [];
         let errors = [];
         // get blocks per role
         let blocks = Object.entries(scriptState.blocks).filter(
-            ([block_id, block]) => Object.keys(block.roles).indexOf(role_id) !== -1);
+            ([block_id, block]) => {
+                return Object.keys(block.roles).indexOf(role_id) !== -1
+            });
         let block_ids = blocks.map(([block_id, block]) => block_id);
 
+
         // test #1 check for multiple open start/end-blocks for role
-        let start_block_ids = blocks.filter(([block_id, block]) =>
-            !block.roles[role_id].prev_block_id
+        let start_block_ids = blocks.filter(([block_id, block]) => {
+            return !("prev_block_id" in block.roles[role_id])
+        }
         ).map(([block_id, block]) => block_id);
 
-        let end_block_ids = blocks.filter(([block_id, block]) =>
-            !block.roles[role_id].next_block_id
-        ).map(([block_id, block]) => block_id);
+        let end_block_ids = blocks.filter(([block_id, block]) => {
+            return !("next_block_id" in block.roles[role_id])
+        }).map(([block_id, block]) => block_id);
 
         let start_end_block_ids = [...start_block_ids, ...end_block_ids];
-        [start_end_block_ids] = dedupArray(start_end_block_ids)
+        [start_end_block_ids] = dedupArray(start_end_block_ids);
 
-        if (start_end_block_ids.length > 2) {
+        if (start_block_ids.length > 1 || end_block_ids.length > 1) {
             errors.push({
-                type: 'multiple_open_ports',
-                text: `more then 2 possible starts/ends for role ${role_id}`,
+                type: 'multiple_open_start_ports',
+                text: `more then 2 possible starts for role ${role_id}`,
                 block_ids: start_end_block_ids
             })
         }
@@ -97,13 +102,10 @@ export default function DataProcessor({ scriptState, setEditorState }) {
         // test #2 look for infinite-loops by recursively iterating
         // through the start_blocks
 
-        let loops = [];
-
         let promises = [];
-
-        promises = start_block_ids.map((block_id) => traverseRole({ role_id, block_id }))
-
+        promises = start_block_ids.map((block_id) => this.traverseRole({ role_id, block_id }))
         let results = await Promise.all(promises);
+
         results.forEach(result => { if (!result.success) errors.push(result.error) })
 
         let total_traversed_block_ids = [].concat.apply([], results.map(result => result.traversed_block_ids));
@@ -116,7 +118,7 @@ export default function DataProcessor({ scriptState, setEditorState }) {
             let [deduped_block_ids, duplicate_block_ids] = dedupArray(total_traversed_block_ids);
 
             if (deduped_block_ids.length !== total_traversed_block_ids.length) {
-                // console.error("block_ids were accessed via multiple start/end-blocks, most likely indicating a bug in the editor");
+                console.error("block_ids were accessed via multiple start/end-blocks, most likely indicating a bug in the editor");
                 errors.push({
                     type: 'multiple_traversed_block_ids',
                     text: `blocks were accessed multiple times for role ${role_id}, most likely indicating a bug in the editor`,
@@ -133,7 +135,7 @@ export default function DataProcessor({ scriptState, setEditorState }) {
                 const traverseAllUnaccessibleBlocks = () => new Promise((resolve) => {
                     let results = [];
                     let traverseRoleFromUnaccessibleBlockId = async (block_id) => {
-                        let result = await traverseRole({ role_id, block_id })
+                        let result = await this.traverseRole({ role_id, block_id })
                         results.push(result);
                         /* if (!result.succes) {
                             errors.push(result.error);
@@ -160,25 +162,134 @@ export default function DataProcessor({ scriptState, setEditorState }) {
                     }
                 })
             }
-
-
         }
 
-
-        // check if 
-
-        /*  if (end_blocks.length > 1) {
-             console.error("multiple end-blocks: ", start_blocks, " for role ", role_id);
-         } */
-
-        // test #1 check for multiple open start/end-blocks for role
         console.info("control of role took: ", performance.now() - start, "ms");
         console.info("total errors of role", role_id, "after control ", errors);
-        return errors;
+        return errors.length == 0 ?
+            {
+                success: true,
+                block_ids: total_traversed_block_ids
+            } :
+            {
+                success: false,
+                errors
+            }
     }
-    this.control = () => {
-        let roles = scriptState("roles");
-        Object.keys(roles).forEach(role => controlRole(role_id))
+    this.control = async () => {
+        let roles = scriptState["roles"];
+        let results = {};
+        for (let role_id of Object.keys(roles)) {
+            results[role_id] = await this.controlRole(role_id)
+        }
+        return results;
+    }
+
+    this.getEndBlock = async ({ block_id, role_id }) => {
+        let { traversed_block_ids } = await this.traverseRole({ block_id, role_id });
+        return traversed_block_ids[traversed_block_ids.length - 1]
+    }
+
+    const processInstructions = () => {
+        const getNextRoleIdsOfLast = (block) => {
+            let next_role_ids = [];
+            Object.values(block.roles).forEach((role) => {
+                if (!role.next_block_id) return
+                let connected_block = scriptState.blocks[role.next_block_id];
+                let next_instruction_id = connected_block.instructions[0];
+                if (next_role_ids.indexOf(instructions[next_instruction_id].role_id) == -1) return;
+                next_role_ids.push(instructions[next_instruction_id].role_id);
+            })
+            return next_role_ids;
+        }
+        const getPrevInstructionIdsOfFirst = (block) => {
+            let prev_instruction_ids = [];
+            Object.values(block.roles).forEach((role) => {
+                if (!role.prev_block_id) return;
+                let connected_block = scriptState.blocks[role.prev_block_id];
+                let prev_instruction_id = connected_block.instructions[connected_block.instructions.length - 1];
+                if (prev_instruction_ids.indexOf(instructions[prev_instruction_id].role_id) == -1) return;
+                prev_instruction_ids.push(prev_instruction_id);
+            })
+            return prev_instruction_ids
+        }
+        const getNextRoleIds = ({ block, count }) => [instructions[block.instructions[count + 1]].role_id]
+        const getPrevInstructionIds = ({ block, count }) => [String(block.instructions[count - 1])]
+
+        let instructions = { ...scriptState.instructions };
+
+        for (let block_id in scriptState.blocks) {
+            let block = scriptState.blocks[block_id];
+            let count = 0;
+            for (let instruction_id of block.instructions) {
+                instructions[instruction_id] = { ...instructions[instruction_id] };
+                instructions[instruction_id].prev_instruction_ids = [];
+                instructions[instruction_id].next_role_ids = [];
+                // if instruction is the first
+                if (count === 0) {
+                    instructions[instruction_id].prev_instruction_ids =
+                        getPrevInstructionIdsOfFirst(block);
+
+                    if (1 !== block.instructions.length) {
+                        instructions[instruction_id].next_role_ids =
+                            getNextRoleIds({ block, count });
+                    }
+                }
+                // if instruction is the last
+                if (count === block.instructions.length - 1) {
+                    instructions[instruction_id].next_role_ids =
+                        getNextRoleIdsOfLast(block);
+
+                    if (1 !== block.instructions.length) {
+                        instructions[instruction_id].prev_instruction_ids =
+                            getPrevInstructionIds({ block, count });
+                    }
+                }
+                // in all other occasions
+                if (count !== 0 && count !== block.instructions.length - 1) {
+                    instructions[instruction_id].next_role_ids = getNextRoleIds({ block, count });
+                    instructions[instruction_id].prev_instruction_ids = getPrevInstructionIds({ block, count });
+                }
+                count++
+            }
+        }
+        return instructions
+    }
+
+
+
+    this.process = async () => {
+        let results = await this.control();
+        if (Object.values(results).find(result => !result.success)) return { success: false };
+        let roles = { ...scriptState["roles"] };
+
+        Object.entries(roles).forEach(([role_id, role]) => {
+            roles[role_id] = { ...role };
+
+            let instruction_ids = [];
+            roles[role_id].instruction_ids = [];
+            results[role_id].block_ids.forEach(block_id =>
+                scriptState["blocks"][block_id].instructions.forEach(instruction_id => {
+
+                    if (!scriptState["instructions"][instruction_id]) {
+                        console.error('instruction ', instruction_id, 'does not exist');
+                        return;
+                    }
+                    if (scriptState["instructions"][instruction_id].role_id === role_id) {
+                        instruction_ids.push(instruction_id);
+                    }
+                })
+            )
+            roles[role_id].instruction_ids = instruction_ids;
+        })
+
+        let instructions = processInstructions();
+
+        return {
+            success: true,
+            roles,
+            instructions
+        }
     }
 }
 

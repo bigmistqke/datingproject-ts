@@ -6,9 +6,8 @@ function Select(props) {
   let select_dom;
   let drop_down_dom;
 
-  const remainingOptions = createMemo(
-    () => props.options.filter((option) => option != props.value),
-    [props.options, props.value, props.options]
+  const remainingOptions = createMemo(() =>
+    props.options.filter((option) => option.value != props.value)
   );
 
   const closeDropDown = () => setFocus(false);
@@ -23,12 +22,6 @@ function Select(props) {
     let parent_style = window.getComputedStyle(select_dom.offsetParent);
     let select_style = window.getComputedStyle(select_dom);
 
-    console.log(
-      "select_dom.offsetLeft",
-      select_dom.offsetParent,
-      select_dom.offsetLeft - parseInt(select_style.marginLeft),
-      parent_style.marginLeft
-    );
     drop_down_dom.style.left =
       select_dom.offsetLeft +
       parseInt(parent_style.marginLeft) -

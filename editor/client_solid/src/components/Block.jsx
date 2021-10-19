@@ -45,6 +45,7 @@ function Block(props) {
       props.storeManager.editor.emptySelectedBlockIds();
     }
     props.storeManager.editor.addToSelectedBlockIds(props.block_id);
+    props.storeManager.editor.setBool("isTranslating", true);
   };
 
   const translate = (offset) => {
@@ -55,6 +56,7 @@ function Block(props) {
     if (!props.isShiftPressed) {
       props.storeManager.editor.emptySelectedBlockIds();
     }
+    props.storeManager.editor.setBool("isTranslating", false);
   };
 
   const contextMenu = async (e) => {
@@ -72,7 +74,12 @@ function Block(props) {
     });
     if (!result) return;
 
-    props.storeManager.script.blocks.removeSelectedBlocks();
+    let { role_ids } = props.storeManager.script.blocks.removeSelectedBlocks();
+    role_ids.forEach((role_id) => {
+      {
+        props.storeManager.process.controlRole(role_id);
+      }
+    });
   };
 
   const isErrored = createMemo(
@@ -87,7 +94,9 @@ function Block(props) {
 
   return (
     <DragBox
+      id={`block_${props.block_id}`}
       classList={{
+        block: true,
         isConnecting: props.isConnecting,
         isTranslating: props.isTranslating,
         selected: isSelected(),

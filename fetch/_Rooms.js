@@ -46,7 +46,8 @@ function _Rooms({ _redis, _mongo, _mqtt }) {
 
         console.info('script.roles', script.roles);
 
-        Object.entries(script.roles).forEach(async ([role_id, instruction_ids]) => {
+        Object.entries(script.roles).forEach(async ([role_id, role]) => {
+            let instruction_ids = role.instruction_ids;
             let role_url = crypto.randomBytes(1).toString('hex');
 
             console.info('get instruction');
@@ -62,7 +63,7 @@ function _Rooms({ _redis, _mongo, _mqtt }) {
 
                 return { ...instruction, instruction_id };
             });
-            room.roles[role_url] = { instructions, role_id, status: 'uninitialized' };
+            room.roles[role_url] = { instructions, role_id, name: role.name, status: 'uninitialized' };
         })
 
         room._roles = { ...room.roles };

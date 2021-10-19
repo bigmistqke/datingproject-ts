@@ -13,22 +13,6 @@
   height: 100%;
 }
 
-.menu {
-  position: fixed;
-  width: 150px;
-  height: 100vh;
-  left: -170px;
-  transition: left 0.5s;
-  z-index: 5;
-  background: var(--medium);
-  /* display: flex; */
-  flex-direction: column;
-  box-shadow: var(--dark-shadow);
-}
-.menu * {
-  font-size: 10pt;
-}
-
 .menu-button.selected {
   transform: rotateZ(45deg);
 }
@@ -52,87 +36,4 @@
 /* .viewport .panel {
     flex: 1;
     position: relative;
-} */
-
-.menu.open {
-  left: 0px;
-}
-
-.menu header {
-  padding-left: 15px;
-  background: white;
-  padding-top: 70px;
-  padding-bottom: 15px;
-  padding-right: 10px;
-}
-
-.menu header textarea {
-  resize: none;
-  font-size: 8pt;
-  outline: none;
-  border: none;
-}
-
-.menu * {
-  color: var(--dark);
-}
-
-.menu h1,
-.menu h2 {
-  /* position: absolute; */
-  /* display: flex; */
-
-  font-weight: normal;
-  line-height: normal;
-
-  top: 0px;
-  z-index: 99;
-}
-.menu-body {
-  padding: 10px;
-  padding-top: 15px;
-  padding-left: 15px;
-  gap: 10px;
-  row-gap: 10px;
-  column-gap: 10px;
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.menu .bubble {
-  background: white;
-  color: var(--dark);
-  border-radius: 30px;
-  padding: 10px;
-  /* margin-bottom: 10px; */
-  box-sizing: border-box;
-  border: none;
-  flex-wrap: wrap;
-  flex-grow: 1;
-  overflow: auto;
-}
-/* .menu .bubble:not(:last-child) {
-  margin-right: 10px;
-} */
-
-/* .role-amount {
-  width: 100%;
-  display: flex;
-}
- */
-.role-amount label {
-  flex: 1;
-}
-
-.role-amount input {
-  width: 50px;
-
-  vertical-align: baseline;
-}
-
-/* .menu header h1 {
-  font-size: 10pt;
-  padding-left: 10pt;
-  font-weight: normal;
-  line-height: normal;
 } */

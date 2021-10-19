@@ -78,6 +78,8 @@ function Map(props) {
     let coords = { x: e.clientX, y: e.clientY };
     let now = performance.now();
 
+    props.storeManager.editor.setBool("isTranslating", true);
+
     await cursorEventHandler((e) => {
       now = performance.now();
       if (props.isShiftPressed) {
@@ -90,6 +92,7 @@ function Map(props) {
         };
       }
     });
+    props.storeManager.editor.setBool("isTranslating", false);
 
     if (!props.isShiftPressed) {
       props.storeManager.editor.setSelectionBox(false);
@@ -114,7 +117,7 @@ function Map(props) {
       x: (e.clientX - props.origin.x) / props.zoom,
       y: (e.clientY - props.origin.y) / props.zoom,
     };
-    props.storeManager.script.blocks.add({ position, type });
+    props.storeManager.script.blocks.addBlock({ position, type });
   };
 
   return (

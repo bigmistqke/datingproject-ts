@@ -23,28 +23,18 @@ var app = express();
 app.use(cors())
 app.listen(8080);
 
-/* app.use(function (req, res, next) {
-  res.header('Access-Control-Allow-Origin', req.get('Origin') || '*');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-  res.header('Access-Control-Expose-Headers', 'Content-Length');
-  res.header('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type, X-Requested-With, Range');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  } else {
-    return next();
-  }
-}); */
-
 
 
 const _mongo = new _Mongo({ url: 'mongodb://localhost:27017' });
 const _redis = new _Redis();
 const _mqtt = new _Mqtt();
 
-let _db, _rooms, monitor;
+// let _db, _rooms, monitor;
 
+let _db = new _Database({ _mongo, _redis });
+let _rooms = new _Rooms({ _mongo, _redis, _mqtt });
 
+let _monitor = new _Monitor({ _rooms, _mqtt });
 
 
 const isDev = true;
@@ -56,10 +46,7 @@ _mongo.connect('datingProject')
 
     await _mqtt.connect(mqtt_url, true)
 
-    _db = new _Database({ _mongo, _redis });
-    _rooms = new _Rooms({ _mongo, _redis, _mqtt });
 
-    _monitor = new _Monitor({ _rooms, _mqtt });
 
     let urls = await _rooms.getAllRoomUrls();
     urls.map(url => url.replace('r_', '')).map(room_url => _monitor.start({ room_url }))

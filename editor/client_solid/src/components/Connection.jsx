@@ -5,9 +5,8 @@ import Bezier from "./Bezier";
 import getColorFromHue from "../helpers/getColorFromHue";
 
 const Connection = (props) => {
-  const PADDING = 10;
-  const MARGIN = 15;
-  const ROLE_HEIGHT = 15;
+  const MARGIN = 10;
+  const ROLE_HEIGHT = 12;
 
   let [positions, setPositions] = createStore({
     prev: {

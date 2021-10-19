@@ -10,7 +10,10 @@ export default function DragBox(props) {
   );
 
   const initTranslation = async function (e) {
-    if (e.button !== 0 || !e.target.classList.contains("block-drag")) {
+    let targetIsDragBox = [...e.target.classList].find(
+      (className) => className.indexOf("drag_box") != -1
+    );
+    if (e.button !== 0 || !targetIsDragBox) {
       return;
     }
     e.preventDefault();
@@ -45,7 +48,7 @@ export default function DragBox(props) {
     <div
       id={props.id}
       classList={{
-        block: true,
+        drag_box: true,
         ...getClassList(),
       }}
       onPointerDown={initTranslation}
@@ -57,8 +60,8 @@ export default function DragBox(props) {
         top: props.position.y + "px",
       }}
     >
-      <div className="block-drag"></div>
-      <div className="block-children">{props.children}</div>
+      <div className="drag_box-drag"></div>
+      <div className="drag_box-children">{props.children}</div>
     </div>
   );
 }

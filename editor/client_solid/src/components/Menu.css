@@ -1,21 +1,18 @@
-.menu {
-  position: fixed;
-  width: 150px;
+.menu > * {
   height: 100vh;
-  left: -170px;
   transition: left 0.5s;
-  z-index: 5;
   background: var(--medium);
-  /* display: flex; */
   flex-direction: column;
   box-shadow: var(--dark-shadow);
-}
-.menu * {
-  font-size: 10pt;
+  display: flex;
 }
 
-.menu.open {
-  left: 0px;
+.menu * {
+  align-items: end;
+}
+
+.menu {
+  font-size: 10pt;
 }
 
 .menu header {
@@ -23,7 +20,13 @@
   background: white;
   padding-top: 70px;
   padding-bottom: 15px;
-  padding-right: 10px;
+  padding-right: 15px;
+  width: 100%;
+}
+
+.menu header .bubble {
+  background: var(--medium);
+  line-height: 25pt;
 }
 
 .menu header textarea {
@@ -57,18 +60,19 @@
   column-gap: 10px;
   display: flex;
   flex-wrap: wrap;
+  align-content: baseline;
+  overflow: auto;
+  width: 100%;
 }
 
-.menu .bubble {
+.menu .menu-body .bubble:not(.role) {
   background: white;
   color: var(--dark);
   border-radius: 30px;
   padding: 10px;
-  /* margin-bottom: 10px; */
   box-sizing: border-box;
   border: none;
   flex-wrap: wrap;
-  flex-grow: 1;
   overflow: auto;
 }
 /* .menu .bubble:not(:last-child) {
@@ -96,3 +100,51 @@
     font-weight: normal;
     line-height: normal;
   } */
+
+.menu input {
+  background: white;
+  line-height: var(--r-height);
+  border-radius: 30px;
+}
+
+.menu .flex {
+  gap: 7px;
+}
+
+.main_menu {
+  width: 150px;
+  position: fixed;
+  left: -170px;
+  z-index: 5;
+}
+
+.main_menu.open {
+  left: 0px;
+}
+
+.sub_menu header {
+  padding-top: 25px;
+}
+
+.sub_menu {
+  position: fixed;
+  top: 0px;
+  z-index: 1;
+}
+.sub_menu.open {
+  left: 150px;
+}
+
+.role_menu {
+  width: 500px;
+  left: -520px;
+}
+.monitor_menu {
+  width: 750px;
+  left: -770px;
+}
+.monitor_menu > iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}

@@ -11,25 +11,33 @@ const Overlay = function (props) {
   };
 
   const getStyle = createMemo(() => {
+    let style = {};
+    console.log("props.style is ", props.style);
+    if (props.style) {
+      style = props.style;
+    }
     if (typeof props.position === "object") {
-      return {
+      style = {
+        ...style,
         left: `${parseInt(props.position.x)}px`,
         top: `${parseInt(props.position.y)}px`,
       };
     } else {
       if (props.position === "center") {
-        return {
+        style = {
+          ...style,
           left: "50vw",
           top: "50vh",
           transform: "translate(-50%,-50%)",
         };
       }
     }
+    return style;
   }, [props.position]);
 
   return (
     <div
-      className={`overlay-container ${props.className}`}
+      className={`overlay-container ${props.className ? props.className : ""}`}
       onMouseDown={closeOverlay}
     >
       <div style={getStyle()} className="overlay ">

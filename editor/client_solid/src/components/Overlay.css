@@ -22,6 +22,7 @@
   border-radius: var(--border-radius);
   box-shadow: var(--dark-shadow);
   overflow: hidden;
+  width: 500px;
   /* display: none; */
 }
 .overlay-body {
@@ -30,6 +31,13 @@
   padding-bottom: 18px;
   display: flex;
   gap: 5px;
+  width: 100%;
+  flex-wrap: wrap;
+  /*   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); */
+  column-gap: 5px;
+  row-gap: 5px;
+  font-size: 8pt;
 }
 
 .overlay header {
@@ -49,7 +57,7 @@
 }
 
 .overlay .role_id {
-  font-size: 10pt;
+  /* font-size: 10pt; */
   color: white;
   position: relative;
   padding-right: 25px;
@@ -57,6 +65,7 @@
   margin-left: 5px;
   margin-right: 5px;
   border-radius: 20px;
+  /* white-space: nowrap; */
 }
 
 .overlay .selected_blocks {

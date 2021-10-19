@@ -86,8 +86,8 @@ function Bezier(props) {
         string += `${points[i + 1].x},${points[i + 1].y} `;
       } else {
         string += "S";
-        string += `${points[i].x},${center.y} `;
-        string += `${points[i].x},${points.y} `;
+        string += `${points[i + 1].x},${points[i + 1].y} `;
+        string += `${points[i + 1].x},${center.y} `;
       }
     }
     //console.log(string);
