@@ -9,7 +9,7 @@ import { array_remove_element } from "./helpers/Pure.js"
 
 // const fetch_url = "fetch.datingproject.net";
 // const fetch_url = "http://10.0.2.2:8080";
-const fetch_url = "http://10.100.15.24:8080";
+// const fetch_url = "http://10.100.15.24:8080";
 const socket_url = "socket.datingproject.net";
 
 
