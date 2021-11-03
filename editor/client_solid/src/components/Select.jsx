@@ -93,7 +93,12 @@ function Select(props) {
               focus: getFocus(),
             }}
           >
-            <div onMouseUp={closeDropDown}>{props.value}</div>
+            <div onMouseUp={closeDropDown}>
+              {
+                props.options.find((option) => option.value === props.value)
+                  .label
+              }
+            </div>
             <For each={remainingOptions()}>
               {(option) => {
                 console.log("remaining options are : ", option);
