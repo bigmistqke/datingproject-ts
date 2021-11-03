@@ -57,6 +57,10 @@ const Roles = (props) => {
     return "";
   };
 
+  createEffect(() => {
+    console.log("props.all_roles", props.all_roles);
+  }, [props.all_roles]);
+
   return (
     <div className="roles">
       <div className="row flex">

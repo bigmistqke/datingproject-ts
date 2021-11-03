@@ -187,12 +187,15 @@ function Editor(props) {
   };
 
   const renameKeyOfObject = (object, old_key, new_key) => {
+    console.log(object[old_key], old_key in object);
+    if (!(old_key in object)) return object;
     Object.defineProperty(
       object,
       new_key,
       Object.getOwnPropertyDescriptor(object, old_key)
     );
     delete object[old_key];
+
     return object;
   };
 
@@ -211,10 +214,13 @@ function Editor(props) {
     return roles;
   };
 
-  const reformatBlocks = (blocks) =>
-    blocks.map((block) => {
+  const reformatBlocks = (_blocks) => {
+    let blocks = {};
+    _blocks.forEach((block) => {
       block = renameKeyOfObject(block, "connections", "roles");
-      block.roles = block.roles.map((role) => {
+      console.log(block, block.roles);
+      /* block.roles = block.roles.map((role) => {
+        console.log(role.next_block_id);
         if (!role.next_block_id) {
           delete role.next_block_id;
         }
@@ -223,9 +229,15 @@ function Editor(props) {
         }
         return role;
       });
-      block.roles = arrayOfObjectsToObject(block.roles, "role_id");
-      return block;
+       */
+      if (Array.isArray(block.roles)) {
+        block.roles = arrayOfObjectsToObject(block.roles, "role_id");
+      }
+      blocks[block.block_id] = block;
+      // return block;
     });
+    return blocks;
+  };
 
   onMount(() => {
     window.addEventListener("keydown", keydown);
@@ -238,6 +250,7 @@ function Editor(props) {
         if (!res) {
           return Promise.reject("error fetching data ", res);
         }
+
         setScriptState("roles", res.roles);
         setScriptState("instructions", res.instructions);
         setScriptState("blocks", res.blocks);
@@ -375,7 +388,8 @@ function Editor(props) {
                           console.error(
                             block.instructions,
                             instruction_id,
-                            "block contains instruction_id which is not present in scriptState.instructions"
+                            scriptState.instructions,
+                            `block contains instruction_id ${instruction_id} which is not present in scriptState.instructions`
                           );
                           return;
                         }
@@ -456,7 +470,13 @@ function Editor(props) {
             )}
           </For>
 
-          <For each={Object.values(scriptState.blocks)}>
+          <For
+            each={
+              Object.values(scriptState.blocks).length > 0
+                ? Object.values(scriptState.blocks)
+                : null
+            }
+          >
             {(block) => {
               return (
                 <For each={Object.entries(block.roles)}>

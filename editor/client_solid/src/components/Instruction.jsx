@@ -154,12 +154,17 @@ const Instruction = (props) => {
       {/* <span>{props.role_id}</span> */}
       <Select
         options={getRoleOptions()}
-        value={props.roles[props.role_id].name}
+        value={props.role_id}
         onInput={changeRole}
         // className="tiny"
       ></Select>
       <Select
-        options={["do", "say", "think", "video"]}
+        options={[
+          { value: "do", label: "do" },
+          { value: "say", label: "say" },
+          { value: "think", label: "think" },
+          { value: "video", label: "video" },
+        ]}
         value={props.type}
         onInput={changeType}
         className="tiny"

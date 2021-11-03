@@ -6,15 +6,33 @@ function Select(props) {
   let select_dom;
   let drop_down_dom;
 
-  const remainingOptions = createMemo(() =>
-    props.options.filter((option) => option.value != props.value)
-  );
+  const remainingOptions = createMemo(() => {
+    let remaining_options = props.options.filter((option) => {
+      console.log(option.value, props.value, option.value != props.value);
+      return option.value !== props.value;
+    });
+
+    console.log(
+      "remainingOptions",
+      props.options,
+      remaining_options,
+      props.value
+    );
+    return remaining_options;
+  }, [props.options, props.value]);
 
   const closeDropDown = () => setFocus(false);
 
   const dropDown = (e) => {
     e.stopPropagation();
     setFocus(true);
+
+    console.log(
+      "props.options",
+      props.options,
+      props.value,
+      remainingOptions()
+    );
 
     // TODO: maybe we will need to iterate through offsetParents
     // when there are nested CSS-transformed dom-elements
@@ -49,6 +67,14 @@ function Select(props) {
     props.onInput(value);
   };
 
+  createEffect(() => {
+    console.log(
+      "props.options",
+      props.options,
+      props.options.find((option) => option.value === props.value)
+    );
+  }, [props.options, props.value]);
+
   return (
     <>
       {getFocus() ? (
@@ -70,13 +96,14 @@ function Select(props) {
             <div onMouseUp={closeDropDown}>{props.value}</div>
             <For each={remainingOptions()}>
               {(option) => {
+                console.log("remaining options are : ", option);
                 return (
                   <div
                     onMouseUp={() => {
                       selectValue(option);
                     }}
                   >
-                    {option}
+                    {option.label}
                   </div>
                 );
                 /*  if (option !== getValue())
@@ -103,7 +130,7 @@ function Select(props) {
           focus: getFocus(),
         }}
       >
-        {props.value}
+        {props.options.find((option) => option.value === props.value).label}
       </div>
     </>
   );
