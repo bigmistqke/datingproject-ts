@@ -1,13 +1,25 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-// import { useParams, useHistory } from "react-router-dom";
 import Card from "../components/Card";
-/* import getData from '../helpers/getData';
-import memoize from "fast-memoize"; */
+import { Dimensions, Button, View, Text, Vibration } from 'react-native';
+import styled from 'styled-components/native';
+import Swipe from "../components/Swipe";
+
 
 import isMobile from "is-mobile";
 
 function Game({ instructions, swipeAction }) {
 
+    let screen_dimensions_ref = useRef({
+        x: Dimensions.get('window').width,
+        y: Dimensions.get('window').height
+    }).current;
+
+    let card_dimensions_ref = useRef({
+        y: screen_dimensions_ref.y - 0.05 * screen_dimensions_ref.y,
+        x: (screen_dimensions_ref.y - 0.05 * screen_dimensions_ref.y) * 0.5588507940957915
+    }).current;
+
+    const [visibleInstructions, setVisibleInstructions] = useState([]);
 
     let [designs, setDesigns] = useState({});
 
@@ -15,122 +27,112 @@ function Game({ instructions, swipeAction }) {
 
     const waitYourTurn = useCallback((reason) => {
         if (!reason) {
-            r_overlay.current.classList.add('hidden')
+            // r_overlay.current.classList.add('hidden')
             return;
         }
         try {
-            window.navigator.vibrate(200);
-        } catch (e) {
-            console.error(e);
-        }
-        r_overlay.current.children[0].innerHTML = reason;
-        r_overlay.current.classList.remove('hidden');
+            Vibration.vibrate(200);
+        } catch (e) { console.error(e) }
+        console.log("REASON WAIT YOUR TURN IS ", reason);
+        // r_overlay.current.children[0].innerHTML = reason;
+        // r_overlay.current.classList.remove('hidden');
     }, [r_overlay]);
 
-    const hideOverlay = useCallback(() => {
-        r_overlay.current.classList.add('hidden');
-    }, [])
-
-    const enterGame = () => {
-        setFullscreen(true);
-        initAlarm();
-        if (r_isMobile.current) {
-            try {
-                const elem = document.documentElement;
-                if (elem.requestFullscreen) {
-                    elem.requestFullscreen().catch(e => console.error(e));
-
-                } else if (elem.webkitRequestFullscreen) { /* Safari */
-                    elem.webkitRequestFullscreen().catch(e => console.error(e));
-                } else if (elem.msRequestFullscreen) { /* IE11 */
-                    elem.msRequestFullscreen().catch(e => console.error(e));
-                }
-            } catch (e) {
-                console.error(e);
-            }
+    const Overlay = styled.View`
+        position: absolute;
+        top: 25%;
+        left: 50%;
+        /* transform: translate(-50%, -50%); */
+        color: rgb(71, 70, 70);
+        box-shadow: 0px 0px 50px rgba(0, 0, 0, 0.096);
+        background: rgb(239, 240, 240);
+        font-family: Arial Rounded MT Bold;
+        border-radius: 50px;
+        padding-left: 37.5px;
+        padding-right: 37.5px;
+        padding-top: 25px;
+        padding-bottom: 25px;
+        line-height: 21pt;
+        font-size: 16pt;
+        z-index: 10;
+        text-align: center;
+        &.hidden{
+            display: none
         }
-    }
+    `;
 
-    const restart = async () => {
-        r_instructions.current = [];
-        // setRender(performance.now());
+    const End = styled.Text`
+        font-size: 5px;
+        font-family: arial_rounded;
+        color: #03034e;
+        background: transparent;
+        border: none;
+        width: 70%;
+        text-align: center;
+    `;
 
-        const { instructions } = await joinRoom();
-        r_receivedSwipes.current = [];
-        r_instructions.current = instructions;
-        // initCookie();
-        // setRender(performance.now());
-    }
+    useEffect(() => {
+        setVisibleInstructions(instructions.slice(0,
+            instructions.length > 5 ? 5 : instructions.length
+        ).reverse())
+        // setVisibleInstructions(instructions);
+    }, [instructions])
 
-    const refetch = async () => {
-        const { instructions } = await joinRoom();
-        r_instructions.current = instructions;
-        // initCookie();
-        // setRender(performance.now());
-    }
-
-    const addToOwnSwipes = useCallback((instruction_id) => {
-        r_ownSwipes.current.push(instruction_id);
-        // addToCookie(instruction_id, `ownCards`)
-    }, [])
-
-
-    /*     const swipeAction = (instruction) => {
-            sendSwipedCardToNextRoleIds(instruction.instruction_id, instruction.next_role_ids);
-            if (r_instructions.current.length === 1) {
-                sendFinished();
-            }
-            setTimeout(() => {
-                removeInstruction(instruction.instruction_id);
-            }, 125);
-            addToOwnSwipes(instruction.instruction_id);
-            if (r_instructions.current.length > 1 && r_instructions.current[1].type === 'video') {
-                let id = `${r_instructions.current[1].instruction_id}_video`;
-                document.querySelector(`#${id}`).play();
-                document.querySelector(`#${id}`).pause();
-            }
-        } */
 
     const Game = () => <>
-        <div ref={r_overlay} onClick={hideOverlay} className='overlay hidden'><span>Wait Your Turn</span></div>
-        <div className="Cards">
+        {/* <Overlay ref={r_overlay} onClick={hideOverlay} className='overlay hidden'>
+            <Text>Wait Your Turn</Text>
+        </Overlay> */}
+        <View className="Cards">
             {
-                instructions.map(
+                visibleInstructions.map(
                     (instruction, i) => {
-                        if (i > 5) return null
+                        console.log("CARD :", instruction, instruction.prev_instruction_ids);
                         let zIndex = instructions.length - i;
-                        let margin = Math.max(0, i);
+                        let margin = visibleInstructions.length - i - 1;
                         return (
-                            <div key={instruction.instruction_id}
-                                className='card-offset'
-                                style={{ marginLeft: margin * 20, marginTop: margin * 20 }}>
+                            <Swipe
+                                screen_dimensions={screen_dimensions_ref}
+                                card_dimensions={card_dimensions_ref}
+                                key={instruction.instruction_id}
+                                // canPlay={props.canPlay}
+                                // ref={r_swipe}
+                                waitYourTurn={waitYourTurn}
+                                onSwipe={() => swipeAction(instruction)}
+                                canSwipe={i === (instructions.length - 1)}
+                                flip={
+                                    !instruction.prev_instruction_ids ||
+                                    instruction.prev_instruction_ids.length == 0
+                                }
+                                margin={margin}
+                            >
                                 <Card
+                                    card_dimensions={card_dimensions_ref}
                                     alarm={instruction.sound ? playAlarm : false}
                                     offset={i}
                                     zIndex={zIndex}
                                     instruction_id={instruction.instruction_id}
-                                    // dataurl={instruction.type === 'video' ? r_videos.current[instruction.instruction_id] : ''}
                                     text={instruction.text}
                                     type={instruction.type}
                                     timespan={instruction.timespan ? instruction.timespan : 0}
-                                    flip={instruction.prev_instruction_ids.length == 0}
-                                    waitYourTurn={waitYourTurn}
-                                    swipeAction={() => { swipeAction(instruction) }}
-                                    video={r_videos.current[instruction.instruction_id]}
                                     designs={designs}
-                                ></Card>
-                            </div>
+                                    key={instruction.instruction_id}
+                                >
+                                    {instruction.text}
+                                </Card>
+                            </Swipe>
+
 
                         )
                     }
                 )
             }
             {
-                r_instructions.current.length < 2 ?
-                    <span className='centered uiText'>Het<br></br>Einde</span> :
+                instructions.length < 2 ?
+                    <End className='centered uiText'>The End</End> :
                     null
             }
-        </div>
+        </View>
     </>
 
     return Game()

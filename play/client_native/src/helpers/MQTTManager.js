@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 function MQTTManager() {
     let client;
-    let subscriptions;
+    let subscriptions = {};
 
     init({
         size: 10000,
@@ -19,11 +19,6 @@ function MQTTManager() {
 
     this.connect = ({ protocol = "ws", url, port = 1883 }) => new Promise(async (resolve, reject) => {
 
-        function onConnect() {
-            console.log("onConnect");
-            client.subscribe("/test")
-        }
-
         function onConnectionLost(responseObject) {
             if (responseObject.errorCode !== 0) {
                 console.log("onConnectionLost:" + responseObject.errorMessage);
@@ -31,22 +26,40 @@ function MQTTManager() {
         }
 
         function onMessageArrived(message) {
-            console.log("onMessageArrived:" + message.payloadString);
+            console.log("onMessageArrived:", message.topic, message.payloadString);
+            try {
+                console.log(JSON.parse(message.payloadString));
+            } catch (err) {
+                console.error("THIS IS NOT JSON ", message.payloadString);
+            }
+            processMessage({ topic: message.topic, data: message.payloadString })
         }
 
-        client = new Paho.MQTT.Client(url, 443, uuid.v4());
+        client = new Paho.MQTT.Client(url, port, uuid.v4());
         client.onConnectionLost = onConnectionLost;
         client.onMessageArrived = onMessageArrived;
-        client.connect({ onSuccess: onConnect, useSSL: true });
+        client.connect({
+            onSuccess: resolve,
+            onFailure: (err) => console.error(err),
+            useSSL: true
+        });
     })
 
 
-    const processMessage = ({ topic, data }) => this.subscriptions[topic](data)
+    const processMessage = ({ topic, data }) => {
+        console.log("PROCESS MESSAGE: ", topic, data);
+        subscriptions[topic](data)
+    }
 
-    this.send = (topic, data) => client.publish(topic, data)
+    this.send = (topic, data) => {
+        console.log("SEND MESSAGE: ", topic, data);
+        client.publish(topic, data);
+    }
     this.subscribe = (topic, callback) => {
+        console.log(subscriptions, topic, callback);
         client.subscribe(topic);
         subscriptions[topic] = callback;
+        console.log(subscriptions);
     }
 }
 

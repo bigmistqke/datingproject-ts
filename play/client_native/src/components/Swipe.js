@@ -1,195 +1,161 @@
-import React, { useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useEffect, useState, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
+import { Dimensions, Pressable, Animated, PanResponder, View, Text, StyleSheet } from 'react-native';
+import styled from 'styled-components/native';
 import Tweener from "../helpers/tweener.js";
 
-// const cTweener = React.createContext(new Tweener());
-
-const Swipe = forwardRef((props, ref) => {
-    // const tweener = useContext(cTweener);
-    // const tweener = new Tweener();
-    const tweener = useRef(new Tweener());
-    let card = useRef(null);
-    let delta = useRef({ x: 0, y: 0 });
-    let posStart = useRef({ x: 0, y: 0 });
-    let transform = useRef({ x: 0, y: 0 });
-    let r_screen = useRef({ x: window.innerWidth, y: window.innerHeight })
-
-    let current = {
-        delta: { x: 0, y: 0 },
-        acceleration: { x: 0, y: 0 },
-        prevTime: null,
-        start: { x: 0, y: 0 },
-        lastSwipe: null
-    };
-
-    useEffect(() => {
-        if (!card.current || !props.flip) return;
-        card.current.classList.remove("flip");
-    });
-
-    const getCoords = (e) => {
-        let coords = {};
-        let offset = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-        if (e.type.includes("touch")) {
-            coords.x = e.touches[0].clientX - offset.x;
-            coords.y = e.touches[0].clientY - offset.y;
-        } else {
-            coords.x = e.clientX - offset.x;
-            coords.y = e.clientY - offset.y;
-        }
-        return coords;
-    }
-
-    const onSwipeStart = (e) => {
-        e.preventDefault();
-        current.prevTime = new Date().getTime();
-
-        let coords = getCoords(e);
-        posStart = coords;
-        current.swiping = true;
-
-        if (!props.canSwipe) {
-            props.waitYourTurn(!props.flip ? 'Your Turn' : 'Wacht tot je beurt gedaan is!')
-        }
-
-        window.addEventListener('mousemove', onSwipeMove);
-        window.addEventListener('mouseup', onSwipeEnd);
-
-        window.addEventListener('touchmove', onSwipeMove);
-        window.addEventListener('touchend', onSwipeEnd);
-
-    }
-
-    const move = (e) => {
-        // e.preventDefault();
-        // e.stopPropagation();
-        if (!current.swiping) {
-            return;
-        }
-        let coords = getCoords(e);
-        delta.current = { x: coords.x - posStart.x, y: coords.y - posStart.y };
-        if (card.current) {
-            card.current.style.transform = getTransform(delta.current, transform.current);
-        } else {
-            console.error('does not have a reference to the card');
-        }
-    }
-    const onSwipeMove = (e) => {
-        // throttledMove(e);
-        move(e)
-    }
-
-    const getTransform = (delta, offset) => {
-        const position = { x: delta.x + offset.x, y: delta.y + offset.y };
-        return `translateX(${position.x}px) translateY(${position.y}px) rotateZ(${2 * (position.x) / r_screen.current.x * 30}deg) /* rotateX(${2 * (position.y) / r_screen.current.y * 30}deg)*/`;
-    }
 
 
-    useImperativeHandle(ref, () => ({
-        swipeAnimation() {
-            delta.current = { x: Math.random() - 0.5, y: Math.random() - 0.5 };
-            let deltaSnap = { x: parseFloat(delta.current.x), y: parseFloat(delta.current.y) };
-            let angle = Math.atan2(delta.current.y, delta.current.x);
-            var newDist = { x: (window.innerWidth * 1.75 * Math.cos(angle)), y: (window.innerHeight * 1.25 * Math.sin(angle)) };
+const Swipe = ({ zIndex, canPlay, canSwipe, onSwipe, triggerSwipe, waitYourTurn, margin, children, flip }, ref) => {
 
-            tweener.current.tweenTo(0, 1, 1000,
-                (alpha) => {
-                    delta.current = {
-                        x: deltaSnap.x + (newDist.x - deltaSnap.x) * alpha,
-                        y: deltaSnap.y + (newDist.y - deltaSnap.y) * alpha
-                    };
-                    if (!card.current) return;
-                    transform.current = delta.current;
+    const tweener = useRef(new Tweener()).current;
+    const DRAG_TRESHOLD = useRef(100).current;
+    // TODO : replacement for windows in react-native
+    let screen_ref = useRef({
+        x: Dimensions.get('window').width,
+        y: Dimensions.get('window').height
+    }).current;
 
-                    card.current.style.transform = `translateX(${transform.current.x}px) translateY(${transform.current.y}px) rotateZ(${2 * (transform.current.x) / r_screen.current.x * 30}deg)`;
-                },
-                () => {
-
-                }
-            );
-        }
-
-    }))
+    let card_dimensions_ref = useRef({
+        y: screen_ref.y - 0.05 * screen_ref.y,
+        x: (screen_ref.y - 0.05 * screen_ref.y) * 0.5588507940957915
+    }).current;
 
 
-    const swipeAway = () => {
-        let deltaSnap = { x: parseFloat(delta.current.x), y: parseFloat(delta.current.y) };
-        let angle = Math.atan2(delta.current.y, delta.current.x);
-        var newDist = { x: (window.innerWidth * 1.75 * Math.cos(angle)), y: (window.innerHeight * 1.25 * Math.sin(angle)) };
-        tweener.current.tweenTo(0, 1, 500,
-            (alpha) => {
-                delta.current = {
-                    x: deltaSnap.x + (newDist.x - deltaSnap.x) * alpha,
-                    y: deltaSnap.y + (newDist.y - deltaSnap.y) * alpha
-                };
-                if (!card.current) return;
-                transform.current = delta.current;
 
-                card.current.style.transform = `translateX(${transform.current.x}px) translateY(${transform.current.y}px) rotateZ(${2 * (transform.current.x) / r_screen.current.x * 30}deg)`;
-            },
-            () => {
+    const pan_ref = useRef(new Animated.ValueXY()).current;
+    const translate_ref = useRef(new Animated.ValueXY()).current;
 
+    let translate_start_ref = useRef().current;
+
+    const rotateZ = useRef(new Animated.Value(0)).current;
+    const rotateZ_ref = rotateZ.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '1deg']
+    })
+
+    const rotateY = useRef(new Animated.Value(1)).current;
+    const rotateY_ref = rotateY.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '180deg']
+    })
+
+
+
+    const panResponder = useRef(PanResponder.create({
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: (e) => {
+            console.log("START TOUCH?");
+            translate_start_ref = {
+                x: translate_ref.x._value,
+                y: translate_ref.y._value
             }
-        );
-    }
+            pan_ref.setOffset({
+                x: pan_ref.x._value,
+                y: pan_ref.y._value
+            });
+        },
+        onPanResponderMove: Animated.event([
+            null, { dx: pan_ref.x, dy: pan_ref.y }
+        ], {
+            useNativeDriver: false,
+            listener: (event, gestureState) => {
+                translate_ref.setValue({
+                    x: translate_start_ref.x + pan_ref.x._value,
+                    y: translate_start_ref.y + pan_ref.y._value
+                });
+                rotateZ.setValue(2 * (translate_ref.x._value) / screen_ref.x * 30);
+            }
+        }),
+        onPanResponderRelease: () => {
+            pan_ref.flattenOffset();
+            if (Math.sqrt(
+                Math.pow(translate_ref.x._value, 2) + Math.pow(translate_ref.y._value, 2)
+            ) < DRAG_TRESHOLD) {
+                snapBack();
+            } else {
+                swipeAway();
+                onSwipe();
+            }
 
 
+
+        }
+    })).current;
+
+    const swipeAway = useCallback(() => {
+        translate_start_ref = {
+            x: translate_ref.x._value,
+            y: translate_ref.y._value
+        }
+        const angle = Math.atan2(translate_start_ref.y, translate_start_ref.x)
+        const new_dist = {
+            x: screen_ref.x * 1.75 * Math.cos(angle),
+            y: screen_ref.y * 1.25 * Math.sin(angle)
+        }
+        tweener.tweenTo(0, 1, 500,
+            (alpha) => {
+                translate_ref.setValue({
+                    x: translate_start_ref.x * (1 - alpha) + (new_dist.x) * alpha,
+                    y: translate_start_ref.y * (1 - alpha) + (new_dist.y) * alpha,
+                })
+                rotateZ.setValue(2 * (translate_ref.x._value) / screen_ref.x * 30);
+            }
+        )
+    }, [])
 
     const snapBack = useCallback(() => {
-        let deltaSnap = { x: parseFloat(delta.current.x), y: parseFloat(delta.current.y) };
-        if (Math.abs(deltaSnap.x) === 0 && Math.abs(deltaSnap.y) === 0) return;
-        tweener.current.tweenTo(1, 0, 250,
+        translate_start_ref = {
+            x: translate_ref.x._value,
+            y: translate_ref.y._value
+        }
+        tweener.tweenTo(1, 0, 250,
             (alpha) => {
-                delta.current = {
-                    x: deltaSnap.x * alpha,
-                    y: deltaSnap.y * alpha
-                };
-                if (!card.current) return;
-                transform.current = delta.current;
-                card.current.style.transform = `translateX(${delta.current.x}px) translateY(${delta.current.y}px) rotateZ(${2 * (delta.current.x) / r_screen.current.x * 30}deg) /* rotateX(${2 * (delta.current.y) / r_screen.current.y * 30}deg)*/`;
-                // card.current.style.transform = getTransform(delta.current, { x: 0, y: 0 });
-            },
-            () => {
-
+                translate_ref.setValue({
+                    x: translate_start_ref.x * alpha,
+                    y: translate_start_ref.y * alpha
+                });
+                rotateZ.setValue(2 * (translate_ref.x._value) / screen_ref.x * 30);
             }
         );
     }, [])
 
-    const onSwipeEnd = (e) => {
-        current.swiping = false;
-        if (!props.canPlay) { snapBack() }
-        props.waitYourTurn(false);
-        let dragThreshold = ((Math.abs(delta.current.x) > window.innerWidth / 5 || Math.abs(delta.current.y) > window.innerHeight / 5)) ? true : false;
-        if (dragThreshold && props.canSwipe) {
-            swipeAway();
-            setTimeout(() => {
-                props.swipeAction(props.zIndex)
-            }, 0)
+    const flipCard = useCallback(() => {
+        tweener.tweenTo(1, 0, 250,
+            (alpha) => rotateY.setValue(alpha)
+        );
+    }, [])
 
-        } else {
-            snapBack();
-        }
-
-        current.lastSwipe = false;
-        window.removeEventListener('mousemove', onSwipeMove);
-        window.removeEventListener('mouseup', onSwipeEnd);
-        window.removeEventListener('touchmove', onSwipeMove);
-        window.removeEventListener('touchend', onSwipeEnd);
-    }
-
+    useEffect(() => {
+        if (!flip) return;
+        flipCard();
+    }, [flip])
 
     return (
-        <div
-            ref={card}
-            style={{
-                zIndex: props.zIndex
-            }}
+        <View>
+            <Animated.View
+                style={{
+                    margin: margin * 50,
+                    position: 'absolute',
+                    elevation: 10,
+                    height: parseInt(card_dimensions_ref.y),
+                    width: parseInt(card_dimensions_ref.x),
+                    transform: [
+                        { translateX: translate_ref.x },
+                        { translateY: translate_ref.y },
+                        { rotateZ: rotateZ_ref },
+                        { rotateY: rotateY_ref }
+                    ],
 
-            className="swipe flip"
-            onTouchStart={onSwipeStart}
-            onMouseDown={onSwipeStart}
-        > {props.children}</div >
-    )
-})
+                }}
+                {...panResponder.panHandlers}
+            >
+                {children}
+
+            </Animated.View>
+        </View >
+    );
+}
+
 
 
 export default Swipe;

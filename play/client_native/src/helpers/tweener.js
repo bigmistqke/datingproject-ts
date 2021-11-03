@@ -1,7 +1,7 @@
 import TWEEN from "@tweenjs/tween.js"
 
 class Tweener {
-    tweenTo = (from, to, timespan, update, complete) => {
+    tweenTo = (from, to, timespan, update, complete = () => { }) => {
 
         let tweenData = { val: from };
         this.tween = new TWEEN.Tween(tweenData)
