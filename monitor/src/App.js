@@ -20,8 +20,8 @@ function App() {
 
   const [QRData, setQRData] = useState(false);
 
-  const openQR = useCallback(({ url, role_id }) => {
-    setQRData({ url, role_id })
+  const openQR = useCallback(({ url, game_url }) => {
+    setQRData({ url, game_url })
   }, [])
 
   const closeQR = useCallback(() => {
@@ -100,7 +100,7 @@ function QR({ data, closeQR }) {
   return <div>
     <div className='qr'>
       <span style={{ width: '100%', textAlign: 'center', display: 'inline-block' }}>
-        {data.role_id}
+        {data.game_url}
 
         <QRCode value={data.url}></QRCode>
 
@@ -202,7 +202,7 @@ function Room({ mqtt, script_id, rooms, room, room_url, openQR }) {
       mqtt.subscribe(`/monitor/${room_url}/${role_url}/ping`, (message, topic) => {
         try {
           const ping = JSON.parse(message);
-          console.log('receive ping');
+          console.log('receive ping', room_url, role_url);
           update({ room_url, role_url, state: ping })
         } catch (e) {
           console.error(e, message);
@@ -307,7 +307,7 @@ function Role({ room_url, role, role_url, openQR, mqtt }) {
       <div className='flex role_buttons'>
         <button onClick={openLink}>open </button>
         <button onClick={copyLink}>copy</button>
-        <button onClick={() => { openQR({ url: r_url.current, role_id: role.role_id }) }}>qr</button>
+        <button onClick={() => { openQR({ url: r_url.current, game_url: room_url + role_url }) }}>qr</button>
 
       </div><br></br>
       <div className='flex'>
