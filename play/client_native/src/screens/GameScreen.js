@@ -87,7 +87,6 @@ function Game({ instructions, swipeAction }) {
             {
                 visibleInstructions.map(
                     (instruction, i) => {
-                        console.log("CARD :", instruction, instruction.prev_instruction_ids);
                         let zIndex = instructions.length - i;
                         let margin = visibleInstructions.length - i - 1;
                         return (
@@ -95,8 +94,6 @@ function Game({ instructions, swipeAction }) {
                                 screen_dimensions={screen_dimensions_ref}
                                 card_dimensions={card_dimensions_ref}
                                 key={instruction.instruction_id}
-                                // canPlay={props.canPlay}
-                                // ref={r_swipe}
                                 waitYourTurn={waitYourTurn}
                                 onSwipe={() => swipeAction(instruction)}
                                 canSwipe={i === (instructions.length - 1)}

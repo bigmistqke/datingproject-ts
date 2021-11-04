@@ -142,6 +142,10 @@ const Instruction = (props) => {
     })
   );
 
+  createEffect(() => {
+    console.log("role_id is ", props.role_id);
+  });
+
   return (
     <div
       className={`row flex instruction ${getClassByRole()} ${getClassByError()}`}

@@ -11,9 +11,9 @@ import {
 const isDev = window.location.href.indexOf('localhost') != -1;
 
 window._url = {
-  mqtt: isDev ? "localhost:8883" : "socket.datingproject.net/mqtt",
+  mqtt: isDev ? "socket.datingproject.net/mqtt" : "socket.datingproject.net/mqtt",
   editor: isDev ? "http://localhost:3000" : "https://script.datingproject.net",
-  fetch: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net",
+  fetch: isDev ? "https://fetch.datingproject.net/test" : "https://fetch.datingproject.net",
   play: isDev ? "http://localhost:3001" : "https://play.datingproject.net",
   monitor: isDev ? "http://localhost:3004" : "https://monitor.datingproject.net",
 }

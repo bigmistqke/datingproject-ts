@@ -8,7 +8,6 @@ const _Redis = require('./modules/_Redis.js');
 
 const _Monitor = require('./_Monitor.js');
 
-// console.log('ok'why)
 
 const _Database = require('./_Database.js');
 const _Rooms = require('./_Rooms.js');
@@ -19,9 +18,12 @@ const fileUpload = require('express-fileupload');
 var cors = require('cors')
 var bodyParser = require('body-parser')
 
+console.log("initialize server");
+
+
 var app = express();
 app.use(cors())
-app.listen(8080);
+app.listen(8079);
 
 
 

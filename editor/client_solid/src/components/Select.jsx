@@ -6,33 +6,27 @@ function Select(props) {
   let select_dom;
   let drop_down_dom;
 
-  const remainingOptions = createMemo(() => {
-    let remaining_options = props.options.filter((option) => {
-      console.log(option.value, props.value, option.value != props.value);
-      return option.value !== props.value;
-    });
+  let [selected_label, setSelectedLabel] = createSignal();
 
-    console.log(
-      "remainingOptions",
-      props.options,
-      remaining_options,
-      props.value
+  const remainingOptions = createMemo(() =>
+    props.options.filter((option) => {
+      return option.value !== props.value;
+    })
+  );
+
+  createEffect(() => {
+    setSelectedLabel(
+      props.options.find((option) => option.value === props.value)
+        ? props.options.find((option) => option.value === props.value).label
+        : null
     );
-    return remaining_options;
-  }, [props.options, props.value]);
+  });
 
   const closeDropDown = () => setFocus(false);
 
-  const dropDown = (e) => {
+  const openDropDown = (e) => {
     e.stopPropagation();
     setFocus(true);
-
-    console.log(
-      "props.options",
-      props.options,
-      props.value,
-      remainingOptions()
-    );
 
     // TODO: maybe we will need to iterate through offsetParents
     // when there are nested CSS-transformed dom-elements
@@ -67,75 +61,47 @@ function Select(props) {
     props.onInput(value);
   };
 
-  createEffect(() => {
-    console.log(
-      "props.options",
-      props.options,
-      props.options.find((option) => option.value === props.value)
-    );
-  }, [props.options, props.value]);
+  const DropDown = () => (
+    <>
+      <div
+        classList={{
+          focus: getFocus(),
+        }}
+        className="close-select"
+        onMouseDown={closeDropDown}
+      ></div>
+      <div
+        ref={drop_down_dom}
+        classList={{
+          drop_down: true,
+          focus: getFocus(),
+        }}
+      >
+        <div onMouseUp={closeDropDown}>{selected_label}</div>
+        <For each={remainingOptions()}>
+          {(option) => (
+            <div onMouseUp={() => selectValue(option.value)}>
+              {option.label}
+            </div>
+          )}
+        </For>
+      </div>
+    </>
+  );
 
   return (
     <>
-      {getFocus() ? (
-        <>
-          <div
-            classList={{
-              focus: getFocus(),
-            }}
-            className="close-select"
-            onMouseDown={closeDropDown}
-          ></div>
-          <div
-            ref={drop_down_dom}
-            classList={{
-              drop_down: true,
-              focus: getFocus(),
-            }}
-          >
-            <div onMouseUp={closeDropDown}>
-              {
-                props.options.find((option) => option.value === props.value)
-                  .label
-              }
-            </div>
-            <For each={remainingOptions()}>
-              {(option) => {
-                console.log("remaining options are : ", option);
-                return (
-                  <div
-                    onMouseUp={() => {
-                      selectValue(option);
-                    }}
-                  >
-                    {option.label}
-                  </div>
-                );
-                /*  if (option !== getValue())
-              <div
-                onMouseDown={() => {
-                  selectValue(option);
-                }}
-              >
-                {option}
-              </div>; */
-              }}
-            </For>
-          </div>
-        </>
-      ) : null}
-
+      {getFocus() ? <DropDown></DropDown> : null}
       <div
         ref={select_dom}
-        //   className="select"
-        onMouseUp={dropDown}
+        onMouseUp={openDropDown}
         className={props.className}
         classList={{
           select: true,
           focus: getFocus(),
         }}
       >
-        {props.options.find((option) => option.value === props.value).label}
+        {selected_label}
       </div>
     </>
   );

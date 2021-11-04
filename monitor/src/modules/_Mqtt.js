@@ -1,16 +1,16 @@
 import mqtt from "mqtt"
-import { v4 as uuidv4 } from 'uuid';
 
 export default class Mqtt {
-    constructor(url, websocket = false, ssl = false) {
-        let id = uuidv4();
-        console.log(id);
+
+
+    constructor() {
         this.subscriptions = {};
         this.base = "";
-        let prefix = websocket ? ssl ? 'wss' : 'ws' : 'mqtt';
-        return this.connect(`${prefix}://${url}`);
     }
-    connect = async (url) => {
+    connect = async (url, websocket = true, ssl = true) => {
+        let prefix = websocket ? ssl ? 'wss' : 'ws' : 'mqtt';
+        // return this.connect(`${prefix}://${url}`);
+
         return new Promise((resolve) => {
             this.client = mqtt.connect(url);
             this.client.on('message', this.receive)
