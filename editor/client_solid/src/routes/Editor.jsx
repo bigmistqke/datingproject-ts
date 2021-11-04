@@ -410,7 +410,13 @@ function Editor(props) {
                             role_hue={
                               scriptState.roles[instruction.role_id].hue
                             }
-                            roles={scriptState.roles}
+                            roles={Object.fromEntries(
+                              Object.entries(scriptState.roles).filter(
+                                ([role_id, role]) =>
+                                  Object.keys(block.roles).indexOf(role_id) !=
+                                  -1
+                              )
+                            )}
                             storeManager={storeManager}
                             videoUploader={videoUploader}
                             urls={props.urls}

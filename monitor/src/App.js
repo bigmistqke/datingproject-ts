@@ -30,7 +30,8 @@ function App() {
   }, [])
 
   useEffect(async () => {
-    let _mqtt = await new _Mqtt(window._url.mqtt, true, window.location.protocol.indexOf('https') != -1);
+    let _mqtt = new _Mqtt();
+    await _mqtt.connect(window._url.mqtt, true, true);
     console.log('connect???', _mqtt);
     setMqtt(_mqtt);
   }, [])

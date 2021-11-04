@@ -7,8 +7,12 @@ import LoadingScreen from './screens/LoadingScreen';
 import MQTTManager from './helpers/MQTTManager';
 import { array_remove_element } from "./helpers/Pure.js"
 
+/* import getUrls from "../../../urls"
+
+const urls = getUrls(true); */
+
 // const fetch_url = "fetch.datingproject.net";
-// const fetch_url = "http://10.0.2.2:8080";
+const fetch_url = "https://fetch.datingproject.net/test";
 // const fetch_url = "http://10.100.15.24:8080";
 const socket_url = "socket.datingproject.net";
 
@@ -40,11 +44,8 @@ function App() {
 
 
   const initMqtt = async () => {
-    console.log("INIT MQTT");
     socket = new MQTTManager();
-    console.log(socket_url);
     await socket.connect({ url: socket_url, port: 443 });
-    console.log("INIT SOCKET ", socket);
     // await socket.connect({ url: 'socket.datingproject.net', port: 443 });
     return;
   }
@@ -101,14 +102,14 @@ function App() {
     console.info("join_room")
     let result;
     try {
-      console.log(`${fetch_url}/api/room/join/${game_id_ref}`);
-
+      console.log('url : ', `${fetch_url}/api/room/join/${game_id_ref}`);
       result = await fetch(`${fetch_url}/api/room/join/${game_id_ref}`);
 
       if (!result) {
         console.error('could not fetch instructions: double check the url');
         return false;
       }
+      console.log(result.status);
       result = await result.json();
     } catch (err) {
       console.error("ERROR while joining room:", err);
@@ -120,7 +121,7 @@ function App() {
 
   const initSocket = async () => {
     // set up ping-pong for measuring wifi-strength
-    // TOO: tidy up pingpong
+    // TODO: revisit pingpong
     socket.subscribe(`/${room_id_ref}/${player_id_ref}/ping`, (message, topic) => {
       socket.send(`/${room_id_ref}/${player_id_ref}/pong`, message);
     })
@@ -129,8 +130,10 @@ function App() {
     // to restart game from the monitor (emergency)
     socket.subscribe(`/${room_id_ref}/${player_id_ref}/restart`, async (message, topic) => {
       let result = await joinRoom();
-
-      if (!result) return;
+      if (!result || !result.success) {
+        console.error("could not join room ", result);
+        return;
+      }
       const { instructions } = result;
       received_instruction_ids = [];
       setInstructions(instructions);
@@ -190,9 +193,6 @@ function App() {
     // mechanism to implement videos
     if (instructions.length > 1 && instructions[1].type === 'video') {
       console.error("video stop not implemented yet");
-      /*         let id = `${instructions[1].instruction_id}_video`;
-              document.querySelector(`#${id}`).play();
-              document.querySelector(`#${id}`).pause(); */
     }
   }
 
@@ -234,8 +234,8 @@ function App() {
     try {
       const { instruction_id, role_id: received_role_id } = JSON.parse(json);
       console.log('receiveConfirmation ', instruction_id, received_role_id);
-      /* let message_id = `${received_role_id}_${instruction_id}`;
-      unconfirmed_messages = array_remove_element(unconfirmed_messages, message_id) */
+      let message_id = `${received_role_id}_${instruction_id}`;
+      unconfirmed_messages = array_remove_element(unconfirmed_messages, message_id)
     } catch (e) {
       console.error('receiveConfirmation fails', e);
     }
@@ -264,13 +264,10 @@ function App() {
   const receiveSwipedCard = useCallback((json) => {
     try {
       let { instruction_id, role_id: received_role_id } = JSON.parse(json);
-      console.log("SOCKET IS : ", socket);
-      console.log("INSTRUCTIONS ARE ", instructions_ref);
       socket.send(`/${room_id_ref}/${received_role_id}/confirmation`,
         JSON.stringify({
           instruction_id,
           role_id: player_id_ref
-          // role_url,
         })
       )
       if (received_instruction_ids.indexOf(instruction_id) == -1) {
@@ -294,16 +291,12 @@ function App() {
     game_id_ref = game_id;
 
     await initMqtt()
-    console.log("SOCKET IS ", socket);
     setLoadingMessage("initializing connection");
     let result = await joinRoom();
-    console.log(result)
-    if (!result) {
+    if (!result || !result.success) {
       console.error("joinRoom did not succeed : ", result.error);
       return;
     };
-    // result = await result.json();
-    console.log('result of joinRoom : ', result);
     const { instructions, role_id, room_url, role_url } = result;
 
     player_id_ref = role_url;
@@ -320,13 +313,10 @@ function App() {
 
 
   useEffect(() => {
-    initGame("1e4e9303")
+    initGame("74f29004")
   }, []);
 
-  useEffect(() => {
-    console.log('updated instructions');
-    console.log(instructions);
-  }, [instructions])
+
   return (<>
     {
       !initialized ?
