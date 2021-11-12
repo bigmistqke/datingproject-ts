@@ -5,20 +5,17 @@ import Tweener from "../helpers/tweener.js";
 
 
 
-const Swipe = ({ zIndex, canPlay, canSwipe, onSwipe, triggerSwipe, waitYourTurn, margin, children, flip }, ref) => {
+const Swipe = ({ screen_dimensions, card_dimensions, zIndex, canPlay, canSwipe, onSwipe, triggerSwipe, waitYourTurn, margin, children, flip }) => {
 
     const tweener = useRef(new Tweener()).current;
     const DRAG_TRESHOLD = useRef(100).current;
     // TODO : replacement for windows in react-native
-    let screen_ref = useRef({
-        x: Dimensions.get('window').width,
-        y: Dimensions.get('window').height
-    }).current;
+    /*     let screen_dimensions = useRef({
+            x: Dimensions.get('window').width,
+            y: Dimensions.get('window').height
+        }).current; */
 
-    let card_dimensions_ref = useRef({
-        y: screen_ref.y - 0.05 * screen_ref.y,
-        x: (screen_ref.y - 0.05 * screen_ref.y) * 0.5588507940957915
-    }).current;
+
 
 
 
@@ -33,11 +30,6 @@ const Swipe = ({ zIndex, canPlay, canSwipe, onSwipe, triggerSwipe, waitYourTurn,
         outputRange: ['0deg', '1deg']
     })
 
-    const rotateY = useRef(new Animated.Value(1)).current;
-    const rotateY_ref = rotateY.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0deg', '180deg']
-    })
 
 
 
@@ -63,7 +55,7 @@ const Swipe = ({ zIndex, canPlay, canSwipe, onSwipe, triggerSwipe, waitYourTurn,
                     x: translate_start_ref.x + pan_ref.x._value,
                     y: translate_start_ref.y + pan_ref.y._value
                 });
-                rotateZ.setValue(2 * (translate_ref.x._value) / screen_ref.x * 30);
+                rotateZ.setValue(2 * (translate_ref.x._value) / screen_dimensions.x * 30);
             }
         }),
         onPanResponderRelease: () => {
@@ -89,8 +81,8 @@ const Swipe = ({ zIndex, canPlay, canSwipe, onSwipe, triggerSwipe, waitYourTurn,
         }
         const angle = Math.atan2(translate_start_ref.y, translate_start_ref.x)
         const new_dist = {
-            x: screen_ref.x * 1.75 * Math.cos(angle),
-            y: screen_ref.y * 1.25 * Math.sin(angle)
+            x: screen_dimensions.x * 1.75 * Math.cos(angle),
+            y: screen_dimensions.y * 1.25 * Math.sin(angle)
         }
         tweener.tweenTo(0, 1, 500,
             (alpha) => {
@@ -98,7 +90,7 @@ const Swipe = ({ zIndex, canPlay, canSwipe, onSwipe, triggerSwipe, waitYourTurn,
                     x: translate_start_ref.x * (1 - alpha) + (new_dist.x) * alpha,
                     y: translate_start_ref.y * (1 - alpha) + (new_dist.y) * alpha,
                 })
-                rotateZ.setValue(2 * (translate_ref.x._value) / screen_ref.x * 30);
+                rotateZ.setValue(2 * (translate_ref.x._value) / screen_dimensions.x * 30);
             }
         )
     }, [])
@@ -114,36 +106,27 @@ const Swipe = ({ zIndex, canPlay, canSwipe, onSwipe, triggerSwipe, waitYourTurn,
                     x: translate_start_ref.x * alpha,
                     y: translate_start_ref.y * alpha
                 });
-                rotateZ.setValue(2 * (translate_ref.x._value) / screen_ref.x * 30);
+                rotateZ.setValue(2 * (translate_ref.x._value) / screen_dimensions.x * 30);
             }
         );
     }, [])
 
-    const flipCard = useCallback(() => {
-        tweener.tweenTo(1, 0, 250,
-            (alpha) => rotateY.setValue(alpha)
-        );
-    }, [])
 
-    useEffect(() => {
-        if (!flip) return;
-        flipCard();
-    }, [flip])
 
     return (
         <View>
             <Animated.View
                 style={{
-                    margin: margin * 50,
+                    left: margin * 10,
+                    top: margin * 10,
                     position: 'absolute',
                     elevation: 10,
-                    height: parseInt(card_dimensions_ref.y),
-                    width: parseInt(card_dimensions_ref.x),
+                    height: parseInt(card_dimensions.y),
+                    width: parseInt(card_dimensions.x),
                     transform: [
                         { translateX: translate_ref.x },
                         { translateY: translate_ref.y },
                         { rotateZ: rotateZ_ref },
-                        { rotateY: rotateY_ref }
                     ],
 
                 }}

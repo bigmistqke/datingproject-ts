@@ -8,14 +8,15 @@ import BottomPanel from "./components/BottomPanel.js"
 import CardContainer from "./components/CardContainer.js"
 import Guides from "./components/Guides.js"
 import Rulers from "./components/Rulers.js"
+import ResizeHandles from "./components/ResizeHandles.js"
+import BlurBorder from "./components/BlurBorder.js"
 
 import CardElement from "./components/CardElement.js"
 
 import ImageUploader from "./managers/ImageUploader.js";
 import postData from "./helpers/postData.js"
 
-import ResizeHandles from "./components/ResizeHandles.js"
-import BlurBorder from "./components/BlurBorder.js"
+
 
 import Store from "./helpers/react/Store.js"
 import State from "./helpers/react/State.js"
@@ -28,7 +29,7 @@ const isDev = window.location.href.indexOf('localhost') != -1;
 
 window._url = {
   mqtt: isDev ? "localhost:8883" : "socket.datingproject.net/mqtt",
-  fetch: isDev ? "http://localhost:8080" : "https://fetch.datingproject.net",
+  fetch: isDev ? "https://fetch.datingproject.net/test" : "https://fetch.datingproject.net",
   play: isDev ? "http://localhost:3001" : "https://play.datingproject.net",
 }
 
@@ -50,17 +51,6 @@ function App() {
   guides.hidden = new State(false);
   const viewport = new Viewport();
 
-  /*   viewport.focus = (id) => {
-      Object.entries(viewport.state).forEach(([_id, _element]) => {
-        if (id == _id) {
-          viewport.update(id, { ..._element, focused: true })
-        } else if (_element.focused) {
-          viewport.update(_id, { ..._element, focused: false })
-        }
-      })
-    } */
-
-
   const designs = new Designs();
 
   const shouldAddTextType = new State(false);
@@ -68,6 +58,7 @@ function App() {
   const getCards = useCallback(async () => {
     let result = await fetch(`${window._url.fetch}/api/card/get/${card_id}`);
     result = await result.json();
+    if (!result) return;
     Object.entries(result.designs).forEach(([type, data]) => {
       designs.archive({ data, type });
     });
@@ -160,14 +151,18 @@ function App() {
     reader.readAsDataURL(file);
   }
 
-  const dragOver = useCallback((e) => {
+  const dragOver = (e) => {
+    console.log("DRAGGING OVER!!!!");
     e.preventDefault();
-  }, []);
-
+  }
   const changeType = (type) => {
     designs.archive({ data: viewport.state });
     viewport.updateAll(designs.changeType({ type }));
   }
+
+  useEffect(() => {
+    console.log("INITIALIZE");
+  }, [])
 
   return (
     <div className="app flex-container" onDragOver={dragOver} onDrop={uploadImage}>

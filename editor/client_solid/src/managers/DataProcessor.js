@@ -197,7 +197,7 @@ export default function DataProcessor({ scriptState, setEditorState }) {
                 if (!role.next_block_id) return
                 let connected_block = scriptState.blocks[role.next_block_id];
                 let next_instruction_id = connected_block.instructions[0];
-                if (next_role_ids.indexOf(instructions[next_instruction_id].role_id) == -1) return;
+                if (next_role_ids.indexOf(instructions[next_instruction_id].role_id) !== -1) return;
                 next_role_ids.push(instructions[next_instruction_id].role_id);
             })
             return next_role_ids;
@@ -208,7 +208,7 @@ export default function DataProcessor({ scriptState, setEditorState }) {
                 if (!role.prev_block_id) return;
                 let connected_block = scriptState.blocks[role.prev_block_id];
                 let prev_instruction_id = connected_block.instructions[connected_block.instructions.length - 1];
-                if (prev_instruction_ids.indexOf(instructions[prev_instruction_id].role_id) == -1) return;
+                if (prev_instruction_ids.indexOf(instructions[prev_instruction_id].role_id) !== -1) return;
                 prev_instruction_ids.push(prev_instruction_id);
             })
             return prev_instruction_ids
@@ -225,6 +225,9 @@ export default function DataProcessor({ scriptState, setEditorState }) {
                 instructions[instruction_id] = { ...instructions[instruction_id] };
                 instructions[instruction_id].prev_instruction_ids = [];
                 instructions[instruction_id].next_role_ids = [];
+
+                console.log("count instruction: ", count, block.instructions.length - 1);
+
                 // if instruction is the first
                 if (count === 0) {
                     instructions[instruction_id].prev_instruction_ids =
@@ -237,6 +240,7 @@ export default function DataProcessor({ scriptState, setEditorState }) {
                 }
                 // if instruction is the last
                 if (count === block.instructions.length - 1) {
+                    console.log("last block", block);
                     instructions[instruction_id].next_role_ids =
                         getNextRoleIdsOfLast(block);
 

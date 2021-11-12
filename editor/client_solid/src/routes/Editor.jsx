@@ -44,6 +44,7 @@ window.flatten = flatten;
 
 function Editor(props) {
   const { script_id } = useParams();
+  console.log("YEEHAA EDITOR", script_id);
 
   let r_saveButton;
 
@@ -154,7 +155,7 @@ function Editor(props) {
     console.log("RESULT IS ", result);
     if (!result.success) return;
 
-    console.log({ ...result.roles }, { ...result.instructions });
+    console.log({ ...result.instructions });
 
     let response = await postData(
       `${props.urls.fetch}/api/script/save/${script_id}`,

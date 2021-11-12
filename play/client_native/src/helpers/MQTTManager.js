@@ -21,17 +21,17 @@ function MQTTManager() {
 
         function onConnectionLost(responseObject) {
             if (responseObject.errorCode !== 0) {
-                console.log("onConnectionLost:" + responseObject.errorMessage);
+                // console.log("onConnectionLost:" + responseObject.errorMessage);
             }
         }
 
         function onMessageArrived(message) {
-            console.log("onMessageArrived:", message.topic, message.payloadString);
-            try {
+            // console.log("onMessageArrived:", message.topic, message.payloadString);
+            /* try {
                 console.log(JSON.parse(message.payloadString));
             } catch (err) {
                 console.error("THIS IS NOT JSON ", message.payloadString);
-            }
+            } */
             processMessage({ topic: message.topic, data: message.payloadString })
         }
 
@@ -47,16 +47,16 @@ function MQTTManager() {
 
 
     const processMessage = ({ topic, data }) => {
-        console.log("PROCESS MESSAGE: ", topic, data);
+        // console.log("PROCESS MESSAGE: ", topic, data);
         subscriptions[topic](data)
     }
 
     this.send = (topic, data) => {
-        console.log("SEND MESSAGE: ", topic, data);
+        // console.log("SEND MESSAGE: ", topic, data);
         client.publish(topic, data);
     }
     this.subscribe = (topic, callback) => {
-        console.log(subscriptions, topic, callback);
+        console.log(subscriptions, topic, callback, client);
         client.subscribe(topic);
         subscriptions[topic] = callback;
         console.log(subscriptions);

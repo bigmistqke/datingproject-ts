@@ -13,7 +13,8 @@
     "build:editor": "cd editor/client && npm run build",
     "build:monitor": "cd monitor && npm run build",
     "init": "concurrently \"npm install\"  \"cd mqtt && npm cache clean --force && npm rebuild && npm install\" \"cd play_server && npm cache clean --force && npm rebuild && npm install\" \"cd play && npm cache clean --force && npm rebuild && npm install\" \"cd fetch && npm cache clean --force && npm rebuild && npm install\"  \"cd editor && npm cache clean --force && npm rebuild && npm install\" ",
-    "start": "concurrently \"cd monitor && npm run start\" \"cd card_editor && npm run start\" \"cd mqtt && npm run start\" \"cd play && npm run start\" \"cd fetch && npm run start\"  \"cd editor && npm run start_solid\" "
+    "start": "concurrently \"cd monitor && npm run start\" \"cd card_editor_solid && npm run start\" \"cd mqtt && npm run start\" \"cd play && npm run start\" \"cd fetch && npm run start\"  \"cd editor && npm run start_solid\" ",
+    "start_old": "concurrently \"cd monitor && npm run start\" \"cd card_editor && npm run start\" \"cd mqtt && npm run start\" \"cd play && npm run start\" \"cd fetch && npm run start\"  \"cd editor && npm run start\" "
   },
   "repository": {
     "type": "git",

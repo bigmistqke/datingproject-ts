@@ -4,9 +4,6 @@ import { Dimensions, Button, View, Text, Vibration } from 'react-native';
 import styled from 'styled-components/native';
 import Swipe from "../components/Swipe";
 
-
-import isMobile from "is-mobile";
-
 function Game({ instructions, swipeAction }) {
 
     let screen_dimensions_ref = useRef({
@@ -15,8 +12,8 @@ function Game({ instructions, swipeAction }) {
     }).current;
 
     let card_dimensions_ref = useRef({
-        y: screen_dimensions_ref.y - 0.05 * screen_dimensions_ref.y,
-        x: (screen_dimensions_ref.y - 0.05 * screen_dimensions_ref.y) * 0.5588507940957915
+        y: screen_dimensions_ref.y - 0.1 * screen_dimensions_ref.y,
+        x: (screen_dimensions_ref.y - 0.1 * screen_dimensions_ref.y) * 0.5588507940957915
     }).current;
 
     const [visibleInstructions, setVisibleInstructions] = useState([]);
@@ -27,15 +24,12 @@ function Game({ instructions, swipeAction }) {
 
     const waitYourTurn = useCallback((reason) => {
         if (!reason) {
-            // r_overlay.current.classList.add('hidden')
             return;
         }
         try {
             Vibration.vibrate(200);
         } catch (e) { console.error(e) }
         console.log("REASON WAIT YOUR TURN IS ", reason);
-        // r_overlay.current.children[0].innerHTML = reason;
-        // r_overlay.current.classList.remove('hidden');
     }, [r_overlay]);
 
     const Overlay = styled.View`
@@ -72,6 +66,7 @@ function Game({ instructions, swipeAction }) {
     `;
 
     useEffect(() => {
+        console.log('updated instructions : ', instructions);
         setVisibleInstructions(instructions.slice(0,
             instructions.length > 5 ? 5 : instructions.length
         ).reverse())
@@ -91,16 +86,13 @@ function Game({ instructions, swipeAction }) {
                         let margin = visibleInstructions.length - i - 1;
                         return (
                             <Swipe
+                                key={instruction.instruction_id}
                                 screen_dimensions={screen_dimensions_ref}
                                 card_dimensions={card_dimensions_ref}
-                                key={instruction.instruction_id}
                                 waitYourTurn={waitYourTurn}
                                 onSwipe={() => swipeAction(instruction)}
                                 canSwipe={i === (instructions.length - 1)}
-                                flip={
-                                    !instruction.prev_instruction_ids ||
-                                    instruction.prev_instruction_ids.length == 0
-                                }
+
                                 margin={margin}
                             >
                                 <Card
@@ -114,6 +106,10 @@ function Game({ instructions, swipeAction }) {
                                     timespan={instruction.timespan ? instruction.timespan : 0}
                                     designs={designs}
                                     key={instruction.instruction_id}
+                                    flip={
+                                        !instruction.prev_instruction_ids ||
+                                        instruction.prev_instruction_ids.length == 0
+                                    }
                                 >
                                     {instruction.text}
                                 </Card>

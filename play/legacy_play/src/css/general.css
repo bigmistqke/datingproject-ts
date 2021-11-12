@@ -1,0 +1,573 @@
+@font-face {
+  font-family: "arial_rounded";
+  src: url("acaslon.otf") format("opentype");
+}
+
+@font-face {
+  font-family: "arial_rounded";
+  src: url("acaslon_italic.otf") format("opentype");
+}
+
+@font-face {
+  font-family: "arial_rounded";
+  src: url("arial_rounded.ttf") format("truetype");
+}
+
+:root {
+  --bg-color: #f8eeda;
+  --wait-text: #b779b3;
+  --wait-light: #b779b3;
+  --wait-dark: #49247f;
+  --do-text: #f8eeda;
+  --do-light: #f8eeda;
+  --do-dark: #ff2b00;
+  /*  --say-light: #33b44a;
+    --say-dark: #002f24; */
+  --say-dark: #1eff7f;
+  --say-medium: red;
+  --say-light: #1f5c4e;
+  --say-text: var(--say-dark);
+
+  --txt-color: #0a4297;
+  --b-radius: 5vh;
+  --black: #212124;
+  --ratio: 0.5588507940957915;
+  --map-background: rgb(237, 237, 237);
+  --light-grey: ;
+}
+
+html,
+body {
+  overscroll-behavior-x: none;
+}
+
+.instruction--do .dark {
+  fill: var(--do-dark);
+}
+.instruction--do .light {
+  fill: var(--do-light);
+}
+
+.instruction--do .timer {
+  --do-dark: #f8eeda;
+  --do-light: #ff2b00;
+  color: #ff2b00;
+  background: #f8eeda;
+}
+
+.instruction--do .stopwatch {
+  color: var(--do-dark);
+}
+
+.instruction--say .dark {
+  fill: var(--say-dark);
+}
+
+.instruction--say .medium {
+  fill: var(--say-medium);
+}
+.instruction--say .light {
+  fill: var(--say-light);
+}
+
+.instruction--say .timer {
+  --say-dark: #99ffab;
+  --say-light: #1f5c4e;
+  color: #1f5c4e;
+  background: #99ffab;
+}
+
+.instruction--say .stopwatch {
+  color: var(--say-dark);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  background: #f8f7f4;
+  padding: 0px;
+  margin: 0px;
+  overflow: hidden;
+  font-family: arial_rounded;
+  /* font-style: italic; */
+  /* background: linear-gradient(185deg, var(--bg-color)  25%, var(--txt-color) 100%); */
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+/* .instruction video{} */
+
+.instruction--video .front {
+  pointer-events: all !important;
+}
+
+.instruction .video,
+.instruction .video * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hidden {
+  display: none;
+}
+
+.intro-button {
+  z-index: 5;
+  font-family: arial_rounded;
+  font-size: 5vh;
+  outline: none;
+  border-radius: 10vh;
+  line-height: 5vh;
+  padding-top: 5vh;
+  padding-bottom: 5vh;
+  border: none;
+  padding-left: 5vh;
+  padding-right: 5vh;
+}
+
+.centered {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  position: absolute;
+}
+
+.overlay {
+  position: absolute;
+  top: 25vh;
+  left: 50vw;
+  transform: translate(-50%, -50%);
+  color: rgb(71, 70, 70);
+  box-shadow: 0px 0px 50px rgba(0, 0, 0, 0.096);
+  background: rgb(239, 240, 240);
+  font-family: arial_rounded;
+  border-radius: 50px;
+  padding-left: 37.5px;
+  padding-right: 37.5px;
+  padding-top: 25px;
+  padding-bottom: 25px;
+  line-height: 21pt;
+  font-size: 16pt;
+  z-index: 10;
+  text-align: center;
+}
+
+.overlay span,
+.intro-button span {
+  vertical-align: sub;
+}
+
+#root {
+  position: fixed;
+}
+
+.background {
+  width: 100vw;
+  height: 100%;
+}
+
+.background > div {
+  /* background: url(./clouds.jpg); */
+  background-size: cover;
+  position: absolute;
+  top: -50px;
+  left: -50px;
+  filter: blur(50px);
+  width: calc(100% + 100px);
+  height: calc(100% + 100px);
+  opacity: 0.5;
+}
+
+img {
+  height: 100%;
+  width: 100%;
+}
+
+/* img{
+    width:100vw;
+    height:100%;
+    position:absolute;
+    top:0px;
+    left:0px;
+    filter: invert(1);
+    z-index:0;
+} */
+
+.back {
+  background: var(--wait-dark);
+}
+
+.scriptCards {
+  position: absolute;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  top: 0px;
+  left: 0px;
+  perspective: 800px;
+  perspective-origin: center;
+}
+
+.instruction > .border {
+  border-radius: var(--b-radius);
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+}
+
+.swipe {
+  width: 100%;
+  height: 100%;
+}
+
+.swipe.flip .instruction {
+  transform: rotateY(-180deg) translateY(-50%) translateX(50%);
+}
+
+.instruction {
+  position: absolute;
+  width: calc(90vh * 0.5588507940957915);
+  height: 90vh;
+  top: 50%;
+  left: 50%;
+  transform: rotateY(0deg) translateX(-50%) translateY(-50%);
+  transform-style: preserve-3d;
+  transition: transform 0.375s;
+  transition-timing-function: ease-in-out;
+  overflow-wrap: break-word;
+  background-size: cover;
+  color: var(--bg-color);
+}
+
+svg {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  z-index: 0;
+}
+
+.instruction > div {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform 1s;
+  /* background: url(clouds.jpg); */
+  background-size: cover;
+  border-radius: var(--b-radius);
+  overflow: hidden;
+  box-shadow: 1px 1px 2px rgb(0 0 0 / 3%), 2.5px 2.5px 8px rgb(0 0 0 / 5%),
+    5px 5px 20px rgb(0 0 0 / 4%);
+}
+
+.instruction .front {
+  transform: translate3d(0, 0, 0);
+}
+
+.instruction .back {
+  transform: rotateY(-180deg);
+}
+
+.stopwatch {
+  font-size: 3vh;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 3.75%;
+  font-family: arial_rounded;
+  z-index: 3;
+}
+
+.instruction .text .choice {
+  /* font-family: arial_rounded; */
+  display: block;
+  text-align: right;
+  margin-bottom: 5%;
+  /* font-style:italic; */
+}
+
+.instruction .text .choice div {
+  margin-top: 5%;
+  margin-left: 5%;
+  display: inline-block;
+  text-align: right;
+}
+
+.instruction .text .choice span {
+  padding: 5px;
+  line-height: 3.5vh;
+  background: black;
+}
+
+.instruction--say .front {
+  color: var(--say-text);
+  background: var(--say-dark);
+}
+
+.instruction--say .text .choice span {
+  background: var(--say-dark);
+  color: var(--say-light);
+}
+
+/* .instruction--do .animation {
+    --do-light: red;
+    --do-dark: black;
+} */
+
+.timer {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 0px;
+  z-index: 5;
+}
+
+.instruction--do svg.animation .frame {
+  fill: black !important;
+}
+
+.instruction--do .front {
+  color: var(--do-light);
+  background: var(--do-dark);
+}
+
+.instruction--do .text .choice span {
+  background: var(--do-light);
+  color: var(--do-dark);
+}
+
+.instruction .text span.swipe {
+  font-family: arial_rounded;
+  font-size: 3vh;
+  line-height: 3vh;
+  margin-top: 3vh;
+  display: block;
+  opacity: 0.7;
+  width: 75%;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  /* font-style:italic; */
+}
+
+.instruction .type {
+  position: absolute;
+  top: 5%;
+  font-size: 3.5vh;
+  line-height: 4vh;
+  /* margin-bottom: 2vh;
+    margin-top: -6vh; */
+  opacity: 0.7;
+  font-family: arial_rounded;
+  /* position: absolute; */
+  width: 100%;
+  text-align: center;
+  /* margin-top: 20vh; */
+  color: var(--bg-color);
+  z-index: 2;
+}
+
+.instruction * {
+  pointer-events: none;
+  user-select: none;
+}
+
+.instruction .wait {
+  font-size: 3.5vh;
+  opacity: 0.7;
+  font-family: arial_rounded;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 50%;
+  width: 75%;
+  max-height: 75%;
+  z-index: 3;
+  text-align: center;
+}
+
+.instruction .text {
+  position: absolute;
+  /* transform: translate(-50%, -50%); */
+  /* left: 50%; */
+  /* top: 55%; */
+  left: 10%;
+  top: 12.5%;
+  width: 80%;
+  max-height: 75%;
+  /* margin-top: 2.25vh; */
+  z-index: 3;
+  font-family: arial_rounded;
+  font-size: 3.5vh;
+  line-height: 5vh;
+  letter-spacing: -0.025em;
+  text-align: left;
+}
+
+.hide {
+  display: none;
+}
+
+.log {
+  background: #e7ecf2;
+  height: 30px;
+  border-radius: 15px;
+  padding-left: 15px;
+  padding-right: 15px;
+  margin-bottom: 3.5vh;
+  z-index: 100;
+  line-height: 30px;
+  color: black;
+  font-family: arial;
+  font-style: normal;
+}
+
+.center-bottom {
+  position: absolute;
+  left: 50%;
+  bottom: 0px;
+  transform: translateX(-50%);
+}
+
+.center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.instruction canvas {
+  width: calc(100% - 5vh);
+  height: calc(100% - 5vh);
+}
+
+.next {
+  position: absolute;
+  bottom: 1.25vh;
+  padding: 5pt;
+  padding-left: 20pt;
+  padding-right: 20pt;
+  font-size: 40pt;
+  line-height: 40pt;
+  left: 50vw;
+  transform: translateX(-50%);
+  text-align: 18pt;
+  background: lightgrey;
+  border: 0px;
+  color: white;
+  border-radius: 50px;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.next:hover {
+  color: black;
+}
+
+.the-end {
+  font-size: 20vw;
+}
+
+.swipe {
+  position: absolute;
+}
+
+.Cards {
+  position: absolute;
+  z-index: 2;
+  height: calc(100% - 5vh);
+  margin: 2.5vh;
+  width: calc(100vw - 5vh);
+}
+
+.card {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.card-offset {
+  transition: margin-top 0.5s, margin-left 0.5s;
+}
+
+.timer.start {
+  /* height: 0%; */
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.timer.end {
+  /* height: 100%; */
+  clip-path: polygon(0% 100%, 100% 100%, 100% 100%, 0% 100%);
+}
+
+.fill {
+  width: 100%;
+  height: 100%;
+}
+
+.uiText {
+  font-size: 5vh;
+  font-family: arial_rounded;
+  color: #03034e;
+  background: transparent;
+  border: none;
+  width: 70%;
+  text-align: center;
+}
+
+.uiText:active {
+  outline: none;
+}
+
+.fullWidth {
+  width: 100vw;
+}
+
+.fullHeight {
+  height: 100vh;
+}
+
+/* width = 95vh * 0.5588507940957915 + 5vh */
+
+@media only screen and (max-width: 60.0908254391vh) {
+  .instruction {
+    height: calc((100vw - 5vh) / 0.5588507940957915);
+    width: calc(100vw - 5vh);
+  }
+}
+
+/* @media only screen and (orientation: landscape) {
+    html.isMobile {
+        transform: rotate(90deg);
+        transform-origin: center center;
+        width: 100vw;
+        overflow: hidden;
+        position: absolute;
+        height: 100vw;
+        left: 0;
+    }
+    .isMobile .Cards {
+        height: 95vw;
+        width: calc(100% - 5vh);
+    }
+    .isMobile .instruction {
+        width: calc(95vw * 0.5588507940957915);
+        height: 95vw;
+    }
+    .isMobile .instruction .text {
+        font-size: 5vw;
+        line-height: 4.75vw;
+    }
+} */

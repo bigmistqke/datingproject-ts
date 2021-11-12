@@ -227,8 +227,9 @@ const ScriptManager = function ({
     };
 
     this.removeInstruction = (instruction_id) => {
-      let instructions = scriptState.instructions;
-      delete instructions[instruction_id];
+      console.log("REMOVE INSTRUCTION!!!!");
+      let instructions = { ...scriptState.instructions };
+      instructions[instruction_id] = undefined;
       setScriptState("instructions", instructions);
     };
 
@@ -471,6 +472,10 @@ const ScriptManager = function ({
     };
 
     this.removeInstructionId = ({ block_id, instruction_id, index }) => {
+      console.log(
+        [...scriptState.blocks[block_id].instructions],
+        instruction_id
+      )
       setScriptState("blocks", block_id, "instructions",
         array_remove_element(scriptState.blocks[block_id].instructions, instruction_id)
       );

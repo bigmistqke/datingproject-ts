@@ -12,7 +12,7 @@ export default class Mqtt {
         // return this.connect(`${prefix}://${url}`);
 
         return new Promise((resolve) => {
-            this.client = mqtt.connect(url);
+            this.client = mqtt.connect(`${prefix}://${url}`);
             this.client.on('message', this.receive)
             this.client.on('disconnect', () => {
                 console.log('oops disconnected');
