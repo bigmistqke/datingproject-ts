@@ -16,7 +16,7 @@ const TextStyles = (props) => {
       <HeaderPanel
         label={props.header}
         extra={
-          <Show when={!props.no_modes}>
+          <Show when={!props.hide_modes}>
             <Button onClick={props.toggleMaskedStyling}>
               {props.masked_styling ? "timed" : "default"}
             </Button>

@@ -12,13 +12,10 @@ const CardRenderer = (props) => {
 
     // NO TIMER — NO CHOICE
     if (!props.timed && !props.choice) {
-      console.log(element.type);
       if (
         (element.modes.visible === 1 || element.modes.visible === 0) &&
         (element.modes.timed === 1 || element.modes.timed === 0)
       ) {
-        console.log(element.type + " is visible");
-
         return true;
       } else {
         return false;

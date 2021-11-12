@@ -252,8 +252,6 @@ const LabeledColor = (props) => {
   const onDrop = (e) => {
     e.preventDefault();
 
-    console.log("onDrop");
-
     // props.changeColor(e);
     setLastValue(false);
   };
@@ -274,8 +272,7 @@ const LabeledColor = (props) => {
 
   const revertColor = (e) => {
     e.preventDefault();
-    console.log("revertColor", e);
-    console.log(e.target, swatch_ref, e.target === swatch_ref);
+
     // if (e.target === swatch_ref) return;
     if (isFalse(getLastValue())) return;
     props.onChange(getLastValue());
@@ -320,8 +317,6 @@ const LabeledColorPicker = (props) => {
   };
 
   const onInput = (e) => props.onChange(e.target.value);
-
-  //   createEffect(() => console.log(props.value));
 
   return (
     <>
@@ -376,40 +371,36 @@ const LabeledInput = (props) => {
 };
 
 const HeaderCategory = (props /* { label, data, onChange, children } */) => {
-  const [getVisibility, setVisibility] = createSignal(
+  const [getMode, setMode] = createSignal(
     props.visible ? props.visible : false
   );
 
-  const toggleVisibility = () => setVisibility(!getVisibility());
+  const toggleMode = () => setMode(!getMode());
   return (
     <div style={{ flex: 1 }}>
-      <H2 onClick={toggleVisibility}>{props.label}</H2>
-      <div style={{ display: getVisibility() ? "" : "none" }}>
-        {props.children}
-      </div>
+      <H2 onClick={toggleMode}>{props.label}</H2>
+      <div style={{ display: getMode() ? "" : "none" }}>{props.children}</div>
     </div>
   );
 };
 
 const HeaderPanel = (props) => {
-  const [getVisibility, setVisibility] = createSignal(
+  const [getMode, setMode] = createSignal(
     props.visible || props.always_visible
       ? props.visible || props.always_visible
       : false
   );
 
-  const toggleVisibility = () => setVisibility(!getVisibility());
+  const toggleMode = () => setMode(!getMode());
 
   return (
     <>
-      <H1 onClick={!props.always_visible ? toggleVisibility : null}>
+      <H1 onClick={!props.always_visible ? toggleMode : null}>
         <Title>{props.label}</Title>
         {props.extra}
       </H1>
-      <div style={{ display: getVisibility() ? "" : "none" }}>
-        {props.children}
-      </div>
-      {/* <Show when={getVisibility()}>{props.children}</Show> */}
+      <div style={{ display: getMode() ? "" : "none" }}>{props.children}</div>
+      {/* <Show when={getMode()}>{props.children}</Show> */}
     </>
   );
 };

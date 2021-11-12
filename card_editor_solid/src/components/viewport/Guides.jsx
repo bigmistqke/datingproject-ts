@@ -25,7 +25,6 @@ const Guide = (props) => {
     };
 
     const finish = (e) => {
-      console.log(props.guide.position);
       if (props.guide.position < 0 || props.guide.position > 100) {
         guides.delete(id);
       }
@@ -60,10 +59,6 @@ const Guide = (props) => {
 };
 
 const Guides = (props) => {
-  onMount(() => {
-    console.log({ ...props });
-    console.log("guides are", [...props.guides]);
-  });
   return (
     <div className="guides">
       {/* <For each={props.guides}>

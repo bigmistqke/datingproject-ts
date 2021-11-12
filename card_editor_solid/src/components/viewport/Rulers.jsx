@@ -5,7 +5,7 @@ const Rulers = ({ card_dim, shouldSnap, guides }) => {
     const startCursor = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      ////console.log(direction);
+      ////
 
       let id = uniqid();
 
@@ -25,11 +25,8 @@ const Rulers = ({ card_dim, shouldSnap, guides }) => {
             ? ((e.clientY - card_dim.y) / card_dim.height) * 100
             : ((e.clientX - card_dim.x) / card_dim.width) * 100;
 
-        console.log(shouldSnap);
-
         if (shouldSnap) {
           if (Math.abs(guide.position - 50) < 1) {
-            console.log("snaaaaaaaaap");
             guide.position = 50;
             guide.relativePosition = 50;
           }

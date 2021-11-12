@@ -13,8 +13,6 @@ import {
 import isFalse from "../../helpers/isFalse";
 
 const SVGStyles = (props) => {
-  // createEffect(() => console.log({ ...props.styles }));
-
   return (
     <>
       <HeaderPanel

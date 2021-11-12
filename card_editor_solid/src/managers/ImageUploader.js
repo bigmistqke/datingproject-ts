@@ -39,7 +39,7 @@ export default function ImageUploader({ card_id, fetch_url }) {
     return new Promise((resolve) => {
       const uploader = new Uploader();
       addUploader(element_id, uploader, resolve);
-      console.log("ole!");
+
       uploader.process(
         `${fetch_url}/api/card/uploadImage/${card_id}/${element_id}`,
         { file }

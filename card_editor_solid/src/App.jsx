@@ -19,7 +19,7 @@ import SVGStyling from "./components/panels/SVGStyling";
 import HighlightStyling from "./components/panels/HighlightStyling";
 import BackgroundPanel from "./components/panels/BackgroundPanel";
 
-import Guides from "./components/viewport/Guides";
+// import Guides from "./components/viewport/Guides";
 import Rulers from "./components/viewport/Rulers";
 import Swatches from "./components/panels/Swatches";
 import MaskHandle from "./components/viewport/MaskHandle";
@@ -73,10 +73,10 @@ function App(props) {
     },
   });
 
-  const getDefaultVisibilities = () => [
-    { type: "choice", visible: 1 },
-    { type: "timed", visible: 1 },
-  ];
+  const getDefaultModes = () => ({
+    choice: 1,
+    timed: 1,
+  });
 
   const [state, setState] = createStore({
     pressed_keys: [],
@@ -95,73 +95,27 @@ function App(props) {
         width: 55.88507940957915,
         height: 100,
       },
+      globals: {},
       elements: {},
-      instruction: {
-        ...getDefaultTextState(),
-        highlight_styles: {
-          family: "times",
-          color: 2,
-          background: 0,
-          alignmentHorizontal: "right",
-          marginHorizontal: 5,
-          marginVertical: 5,
-          paddingHorizontal: 5,
-          paddingVertical: 5,
-          alignmentVertical: "flex-start",
-          borderRadius: 0,
-          borderWidth: 0,
-          borderColor: 0,
-          textShadowLeft: 0,
-          textShadowTop: 0,
-          textShadowBox: 0,
-          boxShadowLeft: 0,
-          boxShadowTop: 0,
-          boxShadowBox: 0,
-        },
-      },
-      countdown: {
-        visibilities: [
-          { type: "default", visible: false },
-          { type: "choice", visible: false },
-          { type: "timed", visible: true },
-        ],
-        position: {
-          x: 25,
-          y: 90,
-        },
-        dimensions: {
-          width: 50,
-          height: 10,
-        },
-        styles: {
-          family: "times",
-          size: 10,
-          lineHeight: 12,
-          spacing: 0,
-          color: 0,
-          alignmentHorizontal: "center",
-          alignmentVertical: "center",
-          shadowLeft: 0,
-          shadowTop: 0,
-          shadowBox: 0,
-        },
-      },
-      designs: {},
+      types: {},
     },
     viewport: {
       masked_percentage: 90,
       masked_styling: false,
       selected_element_index: false,
       type_manager: false,
-      card_selected: {
-        type: "do",
+      modes: {
         timed: false,
         choice: false,
       },
+      type: default_types[0],
       prompt: false,
       card_size: {},
     },
   });
+
+  window.state = state;
+  window.setState = setState;
 
   const lorem_ipsum = {
     normal: [
@@ -206,14 +160,9 @@ function App(props) {
 
   //  set card modes
 
-  const setChoice = (bool) => {
-    setState("viewport", "card_selected", "choice", bool);
-    changeInstructionText();
-  };
-
-  const setTimed = (bool) => {
-    setState("viewport", "card_selected", "timed", bool);
-    changeInstructionText();
+  const setModeViewport = (type, bool) => {
+    setState("viewport", "modes", type, bool);
+    if (type === "choice") changeInstructionText();
   };
 
   //   deck
@@ -234,53 +183,63 @@ function App(props) {
   const setBackground = (background) =>
     setState("deck", "background", background);
 
+  const addElementToGlobals = (id, element) =>
+    setState("deck", "globals", id, element);
+
   //   deck: instruction
 
-  const getInstruction = () =>
+  /* const getLocalElement = (id) =>
+    getSelectedType()
+      ? getSelectedType().elements.find((element) => element.id === id)
+      : null; */
+
+  const getLocalInstruction = () =>
     getSelectedType()
       ? getSelectedType().elements.find(
           (element) => element.type === "instruction"
         )
       : null;
 
-  const getInstructionAsArguments = () => {
-    let instruction_index = getSelectedType().elements.findIndex(
-      (element) => element.type === "instruction"
-    );
-    return [...getSelectedTypeAsArguments(), "elements", instruction_index];
+  const getStyles = ({ id, index, highlight }) => {
+    const local_element = getLocalElement({ id, index });
+    if (!local_element) return {};
+    const style_type = highlight ? "highlight_styles" : "styles";
+    return {
+      ...getGlobalElement(local_element.id)[style_type],
+      ...local_element[style_type],
+    };
   };
 
-  const getInstructionStyles = () =>
-    getInstruction()
-      ? {
-          ...state.deck.instruction.styles,
-          ...getInstruction().styles,
-        }
-      : null;
+  const setStyle = ({ index, id, type, value, highlight }) => {
+    const local_element = getLocalElement({ index, id });
+    if (!local_element) return;
 
-  const setStyleInstruction = ({ type, value }) => {
-    if (type === "color") {
-      setState(...getInstructionAsArguments(), "styles", type, value);
+    const style_type = highlight ? "highlight_styles" : "styles";
+
+    if (local_element[style_type][type] + 1) {
+      // set locally
+      setState(
+        ...getLocalElementAsArgs({ index, id }),
+        style_type,
+        type,
+        value
+      );
     } else {
-      setState("deck", "instruction", "styles", type, value);
+      if (!local_element.global) {
+        console.error(
+          "setStyle error: a local element tries to change style-attributes not present",
+          { index, id, type, value }
+        );
+        return;
+      }
+      // set globally
+      setState(...getGlobalElementAsArgs(id), style_type, type, value);
     }
   };
 
-  const translateInstruction = (delta) => {
-    setState("deck", "instruction", "position", (position) => ({
-      x: position.x + (delta.x / getCardSize().width) * 100,
-      y: position.y + (delta.y / getCardSize().height) * 100,
-    }));
-  };
-
-  const resizeInstruction = ({ position, dimensions }) => {
-    setState("deck", "instruction", "position", position);
-    setState("deck", "instruction", "dimensions", dimensions);
-  };
-
   const changeInstructionText = async () => {
-    let type = state.viewport.card_selected.choice ? "choice" : "normal";
-    let current_text = getInstruction().content;
+    let type = state.viewport.modes.choice ? "choice" : "normal";
+    let current_text = getLocalElement({ id: "instruction" }).content;
 
     const getRandomLoremIpsum = () =>
       new Promise((resolve) => {
@@ -298,7 +257,7 @@ function App(props) {
     let random_lorem_ipsum = await getRandomLoremIpsum();
 
     setState(
-      ...getSelectedTypeAsArguments(),
+      ...getSelectedTypeAsArgs(),
       "elements",
       (element) => element.type === "instruction",
       "content",
@@ -306,100 +265,40 @@ function App(props) {
     );
   };
 
-  const getHighlightStyles = () =>
-    getInstruction()
-      ? {
-          ...state.deck.instruction.highlight_styles,
-          ...getInstruction().highlight_styles,
-        }
-      : null;
-
-  const setHighlightStyle = ({ type, value }) => {
-    if (type === "background" || type === "color") {
-      setState(...getInstructionAsArguments(), "highlight_styles", type, value);
-    } else {
-      setState("deck", "instruction", "highlight_styles", type, value);
-    }
-  };
-
-  //   deck: countdown
-
-  const getCountdown = () =>
-    getSelectedType()
-      ? getSelectedType().elements.find(
-          (element) => element && element.type === "countdown"
-        )
-      : null;
-
-  const getCountdownAsArguments = () => {
-    let instruction_index = getSelectedType().elements.findIndex(
-      (element) => element.type === "countdown"
-    );
-    return [...getSelectedTypeAsArguments(), "elements", instruction_index];
-  };
-  const getCountdownStyles = () =>
-    getInstruction()
-      ? {
-          ...state.deck.countdown.styles,
-          ...getCountdown().styles,
-        }
-      : null;
-
-  const getCountdownDimensions = () => state.deck.countdown.dimensions;
-  const getCountdownPosition = () => state.deck.countdown.position;
-
-  const translateCountdown = (delta) => {
-    setState("deck", "countdown", "position", (position) => ({
-      x: position.x + (delta.x / getCardSize().width) * 100,
-      y: position.y + (delta.y / getCardSize().height) * 100,
-    }));
-  };
-  const resizeCountdown = ({ position, dimensions }) => {
-    setState("deck", "countdown", "position", position);
-    setState("deck", "countdown", "dimensions", dimensions);
-  };
-  const setCountdownStyle = ({ type, value }) => {
-    if (type === "color") {
-      setState(...getCountdownAsArguments(), "styles", type, value);
-    } else {
-      setState("deck", "countdown", "styles", type, value);
-    }
-  };
-
   //  deck: type
 
-  const setType = (type) => setState("viewport", "card_selected", "type", type);
+  const setType = (type) => setState("viewport", "type", type);
 
   const isTypeSelected = (type) => {
-    return state.viewport.card_selected.type === type;
+    return state.viewport.type === type;
   };
 
   const getSelectedType = () => {
-    let selected_type = state.deck.designs[state.viewport.card_selected.type];
+    let selected_type = state.deck.types[state.viewport.type];
 
     if (!selected_type) return undefined;
 
     return selected_type;
   };
 
-  const getSelectedTypeAsArguments = createMemo(() => {
-    return ["deck", "designs", state.viewport.card_selected.type];
+  const getSelectedTypeAsArgs = createMemo(() => {
+    return ["deck", "types", state.viewport.type];
   });
 
   //  deck: type: swatches
 
   const getSelectedSwatches = (timed = false) => {
-    let selected_design = getSelectedType();
-    if (!selected_design) return [];
+    let selected_type = getSelectedType();
+    if (!selected_type) return [];
 
-    return selected_design.swatches.map((s) => (timed ? s.timed : s.normal));
+    return selected_type.swatches.map((s) => (timed ? s.timed : s.normal));
   };
 
   const setSwatch = (index, color) => {
     setState(
       "deck",
-      "designs",
-      state.viewport.card_selected.type,
+      "types",
+      state.viewport.type,
       "swatches",
       index,
       !state.viewport.masked_styling ? "normal" : "timed",
@@ -410,10 +309,10 @@ function App(props) {
   const addSwatch = (index, color) => {
     setState(
       "deck",
-      "designs",
-      state.viewport.card_selected.type,
+      "types",
+      state.viewport.type,
       "swatches",
-      state.deck.designs[state.viewport.card_selected.type].swatches.length,
+      state.deck.types[state.viewport.type].swatches.length,
       {
         normal: "#000000",
         timed: "#ffffff",
@@ -427,17 +326,32 @@ function App(props) {
     setState("viewport", "selected_element_index", index);
   };
 
-  const getElement = (index) => getSelectedType().elements[index];
-
-  const getElementAsArguments = (index) => {
-    return [...getSelectedTypeAsArguments(), "elements", index];
+  const getLocalElement = ({ index, id }) => {
+    if (id) {
+      index = getSelectedType().elements.findIndex((e) => e.id === id);
+    }
+    if (index + 1) return getSelectedType().elements[index];
+    return false;
   };
 
-  const getElementsOfSelectedType = (from_where) => {
-    let selected_design = getSelectedType();
-    if (!selected_design) return [];
+  const getLocalElementAsArgs = ({ index, id }) => {
+    if (id) {
+      index = getSelectedType().elements.findIndex((e) => e.id === id);
+    }
+    if (index + 1) return [...getSelectedTypeAsArgs(), "elements", index];
 
-    return selected_design.elements;
+    console.log("getLocalElementAsArgs", index, id);
+    return [];
+  };
+
+  const getGlobalElementAsArgs = (id) => ["deck", "globals", id];
+  const getGlobalElement = (id) => state.deck.globals[id];
+
+  const getElementsOfSelectedType = (from_where) => {
+    let selected_type = getSelectedType();
+    if (!selected_type) return [];
+
+    return selected_type.elements;
   };
 
   const getSelectedElement = createMemo(() => {
@@ -447,9 +361,9 @@ function App(props) {
     ) {
       return false;
     }
-    let selected_design = getSelectedType();
-    if (!selected_design) return false;
-    return selected_design.elements[state.viewport.selected_element_index];
+    let selected_type = getSelectedType();
+    if (!selected_type) return false;
+    return selected_type.elements[state.viewport.selected_element_index];
   });
 
   const selectedElementIsType = (type) =>
@@ -458,27 +372,19 @@ function App(props) {
     getSelectedElement().type.indexOf(type) != -1;
 
   const elementIsVisible = (element) => {
-    // different possible states
-
-    // when choice -> showcase once with choice, else do not
-    // when timer -> showcase if with timer, else do not
-    // if no timer neither choice -> check if default
+    let modes;
+    if (element.global) {
+      modes = state.deck.globals[element.id].modes;
+    } else {
+      modes = element.modes;
+    }
 
     // NO TIMER — NO CHOICE
-    if (
-      !state.viewport.card_selected.timed &&
-      !state.viewport.card_selected.choice
-    ) {
-      console.log(element.type);
+    if (!state.viewport.modes.timed && !state.viewport.modes.choice) {
       if (
-        (element.visibilities.find((v) => v.type === "choice").visible === 1 ||
-          element.visibilities.find((v) => v.type === "choice").visible ===
-            0) &&
-        (element.visibilities.find((v) => v.type === "timed").visible === 1 ||
-          element.visibilities.find((v) => v.type === "timed").visible === 0)
+        (modes.choice === 1 || modes.choice === 0) &&
+        (modes.timed === 1 || modes.timed === 0)
       ) {
-        console.log(element.type + " is visible");
-
         return true;
       } else {
         return false;
@@ -486,45 +392,30 @@ function App(props) {
     }
 
     // YES TIMER — NO CHOICE
-    if (
-      state.viewport.card_selected.timed &&
-      !state.viewport.card_selected.choice
-    ) {
+    if (state.viewport.modes.timed && !state.viewport.modes.choice) {
       if (
-        (element.visibilities.find((v) => v.type === "timed").visible === 1 ||
-          element.visibilities.find((v) => v.type === "timed").visible === 2) &&
-        (element.visibilities.find((v) => v.type === "choice").visible === 1 ||
-          element.visibilities.find((v) => v.type === "choice").visible === 0)
+        (modes.timed === 1 || modes.timed === 2) &&
+        (modes.choice === 1 || modes.choice === 0)
       ) {
         return true;
       }
     }
 
     // NO TIMER — YES CHOICE
-    if (
-      !state.viewport.card_selected.timed &&
-      state.viewport.card_selected.choice
-    ) {
+    if (!state.viewport.modes.timed && state.viewport.modes.choice) {
       if (
-        (element.visibilities.find((v) => v.type === "timed").visible === 1 ||
-          element.visibilities.find((v) => v.type === "timed").visible === 0) &&
-        (element.visibilities.find((v) => v.type === "choice").visible === 1 ||
-          element.visibilities.find((v) => v.type === "choice").visible === 2)
+        (modes.timed === 1 || modes.timed === 0) &&
+        (modes.choice === 1 || modes.choice === 2)
       ) {
         return true;
       }
     }
 
     // YES TIMER — YES CHOICE
-    if (
-      state.viewport.card_selected.timed &&
-      state.viewport.card_selected.choice
-    ) {
+    if (state.viewport.modes.timed && state.viewport.modes.choice) {
       if (
-        (element.visibilities.find((v) => v.type === "timed").visible === 1 ||
-          element.visibilities.find((v) => v.type === "timed").visible === 2) &&
-        (element.visibilities.find((v) => v.type === "choice").visible === 1 ||
-          element.visibilities.find((v) => v.type === "choice").visible === 2)
+        (modes.timed === 1 || modes.timed === 2) &&
+        (modes.choice === 1 || modes.choice === 2)
       ) {
         return true;
       }
@@ -533,23 +424,42 @@ function App(props) {
     return false;
   };
 
+  const resizeElement = ({ index, dimensions, position }) => {
+    const element = getLocalElement({ index });
+    if (element.global) {
+      setState(...getGlobalElementAsArgs(element.id), "position", position);
+      setState(...getGlobalElementAsArgs(element.id), "dimensions", dimensions);
+    } else {
+      setState(...getLocalElementAsArgs({ index }), "position", position);
+      setState(...getLocalElementAsArgs({ index }), "dimensions", dimensions);
+    }
+  };
+
   const translateElement = ({ index, delta }) => {
-    setState(...getElementAsArguments(index), "position", (position) => ({
-      x: position.x + (delta.x / getCardSize().width) * 100,
-      y: position.y + (delta.y / getCardSize().height) * 100,
-    }));
+    const element = getLocalElement({ index });
+    if (element.global) {
+      setState("deck", "globals", element.id, "position", (position) => ({
+        x: position.x + (delta.x / getCardSize().width) * 100,
+        y: position.y + (delta.y / getCardSize().height) * 100,
+      }));
+    } else {
+      setState(...getLocalElementAsArgs({ index }), "position", (position) => ({
+        x: position.x + (delta.x / getCardSize().width) * 100,
+        y: position.y + (delta.y / getCardSize().height) * 100,
+      }));
+    }
   };
 
   const setLockedElement = (index, bool) => {
     if (state.viewport.selected_element_index === index && bool)
       setSelectedElementIndex(false);
     if (!bool) setSelectedElementIndex(index);
-    setState(...getElementAsArguments(index), "locked", bool);
+    setState(...getLocalElementAsArgs({ index }), "locked", bool);
   };
 
   const removeElement = (index) => {
     setState(
-      ...getSelectedTypeAsArguments(),
+      ...getSelectedTypeAsArgs(),
       "elements",
       array_remove(getElementsOfSelectedType(), index)
     );
@@ -557,30 +467,20 @@ function App(props) {
 
   const changeOrderElement = (from_index, to_index) => {
     setState(
-      ...getSelectedTypeAsArguments(),
+      ...getSelectedTypeAsArgs(),
       "elements",
       array_move(getElementsOfSelectedType(), from_index, to_index)
     );
     setSelectedElementIndex(to_index);
   };
 
-  const toggleVisibilityElement = (index, type) => {
+  const toggleModeElement = (index, type) => {
     setState(
-      ...getElementAsArguments(index),
-      "visibilities",
-      (visibility) => visibility.type === type,
-      "visible",
-      (visibility_mode) => (visibility_mode + 1) % 3
+      ...getLocalElementAsArgs({ index }),
+      "modes",
+      type,
+      (mode) => (mode + 1) % 3
     );
-  };
-
-  const resizeElement = ({ index, dimensions, position }) => {
-    setState(...getElementAsArguments(index), "position", position);
-    setState(...getElementAsArguments(index), "dimensions", dimensions);
-  };
-
-  const setStyleElement = ({ index, type, value }) => {
-    setState(...getElementAsArguments(index), "styles", type, value);
   };
 
   const processSVG = async (file) => {
@@ -651,9 +551,11 @@ function App(props) {
 
   // window.setState = setState;
 
-  const setStyleSVG = ({ key, type, value }) => {
+  const setStyleSVG = ({ key, type, value, highlight }) => {
     setState(
-      ...getElementAsArguments(state.viewport.selected_element_index),
+      ...getLocalElementAsArgs({
+        index: state.viewport.selected_element_index,
+      }),
       "styles",
       key,
       type,
@@ -715,22 +617,26 @@ function App(props) {
     reader.onload = async function ({ target }) {
       if (file_is_svg) {
         const { svg, styles } = await processSVG(target);
-
-        setState(...getElementAsArguments(getSelectedType().elements.length), {
-          type: "svg",
-          visibilities: getDefaultVisibilities(),
-          position: {
-            x: 0,
-            y: 0,
-          },
-          dimensions: {
-            width: 100,
-            height: 100,
-          },
-          svg,
-          styles,
-          content: splitted_name.slice(0, splitted_name.length - 1).join("."),
-        });
+        setState(
+          ...getLocalElementAsArgs({
+            index: getSelectedType().elements.length,
+          }),
+          {
+            type: "svg",
+            modes: getDefaultModes(),
+            position: {
+              x: 0,
+              y: 0,
+            },
+            dimensions: {
+              width: 100,
+              height: 100,
+            },
+            svg,
+            styles,
+            content: splitted_name.slice(0, splitted_name.length - 1).join("."),
+          }
+        );
       }
     };
     if (!file_is_svg) reader.readAsDataURL(file);
@@ -793,10 +699,65 @@ function App(props) {
     position: relative;
   `;
 
-  //
-
   const createNewCard = () => {
-    let designs = Object.fromEntries(
+    const instruction = {
+      ...getDefaultTextState(),
+      modes: getDefaultModes(),
+      hide_modes: true,
+      highlight_styles: {
+        family: "times",
+        background: 0,
+        alignmentHorizontal: "right",
+        marginHorizontal: 5,
+        marginVertical: 5,
+        paddingHorizontal: 5,
+        paddingVertical: 5,
+        alignmentVertical: "flex-start",
+        borderRadius: 0,
+        borderWidth: 0,
+        borderColor: 0,
+        textShadowLeft: 0,
+        textShadowTop: 0,
+        textShadowBox: 0,
+        boxShadowLeft: 0,
+        boxShadowTop: 0,
+        boxShadowBox: 0,
+      },
+    };
+
+    addElementToGlobals("instruction", instruction);
+
+    const countdown = {
+      modes: {
+        choice: 1,
+        timed: 2,
+      },
+      hide_modes: true,
+      position: {
+        x: 25,
+        y: 90,
+      },
+      dimensions: {
+        width: 50,
+        height: 10,
+      },
+      styles: {
+        family: "times",
+        size: 10,
+        lineHeight: 12,
+        spacing: 0,
+        color: 0,
+        alignmentHorizontal: "center",
+        alignmentVertical: "center",
+        shadowLeft: 0,
+        shadowTop: 0,
+        shadowBox: 0,
+      },
+    };
+
+    addElementToGlobals("countdown", countdown);
+
+    let types = Object.fromEntries(
       default_types.map((type) => [
         type,
         {
@@ -809,13 +770,15 @@ function App(props) {
             type !== "back"
               ? [
                   {
+                    id: "instruction",
                     type: "instruction",
-                    visibilities: getDefaultVisibilities(),
+                    global: true,
                     styles: {
                       color: 0,
                     },
                     highlight_styles: {
                       background: 1,
+                      color: 2,
                     },
                     content:
                       lorem_ipsum["normal"][
@@ -823,11 +786,9 @@ function App(props) {
                       ],
                   },
                   {
+                    id: "countdown",
                     type: "countdown",
-                    visibilities: [
-                      { type: "choice", visible: 1 },
-                      { type: "timed", visible: 2 },
-                    ],
+                    global: true,
                     styles: {
                       color: 0,
                     },
@@ -838,8 +799,7 @@ function App(props) {
         },
       ])
     );
-
-    setState("deck", "designs", designs);
+    setState("deck", "types", types);
   };
 
   const openPrompt = ({ type, data, position }) =>
@@ -892,7 +852,7 @@ function App(props) {
               always_visible={true}
             >
               <FlexRow>
-                <For each={Object.keys(state.deck.designs)}>
+                <For each={Object.keys(state.deck.types)}>
                   {(type) => (
                     <Span contenteditable style={{ flex: 1 }}>
                       {type}
@@ -923,7 +883,7 @@ function App(props) {
           onDragOver={(e) => e.preventDefault()}
           onDragEnter={(e) => e.preventDefault()}
           onMouseDown={(e) =>
-            e.buttons === 0 ? setSelectedElementIndex(false) : null
+            e.buttons === 1 ? setSelectedElementIndex(false) : null
           }
         >
           <Rulers
@@ -931,7 +891,7 @@ function App(props) {
             guides={state.guides}
             shouldSnap={state.bools.shouldSnap}
           ></Rulers>
-          <Show when={state.viewport.card_selected.timed}>
+          <Show when={state.viewport.modes.timed}>
             <MaskHandle
               percentage={state.viewport.masked_percentage}
               onTranslate={setMaskPercentage}
@@ -954,6 +914,8 @@ function App(props) {
               <CardComposition
                 elements={getElementsOfSelectedType("card")}
                 swatches={getSelectedSwatches()}
+                globals={state.deck.globals}
+                getStyles={getStyles}
                 //
                 card_dimensions={state.deck.card_dimensions}
                 card_size={state.viewport.card_size}
@@ -963,90 +925,43 @@ function App(props) {
                 altPressed={state.bools.isAltPressed}
                 //
                 elementIsVisible={elementIsVisible}
-                //
                 selected_element_index={state.viewport.selected_element_index}
                 selectElement={setSelectedElementIndex}
-                //
-                translateInstruction={translateInstruction}
-                resizeInstruction={resizeInstruction}
-                //
-                translateCountdown={translateCountdown}
-                resizeCountdown={resizeCountdown}
-                //
                 translateElement={translateElement}
                 resizeElement={resizeElement}
-                //
-                instruction_position={state.deck.instruction.position}
-                instruction_dimensions={state.deck.instruction.dimensions}
-                instruction_styles={getInstructionStyles()}
-                highlight_styles={getHighlightStyles()}
-                //
-                countdown_position={getCountdownPosition()}
-                countdown_dimensions={getCountdownDimensions()}
-                countdown_styles={getCountdownStyles()}
                 //
                 openPrompt={openPrompt}
               ></CardComposition>
 
-              <Show when={state.viewport.card_selected.timed}>
+              <Show when={state.viewport.modes.timed}>
                 <CardMask percentage={state.viewport.masked_percentage}>
                   <CardComposition
+                    masked={true}
                     elements={getElementsOfSelectedType("card")}
                     swatches={getSelectedSwatches(true)}
+                    globals={state.deck.globals}
                     //
                     card_dimensions={state.deck.card_dimensions}
                     card_size={state.viewport.card_size}
-                    guides={state.guides}
-                    shouldSnap={state.bools.shouldSnap}
-                    shiftPressed={state.bools.isShiftPressed}
-                    altPressed={state.bools.isAltPressed}
-                    //
                     elementIsVisible={elementIsVisible}
                     //
-                    selected_element_index={
-                      state.viewport.selected_element_index
-                    }
-                    selectElement={setSelectedElementIndex}
-                    //
-                    translateInstruction={translateInstruction}
-                    translateElement={translateElement}
-                    //
-                    resizeInstruction={resizeInstruction}
-                    resizeElement={resizeElement}
-                    //
-                    translateCountdown={translateCountdown}
-                    resizeCountdown={resizeCountdown}
-                    //
-                    translateElement={translateElement}
-                    resizeElement={resizeElement}
-                    //
-                    instruction_position={state.deck.instruction.position}
-                    instruction_dimensions={state.deck.instruction.dimensions}
-                    instruction_styles={getInstructionStyles()}
-                    highlight_styles={getHighlightStyles()}
-                    //
-                    countdown_position={getCountdownPosition()}
-                    countdown_dimensions={getCountdownDimensions()}
-                    countdown_styles={getCountdownStyles()}
-                    //
                     openPrompt={openPrompt}
-                    masked={true}
                   ></CardComposition>
                 </CardMask>
               </Show>
             </div>
-            {!state.bools.areGuidesHidden ? (
+            {/* {!state.bools.areGuidesHidden ? (
               <Guides
                 card_dim={state.deck.card_dimensions}
                 guides={state.guides}
                 shouldSnap={state.bools.shouldSnap}
               ></Guides>
-            ) : null}
+            ) : null} */}
           </CardContainer>
 
           <BottomPanel
             setType={setType}
-            typeInFocus={state.viewport.card_selected.type}
+            typeInFocus={state.viewport.type}
           ></BottomPanel>
         </Viewport>
         <LongPanel className="right_panel">
@@ -1097,7 +1012,7 @@ function App(props) {
                       padding: "0px",
                     }}
                   >
-                    <For each={Object.keys(state.deck.designs)}>
+                    <For each={Object.keys(state.deck.types)}>
                       {(type) => (
                         <Button
                           className={isTypeSelected(type) ? "focus" : ""}
@@ -1110,20 +1025,20 @@ function App(props) {
                     </For>
                   </GridRow>
                 </GridRow>
-                <Show when={state.viewport.card_selected.type !== "back"}>
+                <Show when={state.viewport.type !== "back"}>
                   <GridRow style={{ "margin-bottom": "6px" }}>
                     <LabeledInput
                       label="choice "
                       type="checkbox"
-                      checked={state.viewport.card_selected.choice}
-                      onChange={(checked) => setChoice(checked)}
+                      checked={state.viewport.modes.choice}
+                      onChange={(checked) => setModeViewport("choice", checked)}
                       style={{ padding: "0px" }}
                     ></LabeledInput>
                     <LabeledInput
                       label="timed"
                       type="checkbox"
-                      checked={state.viewport.card_selected.timed}
-                      onChange={(checked) => setTimed(checked)}
+                      checked={state.viewport.modes.timed}
+                      onChange={(checked) => setModeViewport("timed", checked)}
                       style={{ padding: "0px" }}
                     ></LabeledInput>
 
@@ -1142,10 +1057,10 @@ function App(props) {
                 swatches={getSelectedSwatches(state.viewport.masked_styling)}
                 setSwatch={setSwatch}
                 addSwatch={addSwatch}
-                timed={state.viewport.card_selected.timed}
+                timed={state.viewport.modes.timed}
                 masked_styling={state.viewport.masked_styling}
                 toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
-                no_modes={state.viewport.card_selected.type === "back"}
+                hide_modes={state.viewport.type === "back"}
               ></Swatches>
 
               <Show when={selectedElementIsType("svg")}>
@@ -1156,40 +1071,58 @@ function App(props) {
                   setStyleSVG={setStyleSVG}
                   masked_styling={state.viewport.masked_styling}
                   toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
-                  no_modes={state.viewport.card_selected.type === "back"}
+                  hide_modes={state.viewport.type === "back"}
                 ></SVGStyling>
               </Show>
-              <Show when={getSelectedType() && getInstruction()}>
+              <Show
+                when={
+                  getSelectedType() && getLocalElement({ id: "instruction" })
+                }
+              >
                 <TextStyling
                   header="Instruction Styling"
-                  styles={getInstructionStyles()}
+                  styles={getStyles({ id: "instruction" })}
                   swatches={getSelectedSwatches(state.viewport.masked_styling)}
                   onChange={(type, value) =>
-                    setStyleInstruction({ type, value })
+                    setStyle({ id: "instruction", type, value })
                   }
                   masked_styling={state.viewport.masked_styling}
                   toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
                   visible={true}
-                  no_modes={state.viewport.card_selected.type === "back"}
+                  hide_modes={state.viewport.type === "back"}
                 ></TextStyling>
                 <HighlightStyling
-                  styles={getHighlightStyles()}
+                  styles={getStyles({ id: "instruction", highlight: true })}
                   swatches={getSelectedSwatches(state.viewport.masked_styling)}
-                  onChange={(type, value) => setHighlightStyle({ type, value })}
+                  // onChange={(type, value) => setHighlightStyle({ type, value })}
+                  onChange={(type, value) =>
+                    setStyle({
+                      id: "instruction",
+                      type,
+                      value,
+                      highlight: true,
+                    })
+                  }
                   masked_styling={state.viewport.masked_styling}
                   toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
                   visible={true}
-                  no_modes={state.viewport.card_selected.type === "back"}
+                  hide_modes={state.viewport.type === "back"}
                 ></HighlightStyling>
                 <TextStyling
                   header="Countdown Styling"
-                  styles={getCountdownStyles()}
+                  styles={getStyles({ id: "countdown" })}
                   swatches={getSelectedSwatches(state.viewport.masked_styling)}
-                  onChange={(type, value) => setCountdownStyle({ type, value })}
+                  onChange={(type, value) =>
+                    setStyle({
+                      id: "countdown",
+                      type,
+                      value,
+                    })
+                  }
                   masked_styling={state.viewport.masked_styling}
                   toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
                   visible={false}
-                  no_modes={state.viewport.card_selected.type === "back"}
+                  hide_modes={state.viewport.type === "back"}
                 ></TextStyling>
               </Show>
 
@@ -1199,13 +1132,13 @@ function App(props) {
                   styles={getSelectedElement().styles}
                   swatches={getSelectedSwatches(state.viewport.masked_styling)}
                   onChange={(type, value) =>
-                    setStyleElement({
+                    setStyle({
                       index: state.viewport.selected_element_index,
                       type,
                       value,
                     })
                   }
-                  no_modes={state.viewport.card_selected.type === "back"}
+                  hide_modes={state.viewport.type === "back"}
                 ></TextStyling>
               </Show>
 
@@ -1239,11 +1172,11 @@ function App(props) {
                 elementIsVisible={elementIsVisible}
                 removeElement={props.removeElement}
                 setLockedElement={setLockedElement}
-                toggleVisibilityElement={toggleVisibilityElement}
+                toggleModeElement={toggleModeElement}
                 selectElement={setSelectedElementIndex}
                 selected_element_index={state.viewport.selected_element_index}
-                card_selected={state.viewport.card_selected.type}
-                no_modes={state.viewport.card_selected.type === "back"}
+                card_type={state.viewport.type}
+                hide_modes={state.viewport.type === "back"}
               ></HierarchyList>
             </LongPanel>
           </LongPanel>

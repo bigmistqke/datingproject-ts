@@ -12,13 +12,12 @@ import {
 import { onMount, Show } from "solid-js";
 
 const HighlightStyling = (props) => {
-  onMount(() => console.log("HighlightStyling", props.styles));
   return (
     <>
       <HeaderPanel
         label="Highlight Styling"
         extra={
-          <Show when={!props.no_modes}>
+          <Show when={!props.hide_modes}>
             <Button onClick={props.toggleMaskedStyling}>
               {props.masked_styling ? "timed" : "default"}
             </Button>

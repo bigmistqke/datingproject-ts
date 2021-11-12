@@ -8,12 +8,8 @@ const Swatches = (props) => {
   let input;
 
   const onDrop = (e) => {
-    console.log(e);
     let color = parseInt(e.dataTransfer.getData("color"));
-    console.log(color);
   };
-
-  createEffect(() => console.log("props.choice ", props.timed));
 
   let last_time = performance.now();
   const onInput = (e) => {
@@ -35,7 +31,7 @@ const Swatches = (props) => {
         label="Swatches"
         visible={true}
         extra={
-          <Show when={!props.no_modes}>
+          <Show when={!props.hide_modes}>
             <Button onClick={props.toggleMaskedStyling}>
               {props.masked_styling ? "timed" : "default"}
             </Button>

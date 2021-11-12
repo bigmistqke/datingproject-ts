@@ -4,69 +4,32 @@ import { For, Show, createEffect } from "solid-js";
 
 const CardComposition = (props) => {
   const getDimensions = (element) => {
-    switch (element.type) {
-      case "instruction":
-        return props.instruction_dimensions;
-      case "countdown":
-        return props.countdown_dimensions;
-      default:
-        return element.dimensions;
+    if (element.global) {
+      return props.globals[element.id].dimensions;
+    } else {
+      return element.dimensions;
     }
   };
 
   const getPosition = (element) => {
-    switch (element.type) {
-      case "instruction":
-        return props.instruction_position;
-      case "countdown":
-        return props.countdown_position;
-      default:
-        return element.position;
+    if (element.global) {
+      return props.globals[element.id].position;
+    } else {
+      return element.position;
     }
   };
 
   const onTranslate = (index, delta) => {
-    switch (props.elements[index].type) {
-      case "instruction":
-        props.translateInstruction(delta);
-        break;
-      case "countdown":
-        props.translateCountdown(delta);
-        break;
-      default:
-        props.translateElement({ index, delta });
-        break;
-    }
+    props.translateElement({ index, delta });
   };
 
-  const onResize = ({ position, dimensions, index }) => {
-    switch (props.elements[index()].type) {
-      case "instruction":
-        props.resizeInstruction({ position, dimensions });
-        break;
-      case "countdown":
-        props.resizeCountdown({ position, dimensions });
-        break;
-      default:
-        props.resizeElement({
-          index: index(),
-          position,
-          dimensions,
-        });
-        break;
-    }
-  };
-
-  const getStyles = (element) => {
-    switch (element.type) {
-      case "instruction":
-        return props.instruction_styles;
-      case "countdown":
-        return props.countdown_styles;
-      default:
-        return props.styles;
-    }
-  };
+  /*   const onResize = ({ position, dimensions, index }) => {
+    props.resizeElement({
+      index: index(),
+      position,
+      dimensions,
+    });
+  }; */
 
   return (
     <For each={props.elements}>
@@ -74,11 +37,15 @@ const CardComposition = (props) => {
         <Show when={props.elementIsVisible(element)}>
           <CardElement
             element={element}
+            type={element.type}
             position={getPosition(element)}
             locked={element.locked}
             dimensions={getDimensions(element)}
-            styles={getStyles(element)}
-            highlight_styles={props.highlight_styles}
+            styles={props.getStyles(element)}
+            highlight_styles={props.getStyles({
+              index: index(),
+              highlight: true,
+            })}
             card_dimensions={props.card_dimensions}
             card_size={props.card_size}
             guides={props.guides}
@@ -94,7 +61,7 @@ const CardComposition = (props) => {
             }}
             // onPointerUp={}
             onResize={({ position, dimensions }) => {
-              onResize({ index, position, dimensions });
+              props.resizeElement({ index: index(), position, dimensions });
             }}
             openPrompt={props.openPrompt}
             removeElement={() => props.removeElement(index())}
@@ -103,6 +70,7 @@ const CardComposition = (props) => {
             <Show when={index() === props.selected_element_index}>
               <ResizeHandles
                 locked={element.locked}
+                keep_ratio={element.type === "svg"}
                 element={element}
                 position={getPosition(element)}
                 dimensions={getDimensions(element)}
@@ -113,7 +81,7 @@ const CardComposition = (props) => {
                 card_size={props.card_size}
                 // onResize={onResize({ index: index(), position, dimension })}
                 onResize={({ position, dimensions }) =>
-                  onResize({ index, position, dimensions })
+                  props.resizeElement({ index: index(), position, dimensions })
                 }
               ></ResizeHandles>
             </Show>

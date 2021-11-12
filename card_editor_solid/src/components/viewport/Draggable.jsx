@@ -47,10 +47,6 @@ export default function Draggable(props) {
     &.locked * {
       pointer-events: none !important;
     }
-    /* background: red; */
-    /* & > * {
-      pointer-events: none;
-    } */
   `;
 
   return (

@@ -43,29 +43,72 @@ const ResizeHandles = (props) => {
       background: rgba(200, 200, 200, 0.25);
     }
   `;
-
   const resize = ({ top, bottom, left, right }) => {
     let position = { ...props.position };
     let dimensions = { ...props.dimensions };
 
-    if (top) {
-      top = (top / props.card_size.height) * 100;
-      position.y = props.position.y + top;
-      dimensions.height = props.dimensions.height - top;
-    }
-    if (bottom) {
-      bottom = (bottom / props.card_size.height) * 100;
-      dimensions.height = props.dimensions.height + bottom;
-    }
-    if (left) {
-      left = (left / props.card_size.width) * 100;
-      position.x = props.position.x + left;
-      dimensions.width = props.dimensions.width - left;
-    }
-    if (right) {
-      right = (right / props.card_size.width) * 100;
+    // TODO:  must be a more conscise way of writing this but i m lazy
 
-      dimensions.width = props.dimensions.width + right;
+    if (!props.keep_ratio) {
+      if (top) {
+        top = (top / props.card_size.height) * 100;
+        position.y = props.position.y + top;
+        dimensions.height = props.dimensions.height - top;
+      }
+      if (bottom) {
+        bottom = (bottom / props.card_size.height) * 100;
+        dimensions.height = props.dimensions.height + bottom;
+      }
+      if (left) {
+        left = (left / props.card_size.width) * 100;
+        position.x = props.position.x + left;
+        dimensions.width = props.dimensions.width - left;
+      }
+      if (right) {
+        right = (right / props.card_size.width) * 100;
+        dimensions.width = props.dimensions.width + right;
+      }
+    } else {
+      const ratio = dimensions.width / dimensions.height;
+      const old_width = dimensions.width;
+      const old_height = dimensions.height;
+
+      if (top) {
+        top = (top / props.card_size.height) * 100;
+        position.y = props.position.y + top;
+        dimensions.height = props.dimensions.height - top;
+        dimensions.width = dimensions.height * ratio;
+        if (right) {
+        } else if (left) {
+          position.x = props.position.x + (old_width - dimensions.width);
+        } else {
+          position.y = props.position.y + (old_height - dimensions.height) / 2;
+          position.x = props.position.x + (old_width - dimensions.width) / 2;
+        }
+      } else if (bottom) {
+        bottom = (bottom / props.card_size.height) * 100;
+        dimensions.height = props.dimensions.height + bottom;
+        dimensions.width = dimensions.height * ratio;
+
+        if (left) {
+          position.x = props.position.x + (old_width - dimensions.width);
+        } else if (!right) {
+          position.y = props.position.y + (old_height - dimensions.height) / 2;
+          position.x = props.position.x + (old_width - dimensions.width) / 2;
+        }
+      } else if (left) {
+        left = (left / props.card_size.width) * 100;
+        dimensions.width = props.dimensions.width - left;
+        dimensions.height = dimensions.width / ratio;
+        position.x = props.position.x + left / 2;
+        position.y = props.position.y + (old_height - dimensions.height) / 2;
+      } else if (right) {
+        right = (right / props.card_size.width) * 100;
+        dimensions.width = props.dimensions.width + right;
+        dimensions.height = dimensions.width / ratio;
+        position.x = props.position.x - right / 2;
+        position.y = props.position.y + (old_height - dimensions.height) / 2;
+      }
     }
 
     props.onResize({ position, dimensions });

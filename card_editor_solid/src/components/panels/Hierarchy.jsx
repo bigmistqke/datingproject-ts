@@ -4,7 +4,7 @@ import {
   FlexRow,
   Button,
 } from "./UI_Components";
-import { Show, createSignal, createEffect } from "solid-js";
+import { Show, onMount } from "solid-js";
 import { styled } from "solid-styled-components";
 
 const HierarchyElement = (props) => {
@@ -33,17 +33,19 @@ const HierarchyElement = (props) => {
     color: var(--medium);
   `;
 
-  const toggleVisibility = (index, type) => {
-    console.log(index, type);
+  const toggleMode = (index, type) => {
     props.toggleVisiblity(index, JSON.parse(JSON.stringify(type)));
   };
 
-  const visibility_colors = ["var(--red)", "var(--yellow)", "var(--green)"];
+  const mode_colors = ["var(--red)", "var(--yellow)", "var(--green)"];
 
   const getColor = (index) => {
-    console.log("getColor", index, visibility_colors[index]);
-    return visibility_colors[index];
+    return mode_colors[index];
   };
+
+  onMount(() =>
+    console.log("HierarchyElement", props.element, props.element.modes)
+  );
 
   return (
     <>
@@ -81,13 +83,7 @@ const HierarchyElement = (props) => {
             </Button>
           </Show>
         </FlexRow>
-        <Show
-          when={
-            props.card_type !== "back" &&
-            props.element.type !== "instruction" &&
-            props.element.type !== "countdown"
-          }
-        >
+        <Show when={props.element.modes}>
           <FlexRow
             style={{
               height: "15px",
@@ -95,22 +91,22 @@ const HierarchyElement = (props) => {
               "justify-content": "end",
             }}
           >
-            <Show when={!props.no_modes}>
-              <For each={props.element.visibilities}>
-                {(visibility) => (
-                  <Button
-                    style={{
-                      background: getColor(visibility.visible),
-                    }}
-                    onMouseDown={(e) => {
-                      toggleVisibility(props.index, visibility.type);
-                    }}
-                  >
-                    {visibility.type}
-                  </Button>
-                )}
-              </For>
-            </Show>
+            {/* <Show when={!props.hide_modes}> */}
+            <For each={Object.entries(props.element.modes)}>
+              {([mode, visible]) => (
+                <Button
+                  style={{
+                    background: getColor(visible),
+                  }}
+                  onMouseDown={(e) => {
+                    toggleMode(props.index, mode);
+                  }}
+                >
+                  {mode}
+                </Button>
+              )}
+            </For>
+            {/* </Show> */}
           </FlexRow>
         </Show>
 
@@ -123,7 +119,6 @@ const HierarchyElement = (props) => {
 const HierarchyList = (props) => {
   const onDrop = (e) => {
     let from = parseInt(e.dataTransfer.getData("index"));
-    console.log("drop hiearachy list", from, 0);
 
     if (!from && from !== 0) return;
     props.changeOrderElement(from, 0);
@@ -156,12 +151,12 @@ const HierarchyList = (props) => {
                 setLocked={() =>
                   props.setLockedElement(index(), !element.locked)
                 }
-                toggleVisiblity={props.toggleVisibilityElement}
+                toggleVisiblity={props.toggleModeElement}
                 select={() => props.selectElement(index())}
                 element={element}
                 selected={props.selected_element_index === index()}
-                card_type={props.card_selected.type}
-                no_modes={props.no_modes}
+                card_type={props.type}
+                hide_modes={props.hide_modes}
               ></HierarchyElement>
             )}
           </For>

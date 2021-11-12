@@ -75,7 +75,7 @@ const LayOut = (props) => {
               : (((i + 1) / 2) * 100) / (v_amount / 2 + 1) - v_padding,
           key: uniqid(),
         };
-        console.log(guide.position);
+
         _guides.push(guide);
       }
     }

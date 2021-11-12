@@ -57,7 +57,6 @@ function Prompt(props) {
 
   const getStyle = createMemo(() => {
     let style = {};
-    // console.log("props.style is ", props.style);
     if (props.style) {
       style = props.style;
     }
@@ -78,13 +77,11 @@ function Prompt(props) {
         };
       }
     }
-    console.log("getStyle", style, props.position);
+
     return style;
   }, [props.position]);
 
-  onMount(() => {
-    console.log(props.type, props, PromptTypes[props.type](props));
-  });
+  onMount(() => {});
 
   return (
     <FullScreen className="prompt_container" onMouseDown={closePrompt}>
