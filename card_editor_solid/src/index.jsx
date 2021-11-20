@@ -1,5 +1,6 @@
 import { render } from "solid-js/web";
 import { Router, Routes, Route } from "solid-app-router";
+import { Provider } from "./Store";
 
 import "./index.css";
 import App from "./App";
@@ -20,11 +21,13 @@ const urls = {
 
 render(
   () => (
-    <Router>
-      <Routes>
-        <Route path="/:card_id" element={<App urls={urls} />} />
-      </Routes>
-    </Router>
+    <Provider>
+      <Router>
+        <Routes>
+          <Route path="/:card_id" element={<App urls={urls} />} />
+        </Routes>
+      </Router>
+    </Provider>
   ),
   document.getElementById("root")
 );

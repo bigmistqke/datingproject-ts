@@ -1,8 +1,13 @@
 import ResizeHandles from "../viewport/ResizeHandles";
 import CardElement from "./CardElement";
+import CardMask from "./CardMask";
 import { For, Show, createEffect } from "solid-js";
 
+import { useStore } from "../../Store";
+
 const CardComposition = (props) => {
+  const [state, { resizeElement }] = useStore();
+
   const getDimensions = (element) => {
     if (element.global) {
       return props.globals[element.id].dimensions;
@@ -19,27 +24,34 @@ const CardComposition = (props) => {
     }
   };
 
-  const onTranslate = (index, delta) => {
-    props.translateElement({ index, delta });
+  const isElementVisible = (element) => {
+    let modes;
+    if (element.global) {
+      modes = props.deck.globals[element.id].modes;
+    } else {
+      modes = element.modes;
+    }
+
+    for (let [mode_type, activated] of Object.entries(props.modes)) {
+      if (modes[mode_type] !== 1 && modes[mode_type] !== (activated ? 2 : 0)) {
+        return false;
+      }
+    }
+    return true;
   };
 
-  /*   const onResize = ({ position, dimensions, index }) => {
-    props.resizeElement({
-      index: index(),
-      position,
-      dimensions,
-    });
-  }; */
+  createEffect(() => console.log("ELEMENTS", props.elements));
 
   return (
     <For each={props.elements}>
       {(element, index) => (
-        <Show when={props.elementIsVisible(element)}>
+        <Show when={isElementVisible(element)}>
           <CardElement
+            index={index()}
             element={element}
             type={element.type}
-            position={getPosition(element)}
             locked={element.locked}
+            position={getPosition(element)}
             dimensions={getDimensions(element)}
             styles={props.getStyles(element)}
             highlight_styles={props.getStyles({
@@ -48,41 +60,22 @@ const CardComposition = (props) => {
             })}
             card_dimensions={props.card_dimensions}
             card_size={props.card_size}
-            guides={props.guides}
-            shouldSnap={props.shouldSnap}
-            shiftPressed={props.isShiftPressed}
-            altPressed={props.isAltPressed}
-            zIndex={index}
             swatches={props.swatches}
             timed={props.timed}
-            onTranslate={(delta) => onTranslate(index(), delta)}
-            onPointerDown={() => {
-              props.selectElement(index());
-            }}
-            // onPointerUp={}
-            onResize={({ position, dimensions }) => {
-              props.resizeElement({ index: index(), position, dimensions });
-            }}
-            openPrompt={props.openPrompt}
-            removeElement={() => props.removeElement(index())}
             masked={props.masked}
           >
             <Show when={index() === props.selected_element_index}>
               <ResizeHandles
                 locked={element.locked}
-                keep_ratio={element.type === "svg"}
                 element={element}
                 position={getPosition(element)}
                 dimensions={getDimensions(element)}
-                guides={props.guides}
-                card_dim={props.deck.card_dimensions}
-                shiftPressed={props.isShiftPressed}
-                altPressed={props.isAltPressed}
                 card_size={props.card_size}
-                // onResize={onResize({ index: index(), position, dimension })}
                 onResize={({ position, dimensions }) =>
-                  props.resizeElement({ index: index(), position, dimensions })
+                  resizeElement({ index: index(), position, dimensions })
                 }
+                archiveStateChanges={props.archiveStateChanges}
+                keep_ratio={element.type === "svg"}
               ></ResizeHandles>
             </Show>
           </CardElement>
@@ -92,4 +85,17 @@ const CardComposition = (props) => {
   );
 };
 
-export default CardComposition;
+const CardCompositor = (props) => {
+  return (
+    <>
+      <CardComposition {...props}></CardComposition>
+      <Show when={props.timed}>
+        <CardMask percentage={props.masked_percentage}>
+          <CardComposition masked={true} {...props}></CardComposition>
+        </CardMask>
+      </Show>
+    </>
+  );
+};
+
+export default CardCompositor;

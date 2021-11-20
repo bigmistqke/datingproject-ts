@@ -1,63 +1,63 @@
-import { createSignal, createEffect } from "solid-js";
-import { HeaderPanel, FlexRow, Button } from "./UI_Components";
-import Color from "./Color";
+import { createSignal, createEffect, Index, onMount } from "solid-js";
+import {
+  HeaderPanel,
+  FlexRow,
+  Button,
+  Color,
+  ColorPicker,
+} from "./UI_Components";
+// import Color from "./Color";
+
+import { useStore } from "../../Store";
+
+// swatches={getSelectedSwatches()}
+// swatches={getSelectedSwatches(state.viewport.masked_styling)}
+/*  setSwatch={setSwatch}
+                addSwatch={addSwatch}
+                timed={state.viewport.modes.timed}
+                masked_styling={state.viewport.masked_styling}
+                toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
+                hide_modes={state.viewport.type === "back"} */
+// archiveStateChanges={archiveStateChanges}
 
 const Swatches = (props) => {
-  const [getSelected, setSelected] = createSignal(false);
-
-  let input;
-
+  const [
+    state,
+    { getSelectedSwatches, setSwatch, addSwatch, toggleMaskedStyling },
+  ] = useStore();
   const onDrop = (e) => {
     let color = parseInt(e.dataTransfer.getData("color"));
   };
 
-  let last_time = performance.now();
-  const onInput = (e) => {
-    if (performance.now() - last_time < 1000 / 30) return;
-    last_time = performance.now();
-    props.setSwatch(getSelected(), e.target.value);
-  };
-
   return (
     <>
-      <input
-        ref={input}
-        type="color"
-        value={props.swatches[getSelected()]}
-        style={{ display: "none" }}
-        onInput={onInput}
-      ></input>
       <HeaderPanel
         label="Swatches"
         visible={true}
         extra={
-          <Show when={!props.hide_modes}>
-            <Button onClick={props.toggleMaskedStyling}>
+          <Show when={state.viewport.type !== "back"}>
+            <Button onClick={toggleMaskedStyling}>
               {props.masked_styling ? "timed" : "default"}
             </Button>
           </Show>
         }
       >
         <FlexRow onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
-          <For each={props.swatches}>
+          <Index each={getSelectedSwatches()}>
             {(color, index) => (
-              <Color
+              <ColorPicker
                 onClick={() => {
-                  setSelected(index());
-                  input.click();
+                  setSelected(index);
+                  // input.click();
                 }}
+                onInput={(value) => setSwatch(index, value)}
+                value={color()}
                 draggable={true}
-                onDragStart={(e) =>
-                  e.dataTransfer.setData("swatch_index", index())
-                }
-                onDragOver={(e) => e.preventDefault()}
-                style={{
-                  background: color,
-                }}
-              ></Color>
+                index={index}
+              ></ColorPicker>
             )}
-          </For>
-          <Button onClick={props.addSwatch}>add</Button>
+          </Index>
+          <Button onClick={addSwatch}>add</Button>
         </FlexRow>
       </HeaderPanel>
     </>

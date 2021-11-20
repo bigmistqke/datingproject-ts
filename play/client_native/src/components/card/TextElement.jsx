@@ -1,19 +1,22 @@
-import { Show, For, createMemo, Switch, Match, onMount } from "solid-js";
+// import { Show, For, createMemo, Switch, Match, onMount } from "solid-js";
 
-const TextElement = (props) => {
+import {Show, For} from '../solid-like-components';
+import {useMemo} from 'react';
+
+const TextElement = props => {
   const getTextAlignFromAlignment = () => {
     switch (props.styles.alignmentHorizontal) {
-      case "flex-start":
-        return "left";
-      case "center":
-        return "center";
-      case "flex-end":
-        return "right";
+      case 'flex-start':
+        return 'left';
+      case 'center':
+        return 'center';
+      case 'flex-end':
+        return 'right';
     }
   };
 
-  /*   const getFormattedContent = createMemo(() => {
-    let formatted_text = [{ type: "normal", content: props.content }];
+  const getFormattedContent = useMemoN(() => {
+    let formatted_text = [{type: 'normal', content: props.content}];
     // regex
     const regex_for_brackets = /[\["](.*?)[\]"][.!?\\-]?/g;
     let matches = String(props.content).match(regex_for_brackets);
@@ -23,13 +26,13 @@ const TextElement = (props) => {
     for (let i = matches.length - 1; i >= 0; i--) {
       let split = formatted_text.shift().content.split(`${matches[i]}`);
 
-      let multi_choice = matches[i].replace("[", "").replace("]", "");
-      let choices = multi_choice.split("/");
+      let multi_choice = matches[i].replace('[', '').replace(']', '');
+      let choices = multi_choice.split('/');
 
       formatted_text = [
-        { type: "normal", content: split[0] },
-        { type: "choice", content: choices },
-        { type: "normal", content: split[1] },
+        {type: 'normal', content: split[0]},
+        {type: 'choice', content: choices},
+        {type: 'normal', content: split[1]},
         ...formatted_text,
       ];
     }
@@ -37,7 +40,7 @@ const TextElement = (props) => {
     // return _formattedText;
 
     return formatted_text;
-  }); */
+  });
 
   const convert = (value, horizontal = false) =>
     !horizontal
@@ -47,27 +50,27 @@ const TextElement = (props) => {
   const getStyle = () => {
     return !props.styles
       ? {
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          "flex-direction": "column",
-          "pointer-events": "all",
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          'flex-direction': 'column',
+          'pointer-events': 'all',
         }
       : {
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          "flex-direction": "column",
-          "pointer-events": "all",
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          'flex-direction': 'column',
+          'pointer-events': 'all',
           // zIndex: props.zIndex,
-          "justify-content": props.styles.alignmentVertical,
-          "align-items": props.styles.alignmentHorizontal,
-          "font-size": convert(props.styles.size) + "pt",
-          "font-family": props.styles.family,
-          "letter-spacing": convert(props.styles.spacing, true),
-          "line-height": `${convert(props.styles.lineHeight)}pt`,
+          'justify-content': props.styles.alignmentVertical,
+          'align-items': props.styles.alignmentHorizontal,
+          'font-size': convert(props.styles.size) + 'pt',
+          'font-family': props.styles.family,
+          'letter-spacing': convert(props.styles.spacing, true),
+          'line-height': `${convert(props.styles.lineHeight)}pt`,
           color: props.swatches[props.styles.color],
-          "text-shadow":
+          'text-shadow':
             props.styles.shadowLeft ||
             props.styles.shadowLeft ||
             props.styles.shadowBlur
@@ -80,7 +83,7 @@ const TextElement = (props) => {
                 }px ${
                   props.styles.shadowColor
                     ? props.swatches[props.styles.shadowColor]
-                    : "black"
+                    : 'black'
                 }`
               : null,
         };
@@ -89,31 +92,31 @@ const TextElement = (props) => {
   const getHighlightStyles = createMemo(() => {
     return props.highlight_styles
       ? {
-          "font-family": props.highlight_styles.family,
+          'font-family': props.highlight_styles.family,
           color: props.swatches[props.highlight_styles.color],
           background: props.swatches[props.highlight_styles.background],
-          display: "inline-block",
-          "box-sizing": "border-box",
-          "padding-left":
-            convert(props.highlight_styles.paddingHorizontal) + "px",
-          "padding-right":
-            convert(props.highlight_styles.paddingHorizontal) + "px",
-          "padding-top": convert(props.highlight_styles.paddingVertical) + "px",
-          "padding-bottom":
-            convert(props.highlight_styles.paddingVertical) + "px",
+          display: 'inline-block',
+          'box-sizing': 'border-box',
+          'padding-left':
+            convert(props.highlight_styles.paddingHorizontal) + 'px',
+          'padding-right':
+            convert(props.highlight_styles.paddingHorizontal) + 'px',
+          'padding-top': convert(props.highlight_styles.paddingVertical) + 'px',
+          'padding-bottom':
+            convert(props.highlight_styles.paddingVertical) + 'px',
 
-          "margin-left":
-            convert(props.highlight_styles.marginHorizontal) + "px",
-          "margin-right":
-            convert(props.highlight_styles.marginHorizontal) + "px",
-          "margin-top": convert(props.highlight_styles.marginVertical) + "px",
-          "margin-bottom":
-            convert(props.highlight_styles.marginVertical) + "px",
-          "border-radius": convert(props.highlight_styles.borderRadius) + "px",
-          "border-width": props.highlight_styles.borderWidth + "px",
-          "border-color": props.swatches[props.highlight_styles.borderColor],
-          "border-style": "solid",
-          "box-shadow":
+          'margin-left':
+            convert(props.highlight_styles.marginHorizontal) + 'px',
+          'margin-right':
+            convert(props.highlight_styles.marginHorizontal) + 'px',
+          'margin-top': convert(props.highlight_styles.marginVertical) + 'px',
+          'margin-bottom':
+            convert(props.highlight_styles.marginVertical) + 'px',
+          'border-radius': convert(props.highlight_styles.borderRadius) + 'px',
+          'border-width': props.highlight_styles.borderWidth + 'px',
+          'border-color': props.swatches[props.highlight_styles.borderColor],
+          'border-style': 'solid',
+          'box-shadow':
             props.highlight_styles &&
             (props.highlight_styles.boxShadowLeft ||
               props.highlight_styles.boxShadowLeft ||
@@ -133,10 +136,10 @@ const TextElement = (props) => {
                 }px ${
                   props.highlight_styles.boxShadowColor
                     ? props.swatches[props.highlight_styles.boxShadowColor]
-                    : "black"
+                    : 'black'
                 }`
               : null,
-          "text-shadow":
+          'text-shadow':
             props.highlight_styles &&
             (props.highlight_styles.textShadowLeft ||
               props.highlight_styles.textShadowLeft ||
@@ -156,7 +159,7 @@ const TextElement = (props) => {
                 }px ${
                   props.highlight_styles.textShadowColor
                     ? props.swatches[props.highlight_styles.textShadowColor]
-                    : "black"
+                    : 'black'
                 }`
               : null,
         }
@@ -165,41 +168,38 @@ const TextElement = (props) => {
   return (
     <>
       <div className="text-container" style={getStyle()}>
-        <For each={props.formatted_text}>
-          {(instruction) => (
-            <Switch>
-              <Match when={instruction.type === "normal"}>
+        <For each={getFormattedContent()}>
+          {instruction => (
+            <>
+              <Show when={instruction.type === 'normal'}>
                 <span
                   style={{
-                    "text-align": getTextAlignFromAlignment(),
-                  }}
-                >
+                    'text-align': getTextAlignFromAlignment(),
+                  }}>
                   {instruction.content}
                 </span>
-              </Match>
-              <Match when={instruction.type === "choice"}>
+              </Show>
+              <Show when={instruction.type === 'choice'}>
                 <div
                   style={{
-                    "text-align": props.highlight_styles.alignmentHorizontal,
-                    width: "100%",
-                  }}
-                >
+                    'text-align': props.highlight_styles.alignmentHorizontal,
+                    width: '100%',
+                  }}>
                   <For each={instruction.content}>
-                    {(choice) => (
+                    {choice => (
                       <div style={getHighlightStyles()}>
                         <span
                           style={{
-                            flex: "none",
-                          }}
-                        >
+                            flex: 'none',
+                          }}>
                           {choice}
                         </span>
                       </div>
                     )}
                   </For>
                 </div>
-              </Match>
-            </Switch>
+              </Show>
+            </>
           )}
         </For>
       </div>

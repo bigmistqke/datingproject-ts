@@ -3,12 +3,13 @@ import { styled } from "solid-styled-components";
 import Draggable from "./Draggable";
 import { createSignal, createEffect } from "solid-js";
 
-const MaskHandle = (props) => {
-  const [setFocus, getFocus] = createSignal("true");
+import { useStore } from "../../Store";
 
+const MaskHandle = (props) => {
+  const [state, { setMaskPercentage }] = useStore();
   const onTranslate = (delta) => {
     let percentage_delta = (delta.y / (window.innerHeight * 0.9)) * 100;
-    props.onTranslate(props.percentage + percentage_delta);
+    setMaskPercentage(props.percentage + percentage_delta);
   };
 
   const Line = styled("div")`
@@ -31,7 +32,7 @@ const MaskHandle = (props) => {
         transform: "translateY(-50%)",
         "pointer-events": "all !important",
         top: `${
-          (props.percentage / 100) * 0.9 * window.innerHeight +
+          (state.viewport.masked_percentage / 100) * 0.9 * window.innerHeight +
           0.05 * window.innerHeight
         }px`,
       }}

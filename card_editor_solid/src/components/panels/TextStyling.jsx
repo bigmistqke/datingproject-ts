@@ -53,7 +53,7 @@ const TextStyles = (props) => {
                 label="Color"
                 type="color"
                 swatches={props.swatches}
-                value={props.styles.color}
+                value={props.styles.color ? props.styles.color : 0}
                 onChange={(value) => props.onChange("color", value)}
               ></LabeledColor>
             </HeaderCategory>

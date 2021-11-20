@@ -1,38 +1,41 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Card from "../components/Card";
+import Card from "../components/Card";
+import CardComposition from "../components/card/CardComposition";
+
 import { Dimensions, Button, View, Text, Vibration } from 'react-native';
 import styled from 'styled-components/native';
 import Swipe from "../components/Swipe";
 
-function Game({ instructions, swipeAction }) {
+function Game({ deck, instructions, swipeAction }) {
 
-    let screen_dimensions_ref = useRef({
-        x: Dimensions.get('window').width,
-        y: Dimensions.get('window').height
-    }).current;
+  let screen_dimensions_ref = useRef({
+    x: Dimensions.get('window').width,
+    y: Dimensions.get('window').height
+  }).current;
 
-    let card_dimensions_ref = useRef({
-        y: screen_dimensions_ref.y - 0.1 * screen_dimensions_ref.y,
-        x: (screen_dimensions_ref.y - 0.1 * screen_dimensions_ref.y) * 0.5588507940957915
-    }).current;
+  let card_dimensions_ref = useRef({
+    y: screen_dimensions_ref.y - 0.1 * screen_dimensions_ref.y,
+    x: (screen_dimensions_ref.y - 0.1 * screen_dimensions_ref.y) * 0.5588507940957915
+  }).current;
 
-    const [visibleInstructions, setVisibleInstructions] = useState([]);
+  const [visibleInstructions, setVisibleInstructions] = useState([]);
 
-    let [designs, setDesigns] = useState({});
+  let [designs, setDesigns] = useState({});
 
-    let r_overlay = useRef();
+  let r_overlay = useRef();
 
-    const waitYourTurn = useCallback((reason) => {
-        if (!reason) {
-            return;
-        }
-        try {
-            Vibration.vibrate(200);
-        } catch (e) { console.error(e) }
-        console.log("REASON WAIT YOUR TURN IS ", reason);
-    }, [r_overlay]);
+  const waitYourTurn = useCallback((reason) => {
+    if (!reason) {
+      return;
+    }
+    try {
+      Vibration.vibrate(200);
+    } catch (e) { console.error(e) }
+    console.log("REASON WAIT YOUR TURN IS ", reason);
+  }, [r_overlay]);
 
-    const Overlay = styled.View`
+  const Overlay = styled.View`
         position: absolute;
         top: 25%;
         left: 50%;
@@ -55,7 +58,7 @@ function Game({ instructions, swipeAction }) {
         }
     `;
 
-    const End = styled.Text`
+  const End = styled.Text`
         font-size: 5px;
         font-family: arial_rounded;
         color: #03034e;
@@ -65,70 +68,70 @@ function Game({ instructions, swipeAction }) {
         text-align: center;
     `;
 
-    useEffect(() => {
-        console.log('updated instructions : ', instructions);
-        setVisibleInstructions(instructions.slice(0,
-            instructions.length > 5 ? 5 : instructions.length
-        ).reverse())
-        // setVisibleInstructions(instructions);
-    }, [instructions])
+  useEffect(() => {
+    console.log('updated instructions : ', instructions);
+    setVisibleInstructions(instructions.slice(0,
+      instructions.length > 5 ? 5 : instructions.length
+    ).reverse())
+    // setVisibleInstructions(instructions);
+  }, [instructions])
 
 
-    const Game = () => <>
-        {/* <Overlay ref={r_overlay} onClick={hideOverlay} className='overlay hidden'>
+  const Game = () => <>
+    {/* <Overlay ref={r_overlay} onClick={hideOverlay} className='overlay hidden'>
             <Text>Wait Your Turn</Text>
         </Overlay> */}
-        <View className="Cards">
-            {
-                visibleInstructions.map(
-                    (instruction, i) => {
-                        let zIndex = instructions.length - i;
-                        let margin = visibleInstructions.length - i - 1;
-                        return (
-                            <Swipe
-                                key={instruction.instruction_id}
-                                screen_dimensions={screen_dimensions_ref}
-                                card_dimensions={card_dimensions_ref}
-                                waitYourTurn={waitYourTurn}
-                                onSwipe={() => swipeAction(instruction)}
-                                canSwipe={i === (instructions.length - 1)}
+    <View className="Cards">
+      {
+        visibleInstructions.map(
+          (instruction, i) => {
+            let zIndex = instructions.length - i;
+            let margin = visibleInstructions.length - i - 1;
+            return (
+              <Swipe
+                key={instruction.instruction_id}
+                screen_dimensions={screen_dimensions_ref}
+                card_dimensions={card_dimensions_ref}
+                waitYourTurn={waitYourTurn}
+                onSwipe={() => swipeAction(instruction)}
+                canSwipe={i === (instructions.length - 1)}
 
-                                margin={margin}
-                            >
-                                <Card
-                                    card_dimensions={card_dimensions_ref}
-                                    alarm={instruction.sound ? playAlarm : false}
-                                    offset={i}
-                                    zIndex={zIndex}
-                                    instruction_id={instruction.instruction_id}
-                                    text={instruction.text}
-                                    type={instruction.type}
-                                    timespan={instruction.timespan ? instruction.timespan : 0}
-                                    designs={designs}
-                                    key={instruction.instruction_id}
-                                    flip={
-                                        !instruction.prev_instruction_ids ||
-                                        instruction.prev_instruction_ids.length == 0
-                                    }
-                                >
-                                    {instruction.text}
-                                </Card>
-                            </Swipe>
+                margin={margin}
+              >
+                <CardComposition
+                  card_dimensions={card_dimensions_ref}
+                  // alarm={instruction.sound ? playAlarm : false}
+                  offset={i}
+                  zIndex={zIndex}
+                  instruction_id={instruction.instruction_id}
+                  text={instruction.text}
+                  type={instruction.type}
+                  timespan={instruction.timespan ? instruction.timespan : 0}
+                  designs={deck[instruciton.type].designs}
+                  key={instruction.instruction_id}
+                  flip={
+                    !instruction.prev_instruction_ids ||
+                    instruction.prev_instruction_ids.length == 0
+                  }
+                >
+                  {instruction.text}
+                </CardComposition>
+              </Swipe>
 
 
-                        )
-                    }
-                )
-            }
-            {
-                instructions.length < 2 ?
-                    <End className='centered uiText'>The End</End> :
-                    null
-            }
-        </View>
-    </>
+            )
+          }
+        )
+      }
+      {
+        instructions.length < 2 ?
+          <End className='centered uiText'>The End</End> :
+          null
+      }
+    </View>
+  </>
 
-    return Game()
+  return Game()
 }
 
 export default Game

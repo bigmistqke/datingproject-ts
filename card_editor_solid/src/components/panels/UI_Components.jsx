@@ -1,10 +1,39 @@
-import Color from "./Color";
+// import Color from "./Color";
 
 import { createSignal, createEffect, createMemo, onMount } from "solid-js";
+import { useStore } from "../../Store";
 
 import { styled } from "solid-styled-components";
 import isColor from "../../helpers/isColor";
 import isFalse from "../../helpers/isFalse";
+
+const Color = styled("div")`
+  width: 16px;
+  height: 16px;
+  border: 1px solid grey;
+  border-radius: 3px;
+  &.small {
+    width: 12px;
+    height: 12px;
+  }
+`;
+
+const LongPanel = styled("div")`
+  bottom: 0px;
+  right: 0px;
+  background: white;
+  text-align: left;
+  z-index: 5;
+  text-align: left;
+  font-size: 8pt;
+  overflow: hidden;
+  flex-direction: column;
+  border-left: 3px solid white;
+  display: flex;
+  & * {
+    font-size: 8pt;
+  }
+`;
 
 const Row = styled("div")`
   display: flex;
@@ -244,6 +273,23 @@ const LabeledSelect = (
   );
 };
 
+const LabeledCheckbox = (props) => {
+  return (
+    <>
+      <LabeledColor
+        className="small"
+        label="choice"
+        value={props.checked ? "var(--green)" : "var(--red)"}
+        onClick={props.onClick}
+        style={{
+          "padding-top": "0px",
+          "padding-bottom": "0px",
+        }}
+      ></LabeledColor>
+    </>
+  );
+};
+
 const LabeledColor = (props) => {
   let swatch_ref;
 
@@ -251,8 +297,6 @@ const LabeledColor = (props) => {
 
   const onDrop = (e) => {
     e.preventDefault();
-
-    // props.changeColor(e);
     setLastValue(false);
   };
 
@@ -270,22 +314,19 @@ const LabeledColor = (props) => {
     props.onChange(swatch_index);
   };
 
-  const revertColor = (e) => {
-    e.preventDefault();
-
-    // if (e.target === swatch_ref) return;
-    if (isFalse(getLastValue())) return;
-    props.onChange(getLastValue());
-  };
+  const revertColor = (e) => props.onChange(getLastValue());
 
   const getColor = createMemo(() => {
     if (props.value === "none" || isFalse(props.value)) return "#FFFFFF";
-    if (isColor(props.value)) return props.value;
-    return props.swatches[props.value];
+    if (typeof props.value === "number") {
+      return props.swatches[props.value];
+    } else {
+      return props.value;
+    }
   });
 
   return (
-    <FlexRow>
+    <FlexRow style={{ ...props.style }}>
       <Label className="main">{props.label} </Label>
       <Color
         ref={swatch_ref}
@@ -297,26 +338,37 @@ const LabeledColor = (props) => {
         onDragOver={onDragOver}
         onDragLeave={revertColor}
         onDrop={onDrop}
+        onClick={props.onClick}
         onMouseDown={props.onMouseDown ? props.onMouseDown : null}
+        className={props.className}
       ></Color>
     </FlexRow>
   );
 };
 
-const LabeledColorPicker = (props) => {
+const ColorPicker = (props) => {
+  const [state, { archiveStateChanges }] = useStore();
   let input;
 
-  const onDrop = (e) => {
-    e.stopPropagation();
+  let old_value;
+  let last_time = performance.now();
 
-    let swatch_index = parseInt(e.dataTransfer.getData("swatch_index"));
-
-    if (props.swatches[swatch_index] === props.value) return;
-
-    props.onChange(props.swatches[swatch_index]);
+  const onInput = (e) => {
+    if (performance.now() - last_time < 1000 / 30) return;
+    last_time = performance.now();
+    props.onInput(e.target.value);
   };
 
-  const onInput = (e) => props.onChange(e.target.value);
+  const onFocus = (e) => {
+    old_value = JSON.parse(JSON.stringify(props.value));
+  };
+
+  const onChange = (e) => {
+    let result = props.onInput(e.target.value);
+    if (old_value !== result.new_value) {
+      archiveStateChanges([{ ...result, old_value }]);
+    }
+  };
 
   return (
     <>
@@ -326,15 +378,31 @@ const LabeledColorPicker = (props) => {
         value={props.value}
         style={{ display: "none" }}
         onInput={onInput}
+        onChange={onChange}
+        onClick={onFocus}
       ></input>
+      <Color
+        style={{ background: props.value }}
+        onDragStart={(e) => e.dataTransfer.setData("swatch_index", props.index)}
+        draggable={props.draggable}
+        onClick={() => {
+          input.click();
+          props.onClick();
+        }}
+      ></Color>
+    </>
+  );
+};
+
+const LabeledColorPicker = (props) => {
+  return (
+    <>
       <FlexRow>
         <Label className="main">{props.label} </Label>
-        <Color
-          style={{ background: props.value }}
-          onDragOver={onDrop}
-          onDrop={onDrop}
-          onMouseDown={() => input.click()}
-        ></Color>
+        <ColorPicker
+          value={props.value}
+          onChange={props.onChange}
+        ></ColorPicker>
       </FlexRow>
     </>
   );
@@ -415,21 +483,25 @@ const HeaderContainer = (props) => {
 };
 
 export {
-  LabeledInput,
+  Color,
+  Label,
+  Button,
+  Span,
+  ColorPicker,
+  Overlay,
+  FullScreen,
+  FlexRow,
+  FlexColumn,
+  GridRow,
+  RowContainer,
+  ColumnContainer,
   HeaderCategory,
   HeaderPanel,
   HeaderContainer,
+  LabeledCheckbox,
+  LabeledInput,
   LabeledSelect,
   LabeledColor,
   LabeledColorPicker,
-  RowContainer,
-  ColumnContainer,
-  FlexRow,
-  FlexColumn,
-  Label,
-  Button,
-  GridRow,
-  FullScreen,
-  Overlay,
-  Span,
+  LongPanel,
 };

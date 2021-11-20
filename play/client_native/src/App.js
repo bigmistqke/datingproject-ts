@@ -8,12 +8,13 @@ import MQTTManager from './helpers/MQTTManager';
 import { array_remove_element } from "./helpers/Pure.js"
 import MMKVStorage from "react-native-mmkv-storage";
 
-// const fetch_url = "fetch.datingproject.net";
-const fetch_url = "https://fetch.datingproject.net/test";
-// const fetch_url = "http://10.100.15.24:8080";
-// const fetch_url = "localhost:8079";
-// const fetch_url = "http://10.100.30.163:8079";
-const socket_url = "socket.datingproject.net";
+import urls from "./urls"
+// const urls.fetch = "fetch.datingproject.net";
+// const urls.fetch = "https://fetch.datingproject.net/test";
+// const urls.fetch = "http://10.100.15.24:8080";
+// const urls.fetch = "localhost:8079";
+// const urls.fetch = "http://10.100.30.163:8079";
+// const urls.socket = "socket.datingproject.net";
 
 const MMKV = new MMKVStorage.Loader().initialize();
 
@@ -54,7 +55,7 @@ function App() {
     for (let video of videos) {
       promises.push(new Promise((resolve, reject) => {
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', `${fetch_url}${video.text}`, true);
+        xhr.open('GET', `${urls.fetch}${video.text}`, true);
         xhr.responseType = 'blob';
         xhr.onload = function () {
           if (this.status === 200) {
@@ -89,8 +90,8 @@ function App() {
     console.info("join_room")
     let result;
     try {
-      console.log('url : ', `${fetch_url}/api/room/join/${game_id_ref.current}`);
-      result = await fetch(`${fetch_url}/api/room/join/${game_id_ref.current}`);
+      console.log('url : ', `${urls.fetch}/api/room/join/${game_id_ref.current}`);
+      result = await fetch(`${urls.fetch}/api/room/join/${game_id_ref.current}`);
 
       if (!result) {
         return { success: false, error: 'could not fetch instructions: double check the url' };
@@ -107,7 +108,7 @@ function App() {
   const initSocket = useCallback(async () => {
     console.log('initSocket', socket);
     console.log(room_id_ref.current, role_id_ref.current);
-    await socket.connect({ url: socket_url, port: 443 });
+    await socket.connect({ url: urls.socket, port: 443 });
     // set up ping-pong for measuring wifi-strength
     // TODO: revisit pingpong
     socket.subscribe(`/${room_id_ref.current}/${role_id_ref.current}/ping`, (message, topic) => {
@@ -298,12 +299,36 @@ function App() {
     return true;
   }
 
+  const fetchDeck = async (card_id) => {
+    try {
+      let result = await fetch(`${urls.fetch}/api/card/get/${card_id}`);
+      let deck = await result.json();
+      console.log("fetchDeck", deck);
+      if (!deck) return false;
+      setState("deck", deck);
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
   const initGame = async (game_id) => {
     game_id_ref.current = game_id;
     await MMKV.setStringAsync("game_id", game_id);
 
 
     setLoadingMessage("initializing connection");
+
+
+    let deck = await fetchDeck("oldie_2");
+
+    if (!deck) {
+      console.error("fetch deck did not succeed : ");
+    };
+
+    setDeck(deck);
+
 
     let result = await joinRoom();
 

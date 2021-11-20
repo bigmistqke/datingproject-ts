@@ -1,11 +1,13 @@
-import { createSignal, createEffect } from "solid-js";
 import { styled } from "solid-styled-components";
-// import "./Block.css";
-// import "./DragBox.css";
+
+import ArchiveHelper from "../helpers/ArchiveHelper.js";
+import { useStore } from "../../Store";
 
 import cursorEventHandler from "../../helpers/cursorEventHandler";
 
 export default function Draggable(props) {
+  const [state, { archiveStateChanges }] = useStore();
+
   let div_ref;
 
   const initTranslation = async function (e) {
@@ -22,7 +24,13 @@ export default function Draggable(props) {
     let last_position = { x: e.clientX, y: e.clientY };
     let offset;
 
-    await cursorEventHandler((e) => {
+    let archive_helper = new ArchiveHelper();
+
+    if (props.onTranslate) {
+      archive_helper.init(props.onTranslate({ x: 0, y: 0 }));
+    }
+
+    let finished = await cursorEventHandler((e) => {
       if (performance.now() - lastTick < 1000 / 60) return;
       lastTick = performance.now();
       offset = {
@@ -37,6 +45,17 @@ export default function Draggable(props) {
         y: e.clientY,
       };
     });
+
+    if (props.onTranslate) {
+      offset = {
+        x: (last_position.x - finished.clientX) * -1,
+        y: (last_position.y - finished.clientY) * -1,
+      };
+      let archived_state = archive_helper.update(props.onTranslate(offset));
+      if (archiveStateChanges && archive_helper.state_has_changed) {
+        archiveStateChanges(archived_state);
+      }
+    }
     if (props.onPointerUp) props.onPointerUp(e);
   };
 

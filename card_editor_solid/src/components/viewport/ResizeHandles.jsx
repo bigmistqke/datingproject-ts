@@ -111,7 +111,7 @@ const ResizeHandles = (props) => {
       }
     }
 
-    props.onResize({ position, dimensions });
+    return props.onResize({ position, dimensions });
   };
 
   return (
@@ -120,43 +120,51 @@ const ResizeHandles = (props) => {
         style={{ ...vertical, ...top, cursor: "ns-resize" }}
         onTranslate={(delta) => resize({ top: delta.y })}
         locked={props.locked}
+        archiveStateChanges={props.archiveStateChanges}
       ></Draggable>
       <Draggable
         style={{ ...vertical, ...bottom, cursor: "ns-resize" }}
         onTranslate={(delta) => resize({ bottom: delta.y })}
         locked={props.locked}
+        archiveStateChanges={props.archiveStateChanges}
       ></Draggable>
 
       <Draggable
         style={{ ...horizontal, ...left, cursor: "w-resize" }}
         onTranslate={(delta) => resize({ left: delta.x })}
         locked={props.locked}
+        archiveStateChanges={props.archiveStateChanges}
       ></Draggable>
       <Draggable
         style={{ ...horizontal, ...right, cursor: "w-resize" }}
         onTranslate={(delta) => resize({ right: delta.x })}
         locked={props.locked}
+        archiveStateChanges={props.archiveStateChanges}
       ></Draggable>
 
       <Draggable
         style={{ ...corner, ...top, ...left, cursor: "nw-resize" }}
         onTranslate={(delta) => resize({ top: delta.y, left: delta.x })}
         locked={props.locked}
+        archiveStateChanges={props.archiveStateChanges}
       ></Draggable>
       <Draggable
         style={{ ...corner, ...top, ...right, cursor: "ne-resize" }}
         onTranslate={(delta) => resize({ top: delta.y, right: delta.x })}
         locked={props.locked}
+        archiveStateChanges={props.archiveStateChanges}
       ></Draggable>
       <Draggable
         style={{ ...corner, ...bottom, ...left, cursor: "sw-resize" }}
         onTranslate={(delta) => resize({ bottom: delta.y, left: delta.x })}
         locked={props.locked}
+        archiveStateChanges={props.archiveStateChanges}
       ></Draggable>
       <Draggable
         style={{ ...corner, ...bottom, ...right, cursor: "se-resize" }}
         onTranslate={(delta) => resize({ bottom: delta.y, right: delta.x })}
         locked={props.locked}
+        archiveStateChanges={props.archiveStateChanges}
       ></Draggable>
     </ResizeHandleContainer>
   );

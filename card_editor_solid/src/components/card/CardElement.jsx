@@ -1,16 +1,29 @@
 import Draggable from "../viewport/Draggable";
-import { onMount, createEffect, createMemo } from "solid-js";
+import { Show } from "solid-js";
 import { styled } from "solid-styled-components";
 
 import SVGElement from "./SVGElement";
 import TextElement from "./TextElement";
 
+import { useStore } from "../../Store";
+
 const CardElement = (props) => {
+  const [
+    state,
+    {
+      openPrompt,
+      translateElement,
+      resizeElement,
+      removeElement,
+      archiveStateChanges,
+      setSelectedElementIndex,
+    },
+  ] = useStore();
   const openContext = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const result = await props.openPrompt({
+    const result = await openPrompt({
       type: "options",
       position: { x: e.clientX, y: e.clientY },
       data: {
@@ -22,28 +35,44 @@ const CardElement = (props) => {
 
     switch (result) {
       case "delete":
-        props.removeElement();
+        removeElement();
         break;
       case "fill":
-        props.onResize({
-          dimensions: { width: 100, height: 100 },
-          position: { x: 0, y: 0 },
-        });
+        archiveStateChanges(
+          resizeElement({
+            index: props.index,
+            dimensions: { width: 100, height: 100 },
+            position: { x: 0, y: 0 },
+          })
+        );
         break;
       case "fill horizontally":
-        props.onResize({
-          dimensions: { width: 100, height: props.dimensions.height },
-          position: { x: 0, y: props.position.y },
-        });
+        archiveStateChanges(
+          resizeElement({
+            index: props.index,
+            dimensions: { width: 100, height: props.dimensions.height },
+            position: { x: 0, y: props.position.y },
+          })
+        );
         break;
       case "fill vertically":
-        props.onResize({
-          dimensions: { width: props.dimensions.width, height: 100 },
-          position: { x: props.position.x, y: 0 },
-        });
+        archiveStateChanges(
+          resizeElement({
+            index: props.index,
+            dimensions: { width: props.dimensions.width, height: 100 },
+            position: { x: props.position.x, y: 0 },
+          })
+        );
         break;
     }
   };
+  const onPointerDown = (e) => {
+    if (e.button === 0) setSelectedElementIndex(props.index);
+    e.stopPropagation();
+  };
+
+  const onTranslate = (delta) =>
+    translateElement({ index: props.index, delta });
 
   const Element = styled("div")`
     pointer-events: none;
@@ -51,9 +80,6 @@ const CardElement = (props) => {
       pointer-events: all;
     }
   `;
-
-  createEffect(() => console.log(props.position));
-
   return (
     <Draggable
       position={{ ...props.position }}
@@ -66,43 +92,31 @@ const CardElement = (props) => {
           : null
       }
       locked={props.locked}
-      onPointerDown={(e) => {
-        if (e.button === 0) props.onPointerDown(e);
-        e.stopPropagation();
-      }}
-      // onPointerUp={props.onPointerUp}
-      onPointerUp={(e) => {
-        if (e.button === 0) props.onPointerDown(e);
-        e.stopPropagation();
-      }}
-      onTranslate={props.onTranslate}
+      onPointerDown={onPointerDown}
+      onTranslate={onTranslate}
       onContextMenu={openContext}
     >
       <Element>
         {props.children}
-        <Switch>
-          <Match
-            when={props.type === "countdown" || props.type === "instruction"}
-          >
-            <TextElement
-              styles={props.styles}
-              highlight_styles={props.highlight_styles}
-              card_size={props.card_size}
-              swatches={props.swatches}
-              content={props.element.content}
-            ></TextElement>
-          </Match>
-          <Match when={props.type === "svg"}>
-            <SVGElement
-              masked={props.masked}
-              element={props.element}
-              svg={props.element.svg}
-              styles={props.element.styles}
-              swatches={props.swatches}
-              masked={props.masked}
-            ></SVGElement>
-          </Match>
-        </Switch>
+        <Show when={props.type === "countdown" || props.type === "instruction"}>
+          <TextElement
+            styles={props.styles}
+            highlight_styles={props.highlight_styles}
+            card_size={props.card_size}
+            swatches={props.swatches}
+            content={props.fomatted_text}
+          ></TextElement>
+        </Show>
+        <Show when={props.type === "svg"}>
+          <SVGElement
+            masked={props.masked}
+            element={props.element}
+            svg={props.element.svg}
+            styles={props.element.styles}
+            swatches={props.swatches}
+            masked={props.masked}
+          ></SVGElement>
+        </Show>
       </Element>
     </Draggable>
   );
