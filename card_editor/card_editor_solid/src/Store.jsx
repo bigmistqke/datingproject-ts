@@ -1,13 +1,15 @@
-import { createStore } from "solid-js/store";
+import { createStore, produce } from "solid-js/store";
 import { createContext, useContext } from "solid-js";
 import { array_move, array_remove } from "./helpers/Pure";
 import uniqid from "uniqid";
-import check from "./helpers/check";
+// import check from "./helpers/check";
 const default_types = ["do", "say", "back"];
 
 const StoreContext = createContext();
 
 export function Provider(props) {
+  const check = (bool) => !(!bool && bool !== 0);
+
   const [state, setState] = createStore({
     card_id: null,
     pressed_keys: [],
@@ -20,7 +22,7 @@ export function Provider(props) {
       areGuidesHidden: false,
     },
     guides: [],
-    deck: {
+    design: {
       background: "#efefef",
       border_radius: "5",
       card_dimensions: {
@@ -32,7 +34,7 @@ export function Provider(props) {
       types: {},
     },
     viewport: {
-      masked_percentage: 90,
+      timer_percentage: 90,
       masked_styling: false,
       selected_element_index: false,
       type_manager: false,
@@ -42,7 +44,10 @@ export function Provider(props) {
       },
       type: default_types[0],
       prompt: false,
-      card_size: {},
+      card_size: {
+        width: null,
+        height: null,
+      },
     },
   });
 
@@ -131,22 +136,27 @@ export function Provider(props) {
   const setCardId = (card_id) => setState("card_id", card_id);
 
   //    viewport
+
   const toggleMaskedStyling = (e) => {
     e.stopPropagation();
     setState("viewport", "masked_styling", (bool) => !bool);
   };
 
-  const setMaskPercentage = (percentage) => {
-    setState("viewport", "masked_percentage", percentage);
+  const setTimerPercentage = (percentage) => {
+    setState("viewport", "timer_percentage", percentage);
   };
 
-  const toggleTypeManager = async () =>
+  const getTimerPercentage = (percentage) => state.viewport.timer_percentage;
+
+  const toggleTypeManager = () =>
     setState("viewport", "type_manager", (bool) => !bool);
 
   const toggleModeViewport = (type) => {
     setState("viewport", "modes", type, (bool) => !bool);
     if (type === "choice") changeInstructionText();
   };
+
+  // const getTimer = () => state.viewport.timer;
 
   // instruction:   an instruction constructed from the modes
   //                which is used as an input for the card-renderer
@@ -157,32 +167,41 @@ export function Provider(props) {
     };
   };
 
-  //   deck
+  //   design
 
-  //   deck: general
+  //   design: general
 
-  const updateCardSize = () => setState("viewport", "card_size", getCardSize());
+  const getCardSize = () => state.viewport.card_size;
 
-  const getCardSize = () => ({
+  const convert = (value, horizontal = false) => {
+    return !horizontal
+      ? (parseFloat(value) * getCardSize().height) / 400
+      : parseFloat(value) * getCardSize().width;
+  };
+
+  const updateCardSize = () =>
+    setState("viewport", "card_size", calculateCardSize());
+
+  const calculateCardSize = () => ({
     height: window.innerHeight * 0.9,
     width:
-      (window.innerHeight * 0.9 * state.deck.card_dimensions.width) /
-      state.deck.card_dimensions.height,
+      (window.innerHeight * 0.9 * state.design.card_dimensions.width) /
+      state.design.card_dimensions.height,
   });
 
   const setCardDimension = (dimension, value) => {
     archiveStateChanges([
-      setStateArchive("deck", "card_dimensions", dimension, value),
+      setStateArchive("design", "card_dimensions", dimension, value),
     ]);
   };
 
   const setBackground = (background) =>
-    setState("deck", "background", background);
+    setState("design", "background", background);
 
   const addElementToGlobals = (id, element) =>
-    setState("deck", "globals", id, element);
+    setState("design", "globals", id, element);
 
-  //  deck: type
+  //  design: type
 
   const setType = (type) => setState("viewport", "type", type);
 
@@ -190,15 +209,19 @@ export function Provider(props) {
     return state.viewport.type === type;
   };
 
+  const getType = (type) => {
+    return state.design.types[type];
+  };
+
   const getSelectedType = () => {
-    let selected_type = state.deck.types[state.viewport.type];
+    let selected_type = state.design.types[state.viewport.type];
     if (!selected_type) return undefined;
     return selected_type;
   };
 
-  const getSelectedTypeAsArgs = () => ["deck", "types", state.viewport.type];
+  const getSelectedTypeAsArgs = () => ["design", "types", state.viewport.type];
 
-  //  deck: type: swatches
+  //  design: type: swatches
 
   const getSelectedSwatches = (timed = false) => {
     let selected_type = getSelectedType();
@@ -209,7 +232,7 @@ export function Provider(props) {
 
   const setSwatch = (index, color) =>
     setStateArchive(
-      "deck",
+      "design",
       "types",
       state.viewport.type,
       "swatches",
@@ -220,11 +243,11 @@ export function Provider(props) {
 
   const addSwatch = (index, color) => {
     setState(
-      "deck",
+      "design",
       "types",
       state.viewport.type,
       "swatches",
-      state.deck.types[state.viewport.type].swatches.length,
+      state.design.types[state.viewport.type].swatches.length,
       {
         normal: "#000000",
         timed: "#ffffff",
@@ -232,16 +255,26 @@ export function Provider(props) {
     );
   };
 
-  //      deck: type: elements
+  //      design: type: elements
 
   const setSelectedElementIndex = (index) => {
     setState("viewport", "selected_element_index", index);
   };
 
-  const getLocalElement = ({ index, id }) => {
-    if (id) index = getSelectedType().elements.findIndex((e) => e.id === id);
-    if (check(index)) return getSelectedType().elements[index];
-    return false;
+  //
+
+  const getLocalElement = ({ index, id, type }) => {
+    if (!type) {
+      type = getSelectedType();
+    } else {
+      type = getType(type);
+    }
+    if (!type) return false;
+    if (id) {
+      return type.elements.find((e) => e.id === id);
+    } else {
+      return type.elements[index];
+    }
   };
 
   const getLocalElementAsArgs = ({ index, id }) => {
@@ -250,8 +283,8 @@ export function Provider(props) {
     return [];
   };
 
-  const getGlobalElement = (id) => state.deck.globals[id];
-  const getGlobalElementAsArgs = (id) => ["deck", "globals", id];
+  const getGlobalElement = (id) => state.design.globals[id];
+  const getGlobalElementAsArgs = (id) => ["design", "globals", id];
 
   const getLocalElements = (from_where) => {
     let selected_type = getSelectedType();
@@ -273,6 +306,20 @@ export function Provider(props) {
       getSelectedElement().type.indexOf(type) != -1
     );
   };
+
+  /*   const changeOrderElement = (from_index, to_index) => {
+    setState(
+      produce((_state) => {
+        let elements = _state.design.types[_state.viewport.type].elements;
+        _state.design.types[_state.viewport.type].elements = array_move(
+          elements,
+          from_index,
+          to_index
+        );
+      })
+    );
+    setSelectedElementIndex(to_index);
+  }; */
 
   const changeOrderElement = (from_index, to_index) => {
     setState(
@@ -309,12 +356,10 @@ export function Provider(props) {
     let args;
     let old_value, new_value;
     if (element.global) {
-      args = ["deck", "globals", element.id, "position"];
+      args = ["design", "globals", element.id, "position"];
     } else {
       args = [...getLocalElementAsArgs({ index }), "position"];
     }
-
-    // {args, }
 
     setState(...args, (position) => {
       old_value = { ...position };
@@ -362,13 +407,112 @@ export function Provider(props) {
     );
   };
 
-  const getStyles = ({ id, index, highlight }) => {
-    const local_element = getLocalElement({ id, index });
+  const getDimensions = ({ element, type }) => {
+    return element.global
+      ? state.design.globals[element.id].dimensions
+      : element.dimensions;
+  };
+
+  const getPosition = ({ element, type }) => {
+    return element.global
+      ? state.design.globals[element.id].positions
+      : element.positions;
+  };
+
+  const getStyles = ({ id, index, type, element, highlight }) => {
+    const local_element = element
+      ? element
+      : getLocalElement({ id, index, type });
     if (!local_element) return {};
+
     const style_type = highlight ? "highlight_styles" : "styles";
+
+    if (local_element.global) {
+      let global_style = getGlobalElement(local_element.id)[style_type];
+      return {
+        ...global_style,
+        ...local_element[style_type],
+      };
+    }
+
     return {
-      ...getGlobalElement(local_element.id)[style_type],
       ...local_element[style_type],
+    };
+  };
+
+  const getTextStyles = ({ element, swatches }) => {
+    let styles = getStyles({ element });
+    return {
+      width: "100%",
+      height: "100%",
+      display: "flex",
+      "flex-direction": "column",
+      "pointer-events": "all",
+      // zIndex: props.zIndex,
+      "justify-content": styles.alignmentVertical,
+      "align-items": styles.alignmentHorizontal,
+      "font-size": convert(styles.size) + "pt",
+      "font-family": styles.family,
+      "letter-spacing": convert(styles.spacing, true),
+      "line-height": `${convert(styles.lineHeight)}pt`,
+      color: swatches[styles.color],
+      "text-shadow":
+        styles.shadowLeft || styles.shadowLeft || styles.shadowBlur
+          ? `${styles.shadowLeft ? convert(styles.shadowLeft) : 0}px ${
+              styles.shadowTop ? convert(styles.shadowTop) : 0
+            }px ${styles.shadowBlur ? convert(styles.shadowBlur) : 0}px ${
+              styles.shadowColor ? swatches[styles.shadowColor] : "black"
+            }`
+          : null,
+    };
+  };
+
+  const getHighlightStyles = ({ element, swatches }) => {
+    let styles = getStyles({ element, highlight: true });
+
+    return {
+      "font-family": styles.family,
+      color: swatches[styles.color],
+      background: swatches[styles.background],
+      display: "inline-block",
+      "box-sizing": "border-box",
+      "align-items": styles.alignmentHorizontal,
+      "padding-left": convert(styles.paddingHorizontal) + "px",
+      "padding-right": convert(styles.paddingHorizontal) + "px",
+      "padding-top": convert(styles.paddingVertical) + "px",
+      "padding-bottom": convert(styles.paddingVertical) + "px",
+      "margin-left": convert(styles.marginHorizontal) + "px",
+      "margin-right": convert(styles.marginHorizontal) + "px",
+      "margin-top": convert(styles.marginVertical) + "px",
+      "margin-bottom": convert(styles.marginVertical) + "px",
+      "border-radius": convert(styles.borderRadius) + "px",
+      "border-width": styles.borderWidth + "px",
+      "border-color": swatches[styles.borderColor],
+      "border-style": "solid",
+      "box-shadow":
+        styles &&
+        (styles.boxShadowLeft || styles.boxShadowLeft || styles.boxShadowBlur)
+          ? `${styles.boxShadowLeft ? convert(styles.boxShadowLeft) : 0}px ${
+              styles.boxShadowTop ? convert(styles.boxShadowTop) : 0
+            }px ${styles.boxShadowBlur ? convert(styles.boxShadowBlur) : 0}px ${
+              styles.boxShadowColor ? swatches[styles.boxShadowColor] : "black"
+            }`
+          : null,
+      "text-shadow":
+        styles &&
+        (styles.textShadowLeft ||
+          styles.textShadowLeft ||
+          styles.textShadowBlur)
+          ? `${styles.textShadowLeft ? convert(styles.textShadowLeft) : 0}px ${
+              styles.textShadowTop ? convert(styles.textShadowTop) : 0
+            }px ${
+              styles.textShadowBlur ? convert(styles.textShadowBlur) : 0
+            }px ${
+              styles.textShadowColor
+                ? swatches[styles.textShadowColor]
+                : "black"
+            }`
+          : null,
     };
   };
 
@@ -436,7 +580,7 @@ export function Provider(props) {
 
   // general functions
 
-  const setDeck = (deck) => setState("deck", deck);
+  const setDeck = (design) => setState("design", design);
 
   const addElement = (element) => {
     archiveStateChanges([
@@ -647,15 +791,15 @@ export function Provider(props) {
                     styles: {
                       color: 0,
                     },
-                    content: 30 * (state.viewport.masked_percentage / 100),
+                    content: 30 * (state.viewport.timer_percentage / 100),
                   },
                 ]
               : [],
         },
       ])
     );
-    setState("deck", "types", types);
-    setState("deck", "modes", ["choice", "timed"]);
+    setState("design", "types", types);
+    setState("design", "modes", ["choice", "timed"]);
 
     updateInstruction();
   };
@@ -681,7 +825,8 @@ export function Provider(props) {
     state,
     setCardId,
     toggleMaskedStyling,
-    setMaskPercentage,
+    setTimerPercentage,
+    getTimerPercentage,
     toggleTypeManager,
     toggleModeViewport,
     updateCardSize,
@@ -691,6 +836,7 @@ export function Provider(props) {
     addElementToGlobals,
     setType,
     isTypeSelected,
+    getType,
     getSelectedType,
     getSelectedSwatches,
     setSwatch,
@@ -703,10 +849,14 @@ export function Provider(props) {
     changeOrderElement,
     toggleModeElement,
     setStateArchive,
+    getPosition,
+    getDimensions,
     translateElement,
     resizeElement,
     lockElement,
     removeElement,
+    getTextStyles,
+    getHighlightStyles,
     getStyles,
     setStyle,
     setSVGStyle,
@@ -732,48 +882,3 @@ export function Provider(props) {
 export function useStore() {
   return useContext(StoreContext);
 }
-
-/* 
-export {
-  state,
-  setCardId,
-  toggleMaskedStyling,
-  setMaskPercentage,
-  toggleTypeManager,
-  toggleModeViewport,
-  updateCardSize,
-  getCardSize,
-  setCardDimension,
-  setBackground,
-  addElementToGlobals,
-  setType,
-  isTypeSelected,
-  getSelectedType,
-  getSelectedSwatches,
-  setSwatch,
-  addSwatch,
-  getLocalElements,
-  getLocalElement,
-  setSelectedElementIndex,
-  getSelectedElement,
-  isSelectedElementOfType,
-  changeOrderElement,
-  toggleModeElement,
-  setStateArchive,
-  translateElement,
-  resizeElement,
-  lockElement,
-  removeElement,
-  getStyles,
-  setStyle,
-  setSVGStyle,
-  changeInstructionText,
-  setDeck,
-  addElement,
-  upload,
-  createNewCard,
-  openPrompt,
-  revertStateChange,
-  archiveStateChanges,
-};
- */

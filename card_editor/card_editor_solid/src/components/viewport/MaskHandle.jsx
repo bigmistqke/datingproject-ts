@@ -6,10 +6,10 @@ import { createSignal, createEffect } from "solid-js";
 import { useStore } from "../../Store";
 
 const MaskHandle = (props) => {
-  const [state, { setMaskPercentage }] = useStore();
+  const [state, { setTimerPercentage, getTimerPercentage }] = useStore();
   const onTranslate = (delta) => {
     let percentage_delta = (delta.y / (window.innerHeight * 0.9)) * 100;
-    setMaskPercentage(props.percentage + percentage_delta);
+    return setTimerPercentage(getTimerPercentage() + percentage_delta);
   };
 
   const Line = styled("div")`
@@ -32,12 +32,13 @@ const MaskHandle = (props) => {
         transform: "translateY(-50%)",
         "pointer-events": "all !important",
         top: `${
-          (state.viewport.masked_percentage / 100) * 0.9 * window.innerHeight +
+          (getTimerPercentage() / 100) * 0.9 * window.innerHeight +
           0.05 * window.innerHeight
         }px`,
       }}
       onTranslate={onTranslate}
       checkForTransparency={false}
+      shouldNotArchive={true}
     >
       <Line></Line>
     </Draggable>

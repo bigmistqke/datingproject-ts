@@ -18,16 +18,6 @@ import Prompt from "./components/Prompt";
 import { styled } from "solid-styled-components";
 import { useStore } from "./Store";
 
-/* import {
-  state,
-  updateCardSize,
-  setDeck,
-  upload,
-  toggleTypeManager,
-  createNewCard,
-  setCardId,
-} from "./Store"; */
-
 import {
   HeaderPanel,
   LabeledInput,
@@ -56,11 +46,13 @@ function App(props) {
       toggleTypeManager,
       createNewCard,
       setCardId,
+      setSelectedElementIndex,
     },
   ] = useStore();
   const [instruction, setInstruction] = createStore({
     type: null,
     text: null,
+    timespan: null,
   });
 
   // window.instruction = instruction;
@@ -77,6 +69,10 @@ function App(props) {
         : lorem_ipsum.normal[0]
     );
   });
+
+  createEffect(() => console.log(state.viewport.modes.timed));
+
+  createEffect(() => console.log(instruction.timespan));
 
   const lorem_ipsum = {
     normal: [
@@ -113,10 +109,9 @@ function App(props) {
   const fetchDeck = async (card_id) => {
     try {
       let result = await fetch(`${props.urls.fetch}/api/card/get/${card_id}`);
-      let deck = await result.json();
-      console.log("fetchDeck", deck);
-      if (!deck) return false;
-      return deck;
+      let design = await result.json();
+      if (!design) return false;
+      return design;
     } catch (err) {
       console.error(err);
       return false;
@@ -135,7 +130,7 @@ function App(props) {
         },
         redirect: "follow",
         referrerPolicy: "no-referrer",
-        body: JSON.stringify(state.deck),
+        body: JSON.stringify(state.design),
       });
       result = await result.json();
       return true;
@@ -148,12 +143,12 @@ function App(props) {
   onMount(async () => {
     window.addEventListener("resize", () => updateCardSize);
     updateCardSize();
-    let deck = await fetchDeck(card_id);
-    if (!deck) {
+    let design = await fetchDeck(card_id);
+    if (!design) {
       createNewCard();
       return;
     }
-    setDeck(deck);
+    setDeck(design);
   });
 
   return (
@@ -181,7 +176,7 @@ function App(props) {
               always_visible={true}
             >
               <FlexRow>
-                <For each={Object.keys(state.deck.types)}>
+                <For each={Object.keys(state.design.types)}>
                   {(type) => (
                     <Span contenteditable style={{ flex: 1 }}>
                       {type}
@@ -197,7 +192,7 @@ function App(props) {
         onDragOver={(e) => e.preventDefault()}
         onDragEnter={(e) => e.preventDefault()}
         onDrop={upload}
-        style={{ background: state.deck.background }}
+        style={{ background: state.design.background }}
       >
         <Show when={state.viewport.prompt}>
           <Prompt
@@ -216,7 +211,7 @@ function App(props) {
           }
         >
           <Rulers
-            card_dim={state.deck.card_dimensions}
+            card_dim={state.design.card_dimensions}
             guides={state.guides}
             shouldSnap={state.bools.shouldSnap}
           ></Rulers>
@@ -225,8 +220,8 @@ function App(props) {
           </Show>
 
           <CardRenderer
-            card_size={state.viewport.card_size}
-            deck={state.deck}
+            // card_size={state.viewport.card_size}
+            // design={state.design}
             instruction={instruction}
           ></CardRenderer>
         </Viewport>

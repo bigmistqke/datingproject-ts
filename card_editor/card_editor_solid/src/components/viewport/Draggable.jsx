@@ -3,7 +3,7 @@ import { styled } from "solid-styled-components";
 import ArchiveHelper from "../helpers/ArchiveHelper.js";
 import { useStore } from "../../Store";
 
-import cursorEventHandler from "../../helpers/cursorEventHandler";
+import dragHelper from "../../helpers/dragHelper";
 
 export default function Draggable(props) {
   const [state, { archiveStateChanges }] = useStore();
@@ -26,11 +26,11 @@ export default function Draggable(props) {
 
     let archive_helper = new ArchiveHelper();
 
-    if (props.onTranslate) {
+    if (props.onTranslate && !props.shouldNotArchive) {
       archive_helper.init(props.onTranslate({ x: 0, y: 0 }));
     }
 
-    let finished = await cursorEventHandler((e) => {
+    let finished = await dragHelper((e) => {
       if (performance.now() - lastTick < 1000 / 60) return;
       lastTick = performance.now();
       offset = {
@@ -46,7 +46,7 @@ export default function Draggable(props) {
       };
     });
 
-    if (props.onTranslate) {
+    if (props.onTranslate && !props.shouldNotArchive) {
       offset = {
         x: (last_position.x - finished.clientX) * -1,
         y: (last_position.y - finished.clientY) * -1,
@@ -62,6 +62,7 @@ export default function Draggable(props) {
   const DIV = styled("div")`
     width: 100%;
     height: 100%;
+    display: flex;
     &.locked,
     &.locked * {
       pointer-events: none !important;

@@ -13,8 +13,6 @@ import {
 import isFalse from "../../helpers/isFalse";
 
 const SVGStyles = (props) => {
-  onMount(() => console.log("props.styles", props.styles, props.swatches));
-
   return (
     <>
       <HeaderPanel

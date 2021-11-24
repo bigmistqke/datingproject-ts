@@ -263,11 +263,13 @@ const LabeledSelect = (
         type={props.type}
         onChange={handleChange}
       >
-        {props.data.map((v) => (
-          <option key={v} value={v}>
-            {v}
-          </option>
-        ))}
+        <For each={props.data}>
+          {(value) => (
+            <option value={typeof value === "string" ? value : value.value}>
+              {typeof value === "string" ? value : value.label}
+            </option>
+          )}
+        </For>
       </Select>
     </GridRow>
   );
@@ -278,7 +280,7 @@ const LabeledCheckbox = (props) => {
     <>
       <LabeledColor
         className="small"
-        label="choice"
+        label={props.label}
         value={props.checked ? "var(--green)" : "var(--red)"}
         onClick={props.onClick}
         style={{
@@ -297,21 +299,28 @@ const LabeledColor = (props) => {
 
   const onDrop = (e) => {
     e.preventDefault();
+
     setLastValue(false);
   };
 
   const onDragEnter = (e) => {
+    e.preventDefault();
     setLastValue(props.value);
+
     if (props.onDragEnter) props.onDragEnter(e);
   };
 
   const onDragOver = (e) => {
     e.preventDefault();
-    e.stopPropagation();
-    let swatch_index = parseInt(e.dataTransfer.getData("swatch_index"));
+    // e.stopPropagation();
+
+    let swatch_index = e.dataTransfer.getData("swatch_index");
+
     if (swatch_index === props.value) return;
+
     if (!swatch_index && swatch_index !== 0) return;
-    props.onChange(swatch_index);
+
+    props.onChange(parseInt(swatch_index));
   };
 
   const revertColor = (e) => props.onChange(getLastValue());
@@ -365,10 +374,16 @@ const ColorPicker = (props) => {
 
   const onChange = (e) => {
     let result = props.onInput(e.target.value);
-    if (old_value !== result.new_value) {
+    if (old_value !== e.target.value) {
       archiveStateChanges([{ ...result, old_value }]);
     }
   };
+
+  const onDragStart = (e) => {
+    e.dataTransfer.setData("swatch_index", props.index);
+  };
+
+  const onDrop = (e) => {};
 
   return (
     <>
@@ -383,7 +398,8 @@ const ColorPicker = (props) => {
       ></input>
       <Color
         style={{ background: props.value }}
-        onDragStart={(e) => e.dataTransfer.setData("swatch_index", props.index)}
+        onDragStart={onDragStart}
+        onDrop={onDrop}
         draggable={props.draggable}
         onClick={() => {
           input.click();
@@ -445,7 +461,7 @@ const HeaderCategory = (props /* { label, data, onChange, children } */) => {
 
   const toggleMode = () => setMode(!getMode());
   return (
-    <div style={{ flex: 1 }}>
+    <div>
       <H2 onClick={toggleMode}>{props.label}</H2>
       <div style={{ display: getMode() ? "" : "none" }}>{props.children}</div>
     </div>

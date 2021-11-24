@@ -1,9 +1,12 @@
 import Draggable from "../viewport/Draggable";
-import { Show } from "solid-js";
+import { Show, createEffect, onMount, createSignal } from "solid-js";
 import { styled } from "solid-styled-components";
 
 import SVGElement from "./SVGElement";
-import TextElement from "./TextElement";
+import InstructionElement from "./InstructionElement";
+import CountdownElement from "./CountdownElement";
+
+import ResizeHandles from "../viewport/ResizeHandles";
 
 import { useStore } from "../../Store";
 
@@ -17,8 +20,30 @@ const CardElement = (props) => {
       removeElement,
       archiveStateChanges,
       setSelectedElementIndex,
+      /* getPosition,
+      getDimensions, */
     },
   ] = useStore();
+
+  const [isSelected, setIsSelected] = createSignal(false);
+  const [position, setPosition] = createSignal({ x: null, y: null });
+  const [dimensions, setDimensions] = createSignal({
+    width: null,
+    height: null,
+  });
+
+  const getDimensions = ({ element, type }) => {
+    return element.global
+      ? state.design.globals[element.id].dimensions
+      : element.dimensions;
+  };
+
+  const getPosition = ({ element, type }) => {
+    return element.global
+      ? state.design.globals[element.id].positions
+      : element.positions;
+  };
+
   const openContext = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -76,18 +101,40 @@ const CardElement = (props) => {
 
   const Element = styled("div")`
     pointer-events: none;
+    height: 100%;
+    width: 100%;
     & > * {
       pointer-events: all;
     }
   `;
+
+  createEffect(() => {
+    setIsSelected(state.viewport.selected_element_index === props.index);
+  });
+
+  createEffect(() => {
+    setPosition(
+      props.element.global
+        ? state.design.globals[props.element.id].position
+        : props.element.position
+    );
+  });
+  createEffect(() =>
+    setDimensions(
+      props.element.global
+        ? state.design.globals[props.element.id].dimensions
+        : props.element.dimensions
+    )
+  );
+
   return (
     <Draggable
-      position={{ ...props.position }}
+      position={{ ...position() }}
       style={
-        props.dimensions
+        dimensions
           ? {
-              width: props.dimensions.width + "%",
-              height: props.dimensions.height + "%",
+              width: dimensions().width + "%",
+              height: dimensions().height + "%",
             }
           : null
       }
@@ -97,25 +144,23 @@ const CardElement = (props) => {
       onContextMenu={openContext}
     >
       <Element>
-        {props.children}
-        <Show when={props.type === "countdown" || props.type === "instruction"}>
-          <TextElement
-            styles={props.styles}
-            highlight_styles={props.highlight_styles}
-            card_size={props.card_size}
-            swatches={props.swatches}
-            content={props.fomatted_text}
-          ></TextElement>
+        <Show when={isSelected()}>
+          <ResizeHandles
+            {...props}
+            onResize={({ position, dimensions }) =>
+              resizeElement({ index: index(), position, dimensions })
+            }
+            keep_ratio={props.type === "svg"}
+          ></ResizeHandles>
+        </Show>
+        <Show when={props.type === "countdown"}>
+          <CountdownElement {...props}></CountdownElement>
+        </Show>
+        <Show when={props.type === "instruction"}>
+          <InstructionElement {...props}></InstructionElement>
         </Show>
         <Show when={props.type === "svg"}>
-          <SVGElement
-            masked={props.masked}
-            element={props.element}
-            svg={props.element.svg}
-            styles={props.element.styles}
-            swatches={props.swatches}
-            masked={props.masked}
-          ></SVGElement>
+          <SVGElement {...props}></SVGElement>
         </Show>
       </Element>
     </Draggable>

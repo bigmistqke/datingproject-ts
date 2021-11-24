@@ -47,7 +47,7 @@ const Swatches = (props) => {
             {(color, index) => (
               <ColorPicker
                 onClick={() => {
-                  setSelected(index);
+                  //setSelected(index);
                   // input.click();
                 }}
                 onInput={(value) => setSwatch(index, value)}

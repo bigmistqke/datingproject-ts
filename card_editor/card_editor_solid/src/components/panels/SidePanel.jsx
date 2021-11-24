@@ -16,6 +16,8 @@ import HighlightStyling from "./HighlightStyling";
 import Swatches from "./Swatches";
 import Hierarchy from "./Hierarchy";
 
+import { createEffect } from "solid-js";
+
 import { useStore } from "../../Store";
 
 const SidePanel = (props) => {
@@ -39,8 +41,16 @@ const SidePanel = (props) => {
       getLocalElement,
       setBackground,
       setStyle,
+      getTextStyles,
     },
   ] = useStore();
+
+  createEffect(() =>
+    setTimeout(() => {
+      console.log(getLocalElement({ id: "instruction" }));
+    }, 1000)
+  );
+
   return (
     <LongPanel className="right_panel">
       <FlexRow
@@ -90,7 +100,7 @@ const SidePanel = (props) => {
                   padding: "0px",
                 }}
               >
-                <For each={Object.keys(state.deck.types)}>
+                <For each={Object.keys(state.design.types)}>
                   {(type) => (
                     <Button
                       className={isTypeSelected(type) ? "focus" : ""}
@@ -226,14 +236,14 @@ const SidePanel = (props) => {
             <FlexRow>
               <LabeledColorPicker
                 label="background"
-                value={state.deck.background}
+                value={state.design.background}
                 onChange={setBackground}
                 swatches={getSelectedSwatches()}
               ></LabeledColorPicker>
 
               <LabeledInput
                 label="ratio"
-                value={parseInt(state.deck.card_dimensions.width)}
+                value={parseInt(state.design.card_dimensions.width)}
                 onChange={(value) => setCardDimension("width", value)}
               ></LabeledInput>
             </FlexRow>

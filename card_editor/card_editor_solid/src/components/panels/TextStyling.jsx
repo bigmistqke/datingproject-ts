@@ -8,9 +8,13 @@ import {
   GridRow,
 } from "./UI_Components";
 
-import { Show } from "solid-js";
+import { useStore } from "../../Store";
+
+import { Show, createEffect, createMemo } from "solid-js";
 
 const TextStyles = (props) => {
+  const [state, { getStyles, getTextStyles, getLocalElement }] = useStore();
+
   return (
     <>
       <HeaderPanel
@@ -54,7 +58,9 @@ const TextStyles = (props) => {
                 type="color"
                 swatches={props.swatches}
                 value={props.styles.color ? props.styles.color : 0}
-                onChange={(value) => props.onChange("color", value)}
+                onChange={(value) => {
+                  props.onChange("color", value);
+                }}
               ></LabeledColor>
             </HeaderCategory>
           </div>
@@ -62,7 +68,7 @@ const TextStyles = (props) => {
             <HeaderCategory label="Alignment">
               <LabeledSelect
                 label="Horizontal"
-                data={["flex-start", "center", "flex-end"]}
+                data={["left", "center", "right"]}
                 value={props.styles.alignmentHorizontal}
                 onChange={(value) =>
                   props.onChange("alignmentHorizontal", value)
@@ -70,7 +76,11 @@ const TextStyles = (props) => {
               ></LabeledSelect>
               <LabeledSelect
                 label="Vertical"
-                data={["flex-start", "center", "flex-end"]}
+                data={[
+                  { label: "top", value: "flex-start" },
+                  { label: "center", value: "center" },
+                  { label: "bottom", value: "flex-end" },
+                ]}
                 value={props.styles.alignmentVertical}
                 onChange={(value) => props.onChange("alignmentVertical", value)}
               ></LabeledSelect>

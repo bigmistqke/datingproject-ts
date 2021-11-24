@@ -1,4 +1,4 @@
-import cursorEventHandler from "../../helpers/cursorEventHandler";
+import dragHelper from "../../helpers/dragHelper";
 import Draggable from "./Draggable";
 import { createMemo } from "solid-js";
 import { styled } from "solid-styled-components";

@@ -1,16 +1,22 @@
 import CardCompositor from "./CardComposition";
 
-import { Show, createEffect } from "solid-js";
+import { Show, createEffect, createMemo } from "solid-js";
 import { createStore } from "solid-js/store";
+import { useStore } from "../../Store";
 
 import { styled } from "solid-styled-components";
 import check from "../../helpers/check";
 
 const CardRenderer = (props) => {
-  createEffect(() => console.log("props.card_size", props.card_size));
-  const [state, setState] = createStore({
-    modes: {},
+  const [state, { getLocalElements }] = useStore();
+
+  const [card_state, setCardState] = createStore({
+    modes: {
+      timed: false,
+      choice: false,
+    },
     formatted_text: null,
+    type: null,
   });
 
   const CardContainer = styled("div")`
@@ -25,11 +31,11 @@ const CardRenderer = (props) => {
     z-index: 5;
   `;
 
-  const getSelectedType = () => props.deck.types[props.instruction.type];
+  /*   const getSelectedType = () => props.design.types[props.instruction.type];
   const getLocalElements = () =>
     getSelectedType() ? getSelectedType().elements : [];
 
-  const getGlobalElement = (id) => props.deck.globals[id];
+  const getGlobalElement = (id) => props.design.globals[id];
 
   const getLocalElement = ({ index, id }) => {
     if (id) index = getLocalElements().findIndex((e) => e.id === id);
@@ -45,21 +51,23 @@ const CardRenderer = (props) => {
       ...getGlobalElement(local_element.id)[style_type],
       ...local_element[style_type],
     };
-  };
+  }; */
 
-  createEffect(() =>
-    setState("modes", "timed", props.instruction.timespan ? true : false)
-  );
+  createEffect(() => {
+    setCardState("modes", "timed", props.instruction.timespan ? true : false);
+    // console.log("UPDATE mode.timed in INSTRUCTION", modes.timed);
+  });
+  createEffect(() => setCardState("type", props.instruction.type));
 
   createEffect(() => {
     let formatted_text = [{ type: "normal", content: props.instruction.text }];
     // regex
     const regex_for_brackets = /[\["](.*?)[\]"][.!?\\-]?/g;
-    let matches = String(props.content).match(regex_for_brackets);
+    let matches = String(props.instruction.text).match(regex_for_brackets);
 
     if (!matches) {
-      setState("modes", "choice", false);
-      setState("formatted_text", formatted_text);
+      setCardState("modes", "choice", false);
+      setCardState("formatted_text", formatted_text);
       return;
     }
 
@@ -76,9 +84,8 @@ const CardRenderer = (props) => {
         ...formatted_text,
       ];
     }
-
-    setState("modes", "choice", true);
-    setState("formatted_text", formatted_text);
+    setCardState("modes", "choice", true);
+    setCardState("formatted_text", formatted_text);
   });
 
   const getSelectedSwatches = (timed = false) =>
@@ -89,21 +96,16 @@ const CardRenderer = (props) => {
       <CardContainer
         className="CardContainer"
         style={{
-          width: `${props.card_size.width}px`,
-          height: `${props.card_size.height}px`,
-          "border-radius": props.deck.border_radius * 0.9 + "vh",
+          width: `${state.viewport.card_size.width}px`,
+          height: `${state.viewport.card_size.height}px`,
+          "border-radius": state.design.border_radius * 0.9 + "vh",
         }}
       >
         <div className="viewport">
           <CardCompositor
-            deck={props.deck}
-            card_size={props.card_size}
-            elements={getLocalElements()}
-            swatches={getSelectedSwatches()}
-            globals={props.deck.globals}
-            getStyles={getStyles}
-            formatted_text={state.formatted_text}
-            modes={state.modes}
+            elements={getLocalElements({ type: props.instruction.type })}
+            card_state={card_state}
+            {...props}
           ></CardCompositor>
         </div>
       </CardContainer>
