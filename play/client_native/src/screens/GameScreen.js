@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Card from "../components/Card";
-import Card from "../components/Card";
-import CardComposition from "../components/card/CardComposition";
+// import Card from "../components/Card";
+// import CardComposition from "../components/card/CardComposition";
 
 import { Dimensions, Button, View, Text, Vibration } from 'react-native';
 import styled from 'styled-components/native';
 import Swipe from "../components/Swipe";
 
-function Game({ deck, instructions, swipeAction }) {
+function Game({ design, instructions, swipeAction }) {
 
   let screen_dimensions_ref = useRef({
     x: Dimensions.get('window').width,
@@ -98,24 +98,7 @@ function Game({ deck, instructions, swipeAction }) {
 
                 margin={margin}
               >
-                <CardComposition
-                  card_dimensions={card_dimensions_ref}
-                  // alarm={instruction.sound ? playAlarm : false}
-                  offset={i}
-                  zIndex={zIndex}
-                  instruction_id={instruction.instruction_id}
-                  text={instruction.text}
-                  type={instruction.type}
-                  timespan={instruction.timespan ? instruction.timespan : 0}
-                  designs={deck[instruciton.type].designs}
-                  key={instruction.instruction_id}
-                  flip={
-                    !instruction.prev_instruction_ids ||
-                    instruction.prev_instruction_ids.length == 0
-                  }
-                >
-                  {instruction.text}
-                </CardComposition>
+                <Card instruction={instruction}></Card>
               </Swipe>
 
 

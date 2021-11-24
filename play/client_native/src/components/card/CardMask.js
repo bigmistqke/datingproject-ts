@@ -1,8 +1,7 @@
-// import { styled } from "solid-styled-components";
-import {styled} from 'styled-components';
+import styled from 'styled-components/native';
 
 const CardMask = props => {
-  const Mask = styled('div')`
+  const Mask = styled.View`
     width: 100%;
     height: 100%;
     position: absolute;
