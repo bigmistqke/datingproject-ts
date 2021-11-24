@@ -84,7 +84,7 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
 
         let room = await _redis.get(`r_${room_id}`);
         if (!room)
-          throw 'no room available with this url';
+          throw 'no room available with this url', room_id;
 
         Object.entries(script.roles).forEach(async ([role_id, role]) => {
           console.log('instruction_ids are ', role);

@@ -35,10 +35,10 @@ let _monitor = new Monitor({ _rooms, _mqtt });
 
 const isDev = true;
 let mqtt_url = isDev ? "localhost:8883" : "socket.datingproject.net/mqtt";
+console.log('DOES THE WHOLE SCRIPT RESTART FOR SOME REASON??');
 
 _mongo.connect('datingProject')
   .then(async () => {
-
 
     await _mqtt.connect(mqtt_url, true)
 
@@ -68,24 +68,29 @@ app.use(fileUpload());
 
 // upload video
 app.post('/api/uploadVideo/:script_id/:type', async function (req, res) {
-  console.log('upload video!')
-  let script_path = `./uploads/${req.params.script_id}`;
-  let type = req.params.type;
-  let { blocks, roles, instructions } = req.body;
-  if (!fs.existsSync(script_path)) {
-    fs.mkdirSync(script_path);
-  }
-  let new_filename = `${req.body.instruction_id}${path.extname(req.files.file.name)}`;
-  let new_path = `${script_path}/${new_filename}`;
-  console.log('write the file:', new_path);
-
-  fs.writeFile(new_path, req.files.file.data, async (err) => {
-    if (!err) {
-      res.send(new_path);
-    } else {
-      res.send(err);
+  try {
+    console.log('upload video!')
+    let script_path = `./uploads/${req.params.script_id}`;
+    let type = req.params.type;
+    let { blocks, roles, instructions } = req.body;
+    if (!fs.existsSync(script_path)) {
+      fs.mkdirSync(script_path);
     }
-  })
+    let new_filename = `${req.body.instruction_id}${path.extname(req.files.file.name)}`;
+    let new_path = `${script_path}/${new_filename}`;
+    console.log('write the file:', new_path);
+
+    fs.writeFile(new_path, req.files.file.data, async (err) => {
+      if (!err) {
+        res.send(new_path);
+      } else {
+        res.send(err);
+      }
+    })
+  } catch (e) {
+    console.error('an error happened while trying to upload a video: ', e)
+  }
+
 })
 
 // access point to download video 
@@ -170,16 +175,17 @@ app.get('/api/room/status', async function (req, res, next) {
 
 // join room + fetch role
 app.get('/api/room/join/:url', async function (req, res, next) {
-  console.log('joining room');
   const { url } = req.params;
   const room_id = url.slice(0, 6);
   const player_id = url.slice(6);
-  let { role_id, instructions, error, deck_id = "oldie" } = await _rooms.joinRoom({ room_id, player_id });
+  console.log('joining room', room_id, player_id);
+
+  let { role_id, instructions, error, design_id } = await _rooms.joinRoom({ room_id, player_id });
 
   _mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'connected' }));
 
   setTimeout(() => {
-    _monitor.pingRole({ room_id, player_id });
+    // _monitor.pingRole({ room_id, player_id });
   }, 500)
 
   if (error) {
@@ -187,9 +193,9 @@ app.get('/api/room/join/:url', async function (req, res, next) {
     return;
   };
 
-  let deck = await _db.getDeck({ deck_id })
+  let design = await _db.getDeck({ design_id })
 
-  res.json({ success: true, role_id, instructions, room_id, player_id, deck });
+  res.json({ success: true, role_id, instructions, room_id, player_id, design });
 })
 
 // get all the player_ids of a room (for the combo-test)
@@ -267,11 +273,11 @@ app.post('/api/card/uploadImage/:card_id/:image_id', async function (req, res, n
 app.post('/api/card/save/:card_id', async function (req, res, next) {
   // TODO:  sanitize content
   const { card_id } = req.params;
-  let saved = await _db.saveDeck({ card_id, deck: req.body })
+  let saved = await _db.saveDeck({ card_id, design: req.body })
   res.send(saved);
 })
 
-app.get('/api/deck/get/:card_id', async function (req, res, next) {
+app.get('/api/design/get/:card_id', async function (req, res, next) {
   const { card_id } = req.params;
   let card = await _db.getDeck({ card_id })
   res.json(card);
