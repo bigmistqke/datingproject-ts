@@ -2,7 +2,7 @@ import { createMemo } from "solid-js";
 import "./Block.css";
 import "./DragBox.css";
 
-import cursorEventHandler from "../helpers/cursorEventHandler";
+import dragHelper from "../helpers/dragHelper";
 export default function DragBox(props) {
   let getClassList = createMemo(
     () => (props.classList ? props.classList : {}),
@@ -26,7 +26,7 @@ export default function DragBox(props) {
     let last_position = { x: e.clientX, y: e.clientY };
     let offset;
 
-    await cursorEventHandler((e) => {
+    await dragHelper((e) => {
       if (performance.now() - lastTick < 1000 / 60) return;
       lastTick = performance.now();
       offset = {

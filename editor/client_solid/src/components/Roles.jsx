@@ -1,10 +1,13 @@
 import { createMemo, For, createEffect } from "solid-js";
 
-import cursorEventHandler from "../helpers/cursorEventHandler";
+import dragHelper from "../helpers/dragHelper";
 import "./Roles.css";
 import Role from "./Role.jsx";
 
+import { useStore } from "../managers/Store";
+
 const Roles = (props) => {
+  const [state, actions] = useStore();
   /*   const ordered_roles = createMemo(
     () =>
       props.roles
@@ -24,7 +27,7 @@ const Roles = (props) => {
     e.preventDefault();
     e.stopPropagation();
 
-    let remaining_roles = { ...props.all_roles };
+    let remaining_roles = { ...state.script.roles };
 
     Object.entries(remaining_roles).forEach(([role_id, role]) => {
       if (role_id in props.roles) {
@@ -33,18 +36,18 @@ const Roles = (props) => {
     });
     if (Object.keys(remaining_roles).length === 0) return;
 
-    let role_id = await props.storeManager.editor.openPrompt({
+    let role_id = await actions.openPrompt({
       type: "addRole",
       header: "add role to block",
       data: { block: props.block, roles: remaining_roles },
     });
     if (!role_id) return;
 
-    props.storeManager.script.blocks.addRole({
+    actions.addRoleToBlock({
       block_id: props.block_id,
       role_id,
     });
-    props.storeManager.process.controlRole(role_id);
+    actions.controlRole(role_id);
   };
 
   const checkErrors = (role_id) => {
@@ -56,10 +59,6 @@ const Roles = (props) => {
     }
     return "";
   };
-
-  createEffect(() => {
-    console.log("props.all_roles", props.all_roles);
-  }, [props.all_roles]);
 
   return (
     <div className="roles">
@@ -74,10 +73,11 @@ const Roles = (props) => {
                     block_id={props.block_id}
                     role={role}
                     role_id={role_id}
-                    role_hue={props.all_roles[role_id].hue}
-                    name={props.all_roles[role_id].name}
-                    description={props.all_roles[role_id].description}
-                    all_roles={props.all_roles}
+                    //
+                    role_hue={state.script.roles[role_id].hue}
+                    name={state.script.roles[role_id].name}
+                    description={state.script.roles[role_id].description}
+                    // all_roles={props.all_roles}
                     roles={props.roles}
                     block_id={props.block_id}
                     direction={props.direction}
@@ -85,9 +85,7 @@ const Roles = (props) => {
                     instructions={
                       props.direction === "out" ? props.instructions : null
                     }
-                    roles={props.roles}
-                    storeManager={props.storeManager}
-                    isShiftPressed={props.isShiftPressed}
+                    // isShiftPressed={props.isShiftPressed}
                   ></Role>
                 );
               }}
@@ -95,7 +93,7 @@ const Roles = (props) => {
           }
         </div>
         {Object.keys(props.roles).length <
-        Object.keys(props.all_roles).length ? (
+        Object.keys(state.script.roles).length ? (
           <button
             className="add_role"
             id={`add_${props.block_id}`}

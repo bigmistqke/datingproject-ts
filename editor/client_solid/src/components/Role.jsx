@@ -1,15 +1,19 @@
 import { createMemo, For, createEffect, onMount, createSignal } from "solid-js";
 import "./Role.css";
-import cursorEventHandler from "../helpers/cursorEventHandler";
+import dragHelper from "../helpers/dragHelper";
 import getColorFromHue from "../helpers/getColorFromHue";
 
 import Bubble from "./Bubble";
+
+import { useStore } from "../managers/Store";
 
 const prevOrNext = (direction) =>
   direction === "out" ? "next_block_id" : "prev_block_id";
 const oppositeDirection = (direction) => (direction === "out" ? "in" : "out");
 
 function Role(props) {
+  const [state, actions] = useStore();
+
   const [getDelay, setDelay] = createSignal();
   let role_dom;
   const startConnection = async (e, role_id) => {
@@ -19,9 +23,9 @@ function Role(props) {
     console.log(initially_connecting_block_id);
 
     // set editor-state connecting true so that hovering css is disabled
-    props.storeManager.editor.setConnecting(true);
+    actions.setConnecting(true);
     // remove connections to roles 'both ways': dereference it in this and the connected block
-    props.storeManager.script.blocks.removeConnectionBothWays({
+    actions.removeConnectionBothWays({
       block_id: props.block_id,
       role_id: props.role_id,
       direction: props.direction,
@@ -29,7 +33,7 @@ function Role(props) {
 
     // add a 'temporary connection' to temporary_connections in editor-state
     // this state is being represented with <TemporaryConnection>
-    props.storeManager.editor.addTemporaryConnection({
+    actions.addTemporaryConnection({
       block_id: props.block_id,
       role_id: props.role_id,
       // next_block_id: initially_connecting_block_id,
@@ -37,15 +41,15 @@ function Role(props) {
       cursor: { x: e.clientX, y: e.clientY },
     });
 
-    // add cursorEventHandler
+    // add dragHelper
     // (wrapper around onPointerDown, onPointerMove and onPointerUp)
     // it returns event onPointerUp
-    let { target } = await cursorEventHandler();
+    let { target } = await dragHelper();
     console.log(target);
 
-    props.storeManager.editor.setConnecting(false);
+    actions.setConnecting(false);
     // remove temporary connection from editor-state
-    props.storeManager.editor.removeTemporaryConnection({
+    actions.removeTemporaryConnection({
       block_id: props.block_id,
       role_id: props.role_id,
       direction: props.direction,
@@ -63,19 +67,19 @@ function Role(props) {
       let connecting_block_id = target.id.replace("block_", "");
       // if it does not have a role yet in the block, add the role
       if (
-        !props.storeManager.script.blocks.hasRoleId({
+        !actions.hasRoleId({
           block_id: connecting_block_id,
           role_id: props.role_id,
         })
       ) {
-        props.storeManager.script.blocks.addRole({
+        actions.addRoleToBlock({
           block_id: connecting_block_id,
           role_id: props.role_id,
         });
       }
       // adds a reference to block_id in role of block and connecting_block
       // and derefences any existing connection to that role of connecting_block_id
-      props.storeManager.script.blocks.addConnection({
+      actions.addConnection({
         block_id: props.block_id,
         connecting_block_id,
         role_id: props.role_id,
@@ -83,45 +87,44 @@ function Role(props) {
       });
 
       if (props.isShiftPressed && initially_connecting_block_id) {
-        let end_block_id = await props.storeManager.process.getEndBlockId({
+        let end_block_id = await actions.getEndBlockId({
           role_id: props.role_id,
           block_id: connecting_block_id,
         });
 
-        let { traversed_block_ids } =
-          await props.storeManager.process.traverseRole({
-            role_id: props.role_id,
-            block_id: connecting_block_id,
-          });
+        let { traversed_block_ids } = await actions.traverseRole({
+          role_id: props.role_id,
+          block_id: connecting_block_id,
+        });
         console.log(traversed_block_ids, initially_connecting_block_id);
         if (traversed_block_ids.indexOf(initially_connecting_block_id) === -1) {
-          props.storeManager.script.blocks.addConnection({
+          actions.addConnection({
             block_id: end_block_id,
             connecting_block_id: initially_connecting_block_id,
             role_id: props.role_id,
             direction: props.direction,
           });
-          props.storeManager.process.controlRole(props.role_id);
+          actions.controlRole(props.role_id);
         }
       }
     } else if (
       target.classList.contains("map-container") &&
       props.isShiftPressed
     ) {
-      let block_id = props.storeManager.script.blocks.addBlock();
-      props.storeManager.script.blocks.addRole({
+      let block_id = actions.addBlock();
+      actions.addRoleToBlock({
         block_id,
         role_id: props.role_id,
       });
 
-      props.storeManager.script.blocks.addConnection({
+      actions.addConnection({
         block_id: props.block_id,
         connecting_block_id: block_id,
         role_id: props.role_id,
         direction: props.direction,
       });
       if (initially_connecting_block_id) {
-        props.storeManager.script.blocks.addConnection({
+        actions.addConnection({
           block_id: block_id,
           connecting_block_id: initially_connecting_block_id,
           role_id: props.role_id,
@@ -130,11 +133,11 @@ function Role(props) {
       }
     }
 
-    props.storeManager.process.controlRole(props.role_id);
+    actions.controlRole(props.role_id);
   };
 
   const updateRoleOffset = () =>
-    props.storeManager.editor.updateRoleOffset({
+    actions.updateRoleOffset({
       block_id: props.block_id,
       role_id: props.role_id,
       direction: props.direction,
@@ -176,7 +179,7 @@ function Role(props) {
 
     if (Object.keys(remaining_roles).length === 0) return;
 
-    let target_role_id = await props.storeManager.editor.openPrompt({
+    let target_role_id = await actions.openPrompt({
       type: "options",
       header: (
         <>
@@ -195,7 +198,7 @@ function Role(props) {
 
     if (!!!target_role_id) return;
 
-    props.storeManager.script.blocks.convertRole({
+    actions.convertRole({
       block_id: props.block_id,
       source_role_id: props.role_id,
       target_role_id,
@@ -208,9 +211,9 @@ function Role(props) {
     e.preventDefault();
     e.stopPropagation();
 
-    props.storeManager.editor.addToSelectedBlockIds(props.block_id);
+    actions.addToSelectedBlockIds(props.block_id);
 
-    let result = await props.storeManager.editor.openPrompt({
+    let result = await actions.openPrompt({
       type: "options",
       header: (
         <>
@@ -232,7 +235,7 @@ function Role(props) {
     if (!result) return;
 
     if (result === "remove") {
-      await props.storeManager.script.blocks.removeRole({
+      await actions.removeRoleFromBlock({
         block_id: props.block_id,
         role_id: props.role_id,
       });
@@ -240,13 +243,13 @@ function Role(props) {
       await convertRole();
     }
 
-    props.storeManager.editor.emptySelectedBlockIds();
+    actions.emptySelectedBlockIds();
   };
 
   const showDescriptionAfterAWhile = () => {
     setDelay(
       setTimeout(() => {
-        props.storeManager.editor.setTooltip(props.description);
+        actions.setTooltip(props.description);
       }, 1000)
     );
   };
@@ -259,7 +262,7 @@ function Role(props) {
         onMouseEnter={showDescriptionAfterAWhile}
         onMouseOut={() => {
           clearTimeout(getDelay());
-          props.storeManager.editor.setTooltip(false);
+          actions.setTooltip(false);
         }}
         onPointerDown={(e) => {
           startConnection(e, props.role_id);

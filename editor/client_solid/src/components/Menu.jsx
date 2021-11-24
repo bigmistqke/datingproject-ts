@@ -3,6 +3,9 @@ import "./Menu.css";
 import Bubble from "./Bubble";
 import { createSignal } from "solid-js";
 
+import { useStore } from "../managers/Store";
+import urls from "../urls";
+
 const MenuHeader = function (props) {
   return (
     <header>
@@ -20,9 +23,11 @@ const MenuBody = function (props) {
 };
 
 const MainMenu = function (props) {
+  const [state, actions] = useStore();
+
   return (
     <div classList={{ main_menu: true, open: props.open }}>
-      <MenuHeader header={`editor for 📜 ${props.script_id}`}>
+      <MenuHeader header={`editor for 📜 ${state.script.script_id}`}>
         <TextArea
           value={props.description}
           style={{ "font-style": "italic" }}
@@ -38,27 +43,31 @@ const MainMenu = function (props) {
         <button
           classList={{
             bubble: true,
-            selected: props.sub_menu === "monitor_menu",
+            selected: state.editor.gui.sub_menu === "monitor_menu",
           }}
-          onClick={() => props.toggleSubMenu("monitor_menu")}
+          onClick={() => actions.toggleSubMenu("monitor_menu")}
         >
-          {props.sub_menu === "monitor_menu" ? "close games" : "open games"}
+          {state.editor.gui.sub_menu === "monitor_menu"
+            ? "close games"
+            : "open games"}
         </button>
 
         <button
           classList={{
             bubble: true,
-            selected: props.sub_menu === "role_menu",
+            selected: state.editor.gui.sub_menu === "role_menu",
           }}
           onClick={() => {
-            if (props.sub_menu === "role_menu") {
-              props.toggleSubMenu(false);
+            if (state.editor.gui.sub_menu === "role_menu") {
+              actions.toggleSubMenu(false);
             } else {
-              props.toggleSubMenu("role_menu");
+              actions.toggleSubMenu("role_menu");
             }
           }}
         >
-          {props.sub_menu === "role_menu" ? "close roles" : "open roles"}
+          {state.editor.gui.sub_menu === "role_menu"
+            ? "close roles"
+            : "open roles"}
         </button>
       </MenuBody>
       {props.children}
@@ -67,32 +76,25 @@ const MainMenu = function (props) {
 };
 
 const RoleMenu = function (props) {
+  const [state, actions] = useStore();
+
   let roles_container;
   let views = ["list", "grid"];
   let view_index = 0;
   let [getView, setView] = createSignal(views[0]);
 
   const addRole = () => {
-    props.storeManager.script.roles.addRole();
+    actions.addRole();
     roles_container.scrollTop = roles_container.scrollHeight;
-  };
-  const setDescription = ({ role_id, description }) => {
-    props.storeManager.script.roles.setDescription({ role_id, description });
-  };
-
-  const changeName = ({ role_id, name }) => {
-    props.storeManager.script.roles.setName({ role_id, name });
   };
 
   const removeRole = async (role_id) => {
-    let role_instructions = Object.entries(
-      props.scriptState.instructions
-    ).filter(
+    let role_instructions = Object.entries(state.script.instructions).filter(
       ([instruction_id, instruction]) => instruction.role_id === role_id
     );
     if (role_instructions.length > 0) {
-      let hue = props.scriptState.roles[role_id].hue.toString();
-      let result = await props.storeManager.editor.openPrompt({
+      let hue = state.script.roles[role_id].hue.toString();
+      let result = await actions.openPrompt({
         type: "confirm",
         header: (
           <>
@@ -113,10 +115,10 @@ const RoleMenu = function (props) {
 
       if (!result) return;
 
-      props.storeManager.script.roles.remove(role_id);
+      actions.removeRoleFromScript(role_id);
     }
 
-    props.storeManager.script.roles.remove(role_id);
+    actions.removeRoleFromScript(role_id);
   };
 
   const toggleView = () => {
@@ -131,7 +133,7 @@ const RoleMenu = function (props) {
           <span className="flexing">role manager</span>
           <Bubble onClick={toggleView}>{getView()}</Bubble>
           <Bubble color="black">
-            # roles: {Object.keys(props.scriptState.roles).length}
+            # roles: {Object.keys(state.script.roles).length}
           </Bubble>
           <div className="bubble-container">
             <Bubble
@@ -151,14 +153,14 @@ const RoleMenu = function (props) {
 
       <MenuBody ref={roles_container}>
         {getView() === "list" ? (
-          <For each={Object.entries(props.scriptState.roles)}>
+          <For each={Object.entries(state.script.roles)}>
             {([role_id, role]) => (
               <>
                 <div className="row flex role_row">
                   <div className="bubble-container">
                     <Bubble
                       onChange={(name) => {
-                        changeName({ role_id, name });
+                        actions.setName({ role_id, name });
                       }}
                       contentEditable={true}
                       background_hue={role.hue}
@@ -173,7 +175,10 @@ const RoleMenu = function (props) {
                     type={"text"}
                     placeholder="add description"
                     onInput={(e) => {
-                      setDescription({ role_id, description: e.target.value });
+                      actions.setDescriptionRole({
+                        role_id,
+                        description: e.target.value,
+                      });
                     }}
                     className={`instruction-text flexing`}
                     value={role.description}
@@ -198,7 +203,7 @@ const RoleMenu = function (props) {
             )}
           </For>
         ) : (
-          <For each={Object.entries(props.scriptState.roles)}>
+          <For each={Object.entries(state.script.roles)}>
             {([role_id, role]) => (
               <div className="bubble-container  flexing">
                 <Bubble
@@ -225,6 +230,7 @@ const RoleMenu = function (props) {
 };
 
 const GamesMenu = function (props) {
+  const [state, actions] = useStore();
   return (
     <div classList={{ monitor_menu: true, sub_menu: true, open: props.open }}>
       <header>
@@ -237,44 +243,36 @@ const GamesMenu = function (props) {
           </div>
         </h1>
       </header>
-      <iframe src={`${props.urls.monitor}/${props.script_id}`}></iframe>
+      <iframe src={`${urls.monitor}/${state.script.script_id}`}></iframe>
     </div>
   );
 };
 
 export default function Menu(props) {
+  const [state, actions] = useStore();
   // const [sub_menu, setSubMenu] = createSignal(false);
 
-  const toggleSubMenu = (type) => props.storeManager.editor.toggleSubMenu(type);
+  const toggleSubMenu = (type) => actions.toggleSubMenu(type);
 
   return (
     <div class="menu">
       <MainMenu
-        description={props.scriptState.description}
-        open={props.editorState.bools.isMenuOpen}
-        script_id={props.script_id}
-        storeManager={props.storeManager}
-        editorState={props.editorState}
+        description={state.script.description}
+        open={state.editor.bools.isMenuOpen}
         toggleSubMenu={toggleSubMenu}
-        sub_menu={props.sub_menu}
         saveScript={props.saveScript}
       ></MainMenu>
       <RoleMenu
-        storeManager={props.storeManager}
-        scriptState={props.scriptState}
         open={
-          props.sub_menu === "role_menu" && props.editorState.bools.isMenuOpen
+          state.editor.gui.sub_menu === "role_menu" &&
+          state.editor.bools.isMenuOpen
         }
       ></RoleMenu>
       <GamesMenu
-        storeManager={props.storeManager}
-        scriptState={props.scriptState}
-        urls={props.urls}
-        script_id={props.script_id}
         createGame={props.createGame}
         open={
-          props.sub_menu === "monitor_menu" &&
-          props.editorState.bools.isMenuOpen
+          state.editor.gui.sub_menu === "monitor_menu" &&
+          state.editor.bools.isMenuOpen
         }
       ></GamesMenu>
     </div>

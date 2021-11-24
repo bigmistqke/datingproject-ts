@@ -1,22 +1,19 @@
-// import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-
 import { createSignal, onMount } from "solid-js";
 
-import Block from "./Block";
-import Connection from "./Connection";
-
-import normalizeWheel from "normalize-wheel";
-// import State from "../helpers/react/State.js"
 import "./Map.css";
 
-import cursorEventHandler from "../helpers/cursorEventHandler";
+import dragHelper from "../helpers/dragHelper";
+
+import { useStore } from "../managers/Store";
 
 function Map(props) {
+  const [state, actions] = useStore();
+
   let map;
 
   onMount(() => {
     console.info("mounted");
-    console.log(props.storeManager);
+    // console.log(props.storeManager);
   });
 
   const select = ({ e, coords }) => {
@@ -27,7 +24,7 @@ function Map(props) {
       left: (coords.x - props.origin.x) / props.zoom,
     };
 
-    props.storeManager.editor.setSelectionBox(selectionBox);
+    actions.setSelectionBox(selectionBox);
 
     /* let collisions = props.blocks
       .filter((block) => {
@@ -47,7 +44,7 @@ function Map(props) {
     );
 
     if (!ctrlPressed) {
-      const selected_block_ids = props.editorState.selected_block_ids;
+      const selected_block_ids = props.state.editor.selected_block_ids;
 
       const block_ids_to_deselect = selected_block_ids.filter(
         (selected_block_id) => collisions.indexOf(selected_block_id) != -1
@@ -66,9 +63,9 @@ function Map(props) {
       x: e.clientX - coords.x,
       y: e.clientY - coords.y,
     };
-    props.storeManager.editor.setOrigin({
-      x: props.origin.x + origin_delta.x,
-      y: props.origin.y + origin_delta.y,
+    actions.setOrigin({
+      x: state.editor.navigation.origin.x + origin_delta.x,
+      y: state.editor.navigation.origin.y + origin_delta.y,
     });
   };
 
@@ -78,11 +75,11 @@ function Map(props) {
     let coords = { x: e.clientX, y: e.clientY };
     let now = performance.now();
 
-    props.storeManager.editor.setBool("isTranslating", true);
+    actions.setBool("isTranslating", true);
 
-    await cursorEventHandler((e) => {
+    await dragHelper((e) => {
       now = performance.now();
-      if (props.isShiftPressed) {
+      if (state.editor.bools.isShiftPressed) {
         select({ e, coords });
       } else {
         move(e, coords);
@@ -92,18 +89,19 @@ function Map(props) {
         };
       }
     });
-    props.storeManager.editor.setBool("isTranslating", false);
 
-    if (!props.isShiftPressed) {
-      props.storeManager.editor.setSelectionBox(false);
-      props.storeManager.editor.emptySelectedBlockIds();
+    actions.setBool("isTranslating", false);
+
+    if (!state.editor.bools.isShiftPressed) {
+      actions.setSelectionBox(false);
+      actions.emptySelectedBlockIds();
     }
   };
 
   const createBlock = async (e) => {
     e.preventDefault();
 
-    let type = await props.storeManager.editor.openPrompt({
+    let type = await actions.openPrompt({
       type: "options",
       header: "create a new block",
       data: {
@@ -114,10 +112,14 @@ function Map(props) {
     if (!type) return;
 
     const position = {
-      x: (e.clientX - props.origin.x) / props.zoom,
-      y: (e.clientY - props.origin.y) / props.zoom,
+      x:
+        (e.clientX - state.editor.navigation.origin.x) /
+        state.editor.navigation.zoom,
+      y:
+        (e.clientY - state.editor.navigation.origin.y) /
+        state.editor.navigation.zoom,
     };
-    props.storeManager.script.blocks.addBlock({ position, type });
+    actions.addBlock({ position, type });
   };
 
   return (
@@ -127,15 +129,18 @@ function Map(props) {
       onContextMenu={createBlock}
     >
       <div
-        className={`map ${props.zoomedOut ? "zoomedOut" : ""} ${
-          props.connecting ? "connecting" : ""
-        }`}
+        className={`map ${
+          state.editor.navigation.zoomedOut ? "zoomedOut" : ""
+        } ${state.editor.bools.isConnecting ? "connecting" : ""}`}
         ref={map}
         style={{
-          transform: `translateX(${props.origin.x}px) translateY(${props.origin.y}px)`,
+          transform: `translateX(${state.editor.navigation.origin.x}px) translateY(${state.editor.navigation.origin.y}px)`,
         }}
       >
-        <div className="zoom" style={{ transform: `scale(${props.zoom})` }}>
+        <div
+          className="zoom"
+          style={{ transform: `scale(${state.editor.navigation.zoom})` }}
+        >
           {props.children}
         </div>
       </div>

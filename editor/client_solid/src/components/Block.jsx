@@ -1,33 +1,33 @@
 import "./Block.css";
 import DragBox from "./DragBox";
-import cursorEventHandler from "../helpers/cursorEventHandler";
+import dragHelper from "../helpers/dragHelper";
 import { createMemo } from "solid-js";
+import { useStore } from "../managers/Store";
 function Block(props) {
-  const initTranslation = async function (e) {
+  const [state, actions] = useStore();
+
+  /*   const initTranslation = async function (e) {
     e.preventDefault();
     e.stopPropagation();
-    if (!props.isShiftPressed) {
-      props.storeManager.editor.emptySelectedBlockIds();
+    if (!state.editor.bools.isShiftPressed) {
+      actions.emptySelectedBlockIds();
     }
 
-    // props.storeManager.blocks.selectBlock({ block: props.block });
-    props.storeManager.editor.addToSelectedBlockIds(props.block_id);
+    actions.addToSelectedBlockIds(props.block_id);
 
     let lastTick = performance.now();
 
-    // await props.storeManager.blocks.processPosition(e, props.block, props.zoom);
-
     let last_position = { x: e.clientX, y: e.clientY };
     let offset;
-    await cursorEventHandler((e) => {
+    await dragHelper((e) => {
       if (performance.now() - lastTick < 1000 / 60) return;
       lastTick = performance.now();
       offset = {
-        x: ((last_position.x - e.clientX) * -1) / props.zoom,
-        y: ((last_position.y - e.clientY) * -1) / props.zoom,
+        x: ((last_position.x - e.clientX) * -1) / state.editor.navigation.zoom,
+        y: ((last_position.y - e.clientY) * -1) / state.editor.navigation.zoom,
       };
 
-      props.storeManager.script.blocks.translateSelectedBlocks({ offset });
+      actions.translateSelectedBlocks({ offset });
 
       last_position = {
         x: e.clientX,
@@ -35,61 +35,62 @@ function Block(props) {
       };
     });
 
-    if (!props.isShiftPressed) {
-      props.storeManager.editor.emptySelectedBlockIds();
+    if (!state.editor.bools.isShiftPressed) {
+      actions.emptySelectedBlockIds();
     }
-  };
+  }; */
 
   const pointerDown = () => {
-    if (!props.isShiftPressed) {
-      props.storeManager.editor.emptySelectedBlockIds();
+    if (!state.editor.bools.isShiftPressed) {
+      actions.emptySelectedBlockIds();
     }
-    props.storeManager.editor.addToSelectedBlockIds(props.block_id);
-    props.storeManager.editor.setBool("isTranslating", true);
+    actions.addToSelectedBlockIds(props.block_id);
+    actions.setBool("isTranslating", true);
   };
 
   const translate = (offset) => {
-    props.storeManager.script.blocks.translateSelectedBlocks({ offset });
+    actions.translateSelectedBlocks({ offset });
   };
 
   const pointerUp = () => {
-    if (!props.isShiftPressed) {
-      props.storeManager.editor.emptySelectedBlockIds();
+    if (!state.editor.bools.isShiftPressed) {
+      actions.emptySelectedBlockIds();
     }
-    props.storeManager.editor.setBool("isTranslating", false);
+    actions.setBool("isTranslating", false);
   };
 
   const contextMenu = async (e) => {
     e.stopPropagation();
     e.preventDefault();
-    if (!props.isShiftPressed) {
-      props.storeManager.editor.emptySelectedBlockIds();
+
+    if (!state.editor.bools.isShiftPressed) {
+      actions.emptySelectedBlockIds();
     }
 
-    props.storeManager.editor.addToSelectedBlockIds(props.block_id);
+    actions.addToSelectedBlockIds(props.block_id);
 
-    let result = await props.storeManager.editor.openPrompt({
+    let result = await actions.openPrompt({
       type: "confirm",
       header: "delete selected block(s)",
     });
     if (!result) return;
 
-    let { role_ids } = props.storeManager.script.blocks.removeSelectedBlocks();
+    let { role_ids } = actions.removeSelectedBlocks();
     role_ids.forEach((role_id) => {
       {
-        props.storeManager.process.controlRole(role_id);
+        actions.controlRole(role_id);
       }
     });
   };
 
   const isErrored = createMemo(
-    () => props.errored_block_ids.indexOf(props.block_id) != -1,
-    [props.errored_block_ids]
+    () => state.editor.errored_block_ids.indexOf(props.block_id) != -1,
+    [state.editor.errored_block_ids]
   );
 
   const isSelected = createMemo(
-    () => props.selected_block_ids.indexOf(props.block_id) != -1,
-    [props.selected_block_ids]
+    () => state.editor.selected_block_ids.indexOf(props.block_id) != -1,
+    [state.editor.selected_block_ids]
   );
 
   return (
@@ -97,8 +98,8 @@ function Block(props) {
       id={`block_${props.block_id}`}
       classList={{
         block: true,
-        isConnecting: props.isConnecting,
-        isTranslating: props.isTranslating,
+        isConnecting: state.editor.bools.isConnecting,
+        isTranslating: state.editor.bools.isTranslating,
         selected: isSelected(),
         isErrored: isErrored(),
       }}
@@ -111,26 +112,6 @@ function Block(props) {
       {props.children}
     </DragBox>
   );
-
-  /*  (
-    <div
-      id={`block_${props.block_id}`}
-      classList={{
-        block: true,
-        isConnecting: props.isConnecting,
-        selected: props.isSelected,
-        isTranslating: props.isTranslating,
-        isErrored: props.isErrored,
-      }}
-      pointerDown={initTranslation}
-      onContextMenu={contextMenu}
-      style={{
-        transform: `translateX(${props.position.x}px) translateY(${props.position.y}px)`,
-      }}
-    >
-      
-    </div>
-  ); */
 }
 
 export default Block;

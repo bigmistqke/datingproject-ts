@@ -12,7 +12,7 @@ function TextArea(props) {
 
   function onInput() {
     resize();
-    props.storeManager.script.description.set(textarea_dom.value);
+    actions.setDescriptionScript(textarea_dom.value);
   }
   return (
     <textarea

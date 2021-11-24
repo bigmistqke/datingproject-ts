@@ -9,8 +9,11 @@ import {
 } from "solid-js";
 
 import { createStore } from "solid-js/store";
+import { useStore } from "../managers/Store";
 
 function Error(props) {
+  const [state, actions] = useStore();
+
   const [getCounter, setCounter] = createSignal(0);
   createEffect(() => {
     console.log(props.block_ids);

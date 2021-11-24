@@ -5,7 +5,11 @@ import { For, onMount, createSignal, createEffect } from "solid-js";
 import Bubble from "./Bubble";
 import "./RoleAdmin.css";
 
+import { useStore } from "../managers/Store";
+
 export default function RoleAdmin(props) {
+  const [state, actions] = useStore();
+
   let roles_container;
   const [getPosition, setPosition] = createSignal({
     x: window.innerWidth / 2,
@@ -14,11 +18,11 @@ export default function RoleAdmin(props) {
   const [getSelected, setSelected] = createSignal(false);
 
   const closeRoleAdmin = () => {
-    props.storeManager.editor.closeGui("role_admin");
+    actions.closeGui("role_admin");
   };
 
   const addRole = () => {
-    props.storeManager.script.roles.addRole();
+    actions.addRoleToScript();
     roles_container.scrollTop = roles_container.scrollHeight;
   };
 
@@ -30,14 +34,12 @@ export default function RoleAdmin(props) {
   };
 
   const removeRole = async (role_id) => {
-    let role_instructions = Object.entries(
-      props.scriptState.instructions
-    ).filter(
+    let role_instructions = Object.entries(state.scripts.instructions).filter(
       ([instruction_id, instruction]) => instruction.role_id === role_id
     );
     if (role_instructions.length > 0) {
-      let hue = props.scriptState.roles[role_id].hue.toString();
-      let result = await props.storeManager.editor.openPrompt({
+      let hue = state.scripts.roles[role_id].hue.toString();
+      let result = await actions.openPrompt({
         type: "confirm",
         header: (
           <>
@@ -58,18 +60,18 @@ export default function RoleAdmin(props) {
 
       if (!result) return;
 
-      props.storeManager.script.roles.remove(role_id);
+      actions.removeRoleFromScript(role_id);
     }
 
-    props.storeManager.script.roles.remove(role_id);
+    actions.removeRoleFromScript(role_id);
   };
 
   const setDescription = ({ role_id, description }) => {
-    props.storeManager.script.roles.setDescription({ role_id, description });
+    actions.setDescriptionRole({ role_id, description });
   };
 
   const changeName = ({ role_id, name }) => {
-    props.storeManager.script.roles.setName({ role_id, name });
+    actions.setNameRole({ role_id, name });
   };
 
   return (

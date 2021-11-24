@@ -2,7 +2,11 @@ import Bezier from "./Bezier";
 import { createMemo, createEffect } from "solid-js";
 import getColorFromHue from "../helpers/getColorFromHue";
 
+import { useStore } from "../managers/Store";
+
 function TemporaryConnection(props) {
+  const [state, actions] = useStore();
+
   const PADDING = 10;
   const MARGIN = 10;
   const ROLE_HEIGHT = 15;
@@ -55,10 +59,10 @@ function TemporaryConnection(props) {
 
   const getPositionCursor = createMemo(() => {
     return {
-      x: props.cursor.x - props.origin.x,
-      y: props.cursor.y - props.origin.y,
+      x: state.editor.navigation.cursor.x - state.editor.navigation.origin.x,
+      y: state.editor.navigation.cursor.y - state.editor.navigation.origin.y,
     };
-  }, [props.cursor, props.origin]);
+  }, [state.editor.navigation.cursor, state.editor.navigation.origin]);
 
   /*   createEffect(() => {
     console.log("every render: ", getPositionCursor(), getPositionPort());

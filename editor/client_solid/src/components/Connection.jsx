@@ -4,7 +4,11 @@ import "./Connection.css";
 import Bezier from "./Bezier";
 import getColorFromHue from "../helpers/getColorFromHue";
 
+import { useStore } from "../managers/Store";
+
 const Connection = (props) => {
+  const [state, actions] = useStore();
+
   const MARGIN = 10;
   const ROLE_HEIGHT = 12;
 
@@ -16,15 +20,6 @@ const Connection = (props) => {
     next: {
       x: null,
       y: null,
-    },
-  });
-
-  let [state, setState] = createStore({
-    boundaries: { in: false, out: false },
-    SVG: {
-      in: { x: 0, y: 0 },
-      center: { x: 0, y: 0 },
-      out: { x: 0, y: 0 },
     },
   });
 
@@ -62,32 +57,6 @@ const Connection = (props) => {
       points={Object.values(positions)}
       style={{ stroke: getColorFromHue(props.role_hue) }}
     ></Bezier>
-    // <svg
-    //   className="connectionLine"
-    //   width={
-    //     Math.abs(state.boundaries.out.x - state.boundaries.in.x) + PADDING * 2
-    //   }
-    //   height={
-    //     Math.abs(state.boundaries.out.y - state.boundaries.in.y) + PADDING * 2
-    //   }
-    //   style={{
-    //     left: `${state.boundaries.out.x - PADDING}px`,
-    //     top: `${state.boundaries.out.y - PADDING}px`,
-    //     position: "absolute",
-    //     /* height: `${Math.abs(
-    //         state.boundaries.out.y - state.boundaries.in.y
-    //       )}px`,
-    //       width: `${
-    //         Math.abs(state.boundaries.out.x - state.boundaries.in.x) +
-    //         PADDING * 2
-    //       }px`, */
-    //   }}
-    // >
-    //   <path
-    //     style={{ stroke: getColorFromHue(props.role_hue) }}
-    //     d={`M${state.SVG.out.x},${state.SVG.out.y} C${state.SVG.out.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.in.y} ${state.SVG.center.x},${state.SVG.center.y}`}
-    //   ></path>
-    // </svg>
   );
 };
 

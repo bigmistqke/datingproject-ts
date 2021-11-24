@@ -4,29 +4,29 @@ import NumericInput from "./NumericInput";
 // import
 // import Select from 'react-select';
 import "./Instruction.css";
-import { createSignal, onMount, createEffect, createMemo } from "solid-js";
+import { Show, createEffect, createMemo } from "solid-js";
 import Select from "./Select";
 import getColorFromHue from "../helpers/getColorFromHue";
 
+import { useStore } from "../managers/Store";
+import urls from "../urls";
+
 const Instruction = (props) => {
-  let role_ref;
-  let input_ref;
-  let error_ref;
+  const [state, actions] = useStore();
+
+  const myFormat = (num) => num + " sec";
 
   const removeRow = () => {
-    props.storeManager.script.instructions.removeInstruction(
-      props.instruction_id
-    );
-    props.storeManager.script.blocks.removeInstructionId({
+    actions.removeInstruction(props.instruction_id);
+    actions.removeInstructionId({
       block_id: props.block_id,
       instruction_id: props.instruction_id,
     });
   };
 
   const addRow = () => {
-    let { instruction_id } =
-      props.storeManager.script.instructions.addInstruction(props.role_id);
-    props.storeManager.script.blocks.addInstructionId({
+    let { instruction_id } = actions.addInstruction(props.role_id);
+    actions.addInstructionId({
       block_id: props.block_id,
       instruction_id: instruction_id,
       prev_instruction_id: props.instruction_id,
@@ -34,43 +34,23 @@ const Instruction = (props) => {
     });
   };
 
-  const changeTimespan = (e) => {
-    let timespan = e.target.value;
-    props.storeManager.script.instructions.change(props.instruction_id, {
-      timespan,
-    });
-  };
-
-  const changeRole = (value) => {
-    props.storeManager.script.instructions.change(props.instruction_id, {
-      role_id: value,
-    });
-  };
-
   const changeType = (type) => {
-    // let type = e.target.value;
     if (type === "video") {
-      props.storeManager.script.instructions.change(props.instruction_id, {
+      actions.setInstruction(props.instruction_id, {
         text: "",
         type,
       });
     } else {
-      props.storeManager.script.instructions.change(props.instruction_id, {
+      actions.setInstruction(props.instruction_id, {
         type,
       });
     }
   };
 
-  const changeSound = (e) => {
-    props.storeManager.script.instructions.change(props.instruction_id, {
-      sound: e.target.checked,
-    });
-  };
-
   const changeText = (e) => {
     e.target.style.height = "auto";
     e.target.style.height = e.target.scrollHeight + "px";
-    props.storeManager.script.instructions.change(props.instruction_id, {
+    actions.setInstruction(props.instruction_id, {
       text: e.target.value,
     });
   };
@@ -80,61 +60,13 @@ const Instruction = (props) => {
     if (!e.target) return;
     const file = e.target.files[0];
     if (!types.test(file.type) || !types.test(file.name)) return;
-    error_ref = true;
-    let upload = await props.videoUploader.process(file, props.instruction_id);
+    let upload = await actions.processVideo(file, props.instruction_id);
+    console.log("uploaded yeya", upload);
     if (!upload.success) console.error(upload.error);
-    setTimeout(() => {
-      error_ref = false;
-    }, 1000);
-
-    props.storeManager.script.instructions.change(props.instruction_id, {
-      text: `/api${upload.url.substring(1)}`,
+    actions.setInstruction(props.instruction_id, {
+      text: `/api${upload.response.substring(1)}`,
     });
   };
-
-  const myFormat = (num) => num + " sec";
-  const getClassByRole = () => (props.role_id === "a" ? "type_a" : "type_b");
-  const getClassByError = () => (error_ref ? "error" : "");
-
-  const InstructionValue = () => {
-    if (props.type === "video") {
-      if (props.text) {
-        return (
-          // <div></div>
-          <video
-            className="flexing"
-            src={props.urls.fetch + props.text}
-          ></video>
-        );
-      } else {
-        return (
-          <input
-            type="file"
-            onChange={(e) => {
-              processVideo(e);
-            }}
-            className="instruction-text flexing"
-          ></input>
-        );
-      }
-    } else {
-      return (
-        <input
-          ref={input_ref}
-          type={"text"}
-          placeholder="enter instruction here"
-          onInput={changeText}
-          className={`instruction-text flexing`}
-          value={props.text}
-          // onInput={OnInput}
-          // cols={4}
-          rows={1}
-        ></input>
-      );
-    }
-  };
-
-  const getRoleId = () => props.role_id;
 
   const getRoleOptions = createMemo(() =>
     Object.entries(props.roles).map(([role_id, role]) => {
@@ -142,25 +74,29 @@ const Instruction = (props) => {
     })
   );
 
-  createEffect(() => {
-    console.log("role_id is ", props.role_id);
-  });
-
   return (
     <div
-      className={`row flex instruction ${getClassByRole()} ${getClassByError()}`}
+      classList={{
+        row: true,
+        flex: true,
+        instruction: true,
+        error: error_ref,
+      }}
+      // className={`row flex instruction ${getClassByRole()} ${getClassByError()}`}
     >
       <div
         className="instruction-border"
         style={{ background: getColorFromHue(props.role_hue) }}
       ></div>
 
-      {/* <span>{props.role_id}</span> */}
       <Select
         options={getRoleOptions()}
         value={props.role_id}
-        onInput={changeRole}
-        // className="tiny"
+        onInput={() =>
+          actions.setInstruction(props.instruction_id, {
+            role_id: value,
+          })
+        }
       ></Select>
       <Select
         options={[
@@ -176,9 +112,12 @@ const Instruction = (props) => {
 
       <div className="timer-container tiny">
         <input
-          // ref={r_timespan}
           type="number"
-          onChange={changeTimespan}
+          onChange={(e) =>
+            actions.setInstruction(props.instruction_id, {
+              timespan: e.target.value,
+            })
+          }
           min={0}
           step={5}
           precision={0}
@@ -187,19 +126,56 @@ const Instruction = (props) => {
           className={!props.timespan ? "gray" : null}
         />
       </div>
-      <div className={`timer-sound tiny ${props.sound ? "on" : ""}`}>
+      <div
+        classList={{
+          "timer-sound": true,
+          tiny: true,
+          on: props.sound,
+        }}
+      >
         <div>
           <label> 🕪 </label>
         </div>
         <div>
           <input
             type="checkbox"
-            onChange={changeSound}
+            onChange={(e) =>
+              actions.setInstruction(props.instruction_id, {
+                sound: e.target.checked,
+              })
+            }
             checked={props.sound}
           ></input>
         </div>
       </div>
-      <InstructionValue></InstructionValue>
+
+      <Show when={props.type === "video"}>
+        <Show when={props.text === ""}>
+          <input
+            type="file"
+            onChange={(e) => {
+              processVideo(e);
+            }}
+            className="instruction-text flexing"
+          ></input>
+        </Show>
+        <Show when={props.text !== ""}>
+          <video className="flexing" src={urls.fetch + props.text}></video>
+          );
+        </Show>
+      </Show>
+      <Show when={props.type !== "video"}>
+        <input
+          type={"text"}
+          placeholder="enter instruction here"
+          onInput={changeText}
+          className={`instruction-text flexing`}
+          value={props.text}
+          // onInput={OnInput}
+          // cols={4}
+          rows={1}
+        ></input>
+      </Show>
       <button className="instruction-button tiny" onClick={() => removeRow()}>
         -
       </button>
@@ -209,18 +185,6 @@ const Instruction = (props) => {
     </div>
   );
 };
-
-function blockPropsAreEqual(prev, next) {
-  return (
-    prev.text === next.text &&
-    prev.type === next.type &&
-    prev.ports === next.ports &&
-    prev.timespan === next.timespan &&
-    prev.role_id === next.role_id &&
-    prev.render === next.render
-  );
-}
-
 export default Instruction;
 
-//            <video controls src={`${props.urls.fetch}${props.text}`} className="instruction-text flexing"></video> :
+//            <video controls src={`${urls.fetch}${props.text}`} className="instruction-text flexing"></video> :
