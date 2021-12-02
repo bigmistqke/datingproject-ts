@@ -112,7 +112,7 @@ function App(props) {
     setState("viewport", "card_selected", "choice", bool);
 
   const fetchCards = async (card_id) => {
-    let result = await fetch(`${props.urls.fetch}/api/card/get/${card_id}`);
+    let result = await fetch(`${props.urls.fetch}/api/design/get/${card_id}`);
     result = await result.json();
     if (!result) return false;
     setState("designs", result.designs);

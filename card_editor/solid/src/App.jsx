@@ -54,7 +54,6 @@ function App(props) {
     text: null,
     timespan: null,
   });
-
   // window.instruction = instruction;
 
   createEffect(() => setCardId(card_id));
@@ -108,8 +107,9 @@ function App(props) {
 
   const fetchDeck = async (card_id) => {
     try {
-      let result = await fetch(`${props.urls.fetch}/api/card/get/${card_id}`);
+      let result = await fetch(`${props.urls.fetch}/api/design/get/${card_id}`);
       let design = await result.json();
+      console.log("design is ", design);
       if (!design) return false;
       return design;
     } catch (err) {
@@ -118,21 +118,52 @@ function App(props) {
     }
   };
 
+  const renderSvg = ({ svg, card_dimensions }) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = (svg.dimensions.width / 100) * card_dimensions.width * 100;
+    canvas.heigt = (svg.dimensions.height / 100) * card_dimensions.heigt * 100;
+  };
+
+  const processDeck = async () => {
+    let production_deck = {};
+    Object.entries(state.design.types).forEach(([type_name, type]) =>
+      type.elements.forEach((element) => {
+        switch (element.type) {
+          case "svg":
+            console.log(element);
+
+            break;
+          default:
+            break;
+        }
+      })
+    );
+  };
+
   const saveDeck = async () => {
     try {
-      let result = await fetch(`${props.urls.fetch}/api/card/save/${card_id}`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-cache",
-        credentials: "same-origin",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        redirect: "follow",
-        referrerPolicy: "no-referrer",
-        body: JSON.stringify(state.design),
-      });
+      // let development = state.design;
+      // let production = action.processDesign();
+
+      console.log(state.design);
+
+      let result = await fetch(
+        `${props.urls.fetch}/api/design/save/${card_id}`,
+        {
+          method: "POST",
+          mode: "cors",
+          cache: "no-cache",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          redirect: "follow",
+          referrerPolicy: "no-referrer",
+          body: JSON.stringify(state.design),
+        }
+      );
       result = await result.json();
+      console.log(result);
       return true;
     } catch (err) {
       console.error(err);
@@ -225,7 +256,7 @@ function App(props) {
             instruction={instruction}
           ></CardRenderer>
         </Viewport>
-        <SidePanel saveDeck={saveDeck}></SidePanel>
+        <SidePanel processDeck={processDeck} saveDeck={saveDeck}></SidePanel>
       </App>
     </>
   );

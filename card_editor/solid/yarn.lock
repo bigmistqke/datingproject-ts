@@ -513,6 +513,11 @@
   "resolved" "https://registry.yarnpkg.com/safe-buffer/-/safe-buffer-5.1.2.tgz"
   "version" "5.1.2"
 
+"save-svg-as-png@^1.4.17":
+  "integrity" "sha512-7QDaqJsVhdFPwviCxkgHiGm9omeaMBe1VKbHySWU6oFB2LtnGCcYS13eVoslUgq6VZC6Tjq/HddBd1K6p2PGpA=="
+  "resolved" "https://registry.npmjs.org/save-svg-as-png/-/save-svg-as-png-1.4.17.tgz"
+  "version" "1.4.17"
+
 "semver@^6.3.0":
   "integrity" "sha512-b39TBaTSfV6yBrapU89p5fKekE2m/NwnDocOVruQFS1/veMgdzuPcnOM34M6CwxW8jH/lxEa5rBoDeUwu5HHTw=="
   "resolved" "https://registry.yarnpkg.com/semver/-/semver-6.3.0.tgz"

@@ -42,6 +42,7 @@ const SidePanel = (props) => {
       setBackground,
       setStyle,
       getTextStyles,
+      setType,
     },
   ] = useStore();
 
@@ -74,7 +75,8 @@ const SidePanel = (props) => {
         <Button onClick={toggleTypeManager}>manage types</Button>
         <Button>overview</Button>
         <Button onClick={createNewCard}>new card</Button>
-        <Button onClick={props.saveDeck}>save card</Button>
+        <Button onClick={props.processDeck}>process deck</Button>
+        <Button onClick={props.saveDeck}>save deck</Button>
       </FlexRow>
       <LongPanel
         style={{

@@ -56,7 +56,7 @@ function App() {
   const shouldAddTextType = new State(false);
 
   const getCards = useCallback(async () => {
-    let result = await fetch(`${window._url.fetch}/api/card/get/${card_id}`);
+    let result = await fetch(`${window._url.fetch}/api/design/get/${card_id}`);
     result = await result.json();
     if (!result) return;
     Object.entries(result.designs).forEach(([type, data]) => {
