@@ -1,0 +1,10 @@
+{
+	"appId": "com.bigmistqke.thedatingproject",
+	"appName": "solid_ionic",
+	"webDir": "build",
+	"bundledWebRuntime": false,
+	"server": {
+		"url": "http://192.168.1.12:8100",
+		"cleartext": true
+	}
+}
