@@ -39,13 +39,20 @@ console.log('DOES THE WHOLE SCRIPT RESTART FOR SOME REASON??');
 
 _mongo.connect('datingProject')
   .then(async () => {
+    try {
+      console.log('connect to mqtt');
+      await _mqtt.connect(mqtt_url, true)
+      console.log('connected to mqtt :-)');
 
-    await _mqtt.connect(mqtt_url, true)
 
+      let urls = await _rooms.getAllRoomUrls();
+      urls.map(url => url.replace('r_', '')).map(room_id => _monitor.start({ room_id }))
+    } catch (e) {
+      console.error(e);
+    }
 
-
-    let urls = await _rooms.getAllRoomUrls();
-    urls.map(url => url.replace('r_', '')).map(room_id => _monitor.start({ room_id }))
+  }).catch(e => {
+    console.error('error while connecting to mongo:', e);
   })
 
 
@@ -104,16 +111,18 @@ app.get('/api/downloadVideo/:file_name', async (req, res, next) => {
 // save script
 app.post('/api/script/save/:script_id', async function (req, res, next) {
   // TODO:  sanitize content
-  let { blocks, roles, instructions } = req.body;
+  let { blocks, roles, instructions, groups } = req.body;
   const script_id = req.params.script_id;
-  const result = await _db.saveScript({ script_id, blocks, roles, instructions });
+  const result = await _db.saveScript({ script_id, blocks, roles, instructions, groups });
   res.json(result);
 })
 
 // get script
 app.get('/api/script/get/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id;
+  console.log('get script', script_id);
   let results = await _db.getScript(script_id);
+  console.log(results);
   res.send(results);
   return next();
 })
@@ -178,7 +187,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
   const { url } = req.params;
   const room_id = url.slice(0, 6);
   const player_id = url.slice(6);
-  console.log('joining room', room_id, player_id);
+  console.log('joining room', new Date(), room_id, player_id);
 
   let { role_id, instructions, error, design_id } = await _rooms.joinRoom({ room_id, player_id });
 
@@ -193,7 +202,11 @@ app.get('/api/room/join/:url', async function (req, res, next) {
     return;
   };
 
-  let design = await _db.getDeck({ design_id })
+  if (!design_id) {
+    design_id = 'oldie_2';
+  }
+
+  let design = await _db.getDesign({ design_id })
 
   res.json({ success: true, role_id, instructions, room_id, player_id, design });
 })
@@ -270,16 +283,19 @@ app.post('/api/card/uploadImage/:card_id/:image_id', async function (req, res, n
   })
 })
 
-app.post('/api/card/save/:card_id', async function (req, res, next) {
+app.post('/api/design/save/:design_id', async function (req, res, next) {
   // TODO:  sanitize content
-  const { card_id } = req.params;
-  let saved = await _db.saveDeck({ card_id, design: req.body })
+  console.log('save the card');
+  const { design_id } = req.params;
+  let saved = await _db.saveDesign({ design_id, design: req.body })
   res.send(saved);
 })
 
-app.get('/api/design/get/:card_id', async function (req, res, next) {
-  const { card_id } = req.params;
-  let card = await _db.getDeck({ card_id })
+app.get('/api/design/get/:design_id', async function (req, res, next) {
+  const { design_id } = req.params;
+  console.log('get design with card_id ', design_id);
+  let card = await _db.getDesign({ design_id });
+  console.log('card is ', card);
   res.json(card);
 })
 

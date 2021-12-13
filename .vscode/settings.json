@@ -1,5 +1,10 @@
 {
   "git.ignoreLimitWarning": true,
+  "editor.codeActionsOnSave": [
+    "source.formatDocument",
+    "source.fixAll.prettier"
+  ],
+  "editor.formatOnSave": true,
   "jslint.options": { "esversion": 6 },
   "settings": {
     "files.exclude": {

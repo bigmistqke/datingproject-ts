@@ -44,15 +44,11 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
       script_id,
       roles: {}
     };
-    console.info('script', JSON.stringify(script));
 
-    console.info('script.roles', script.roles);
 
     Object.entries(script.roles).forEach(async ([role_id, role]) => {
       let instruction_ids = role.instruction_ids;
       let player_id = crypto.randomBytes(1).toString('hex');
-
-      console.info('get instruction');
 
       let instructions = instruction_ids.map(instruction_id => {
         let instruction = Object.filter(
@@ -61,8 +57,6 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
             'prev_instruction_ids', 'timespan', 'sound'].indexOf(key) != -1
 
         )
-        console.info(role_id, instruction);
-
         return { ...instruction, instruction_id };
       });
       room.roles[player_id] = { instructions, role_id, name: role.name, status: 'uninitialized' };
@@ -182,7 +176,7 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
       // //console.log('joined the room')
       console.log('_rooms.joinRoom success');
 
-      return { role_id: role.role_id, instructions: role.instructions };
+      return { role_id: role.role_id, instructions: role.instructions, player_id, room_id };
     })
 
 

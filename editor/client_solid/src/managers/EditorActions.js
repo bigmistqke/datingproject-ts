@@ -154,7 +154,7 @@ export default function EditorActions({ state, setState, actions }) {
   };
 
   this.addToSelection = (node_id) => {
-    console.log(state.editor.selection, node_id);
+
     if (state.editor.selection.indexOf(node_id) !== -1) return;
     setState(
       "editor",
@@ -162,7 +162,7 @@ export default function EditorActions({ state, setState, actions }) {
       (selection) => [...selection, node_id]
     );
 
-    console.log([...state.editor.selection]);
+
   };
 
   this.removeFromSelection = (node_id) => {
@@ -260,7 +260,7 @@ export default function EditorActions({ state, setState, actions }) {
   }
 
   this.getRoleOffset = ({ node_id, role_id, direction }) => {
-    console.log("getRoleOffset", state.editor.role_offsets, node_id, role_id, direction);
+
 
     return state.editor.role_offsets[node_id] &&
       state.editor.role_offsets[node_id][role_id] &&
@@ -277,14 +277,14 @@ export default function EditorActions({ state, setState, actions }) {
       `/${state.script.script_id}/${state.editor.visited_parent_ids.join("/")}` :
       `/${state.script.script_id}`;
 
-    console.log("url", url);
+
 
     navigate(url);
     this.emptySelection();
     this.emptyRoleOffset();
   }
   this.enterVisitedGroup = ({ group_id, index }) => {
-    console.log(group_id);
+
     setState("editor", "visited_parent_ids", (ids) => ids.slice(0, index));
 
     let url = group_id ?

@@ -7,7 +7,7 @@ import copy from 'copy-to-clipboard';
 import _Mqtt from "./modules/_Mqtt.js";
 
 import QRCode from "qrcode.react";
-
+import urls from './urls';
 
 
 function App() {
@@ -31,7 +31,7 @@ function App() {
 
   useEffect(async () => {
     let _mqtt = new _Mqtt();
-    await _mqtt.connect(window._url.mqtt, true, true);
+    await _mqtt.connect(urls.socket, true, true);
     console.log('connect???', _mqtt);
     setMqtt(_mqtt);
   }, [])
@@ -47,8 +47,8 @@ function App() {
     if (!mqtt) return;
     if (!initialized.state) {
       initialized.set(true);
-      console.log('url ', `${window._url.fetch}/api/room/getRooms/${script_id}`);
-      let _rooms = await fetch(`${window._url.fetch}/api/room/getRooms/${script_id}`);
+      console.log('url ', `${urls.fetch}/api/room/getRooms/${script_id}`);
+      let _rooms = await fetch(`${urls.fetch}/api/room/getRooms/${script_id}`);
 
       _rooms = await _rooms.json();
       console.log('initializing? ', _rooms);
@@ -118,7 +118,7 @@ function QR({ data, closeQR }) {
 
 function Room({ mqtt, script_id, rooms, room, room_id, openQR }) {
   const deleteRoom = useCallback(async () => {
-    let response = await fetch(`${window._url.fetch}/api/room/delete/${room_id}`);
+    let response = await fetch(`${urls.fetch}/api/room/delete/${room_id}`);
     if (!response) return;
     let _rooms = { ...rooms.get() };
     delete _rooms[room_id];
@@ -129,7 +129,7 @@ function Room({ mqtt, script_id, rooms, room, room_id, openQR }) {
   const restartRoom = useCallback(async () => {
     let shouldRestart = window.confirm('are you sure you want to restart the game?');
     if (!shouldRestart) return;
-    let response = await fetch(`${window._url.fetch}/api/room/restart/${room_id}`);
+    let response = await fetch(`${urls.fetch}/api/room/restart/${room_id}`);
     if (!response) return;
   }, [rooms.state])
 
@@ -137,7 +137,7 @@ function Room({ mqtt, script_id, rooms, room, room_id, openQR }) {
     try {
       let shouldUpdate = window.confirm('are you sure you want to update the game?');
       if (!shouldUpdate) return;
-      let response = await fetch(`${window._url.fetch}/api/room/update/${room_id}/${script_id}`);
+      let response = await fetch(`${urls.fetch}/api/room/update/${room_id}/${script_id}`);
       response = await response.json();
       console.log(response);
       if (!response.success) {
@@ -157,7 +157,7 @@ function Room({ mqtt, script_id, rooms, room, room_id, openQR }) {
 
 
   const openCombo = useCallback(() => {
-    window.open(`${window._url.editor}/test/${room_id}`)
+    window.open(`${urls.editor}/test/${room_id}`)
   }, [])
 
   var monitor = useCallback(({ room_id, roles }) => {
@@ -286,7 +286,7 @@ function Role({ room_id, role, role_url, openQR, mqtt }) {
 
   useEffect(() => {
     console.log('room_id is ', room_id);
-    r_url.current = `${window._url.play}/${room_id}${role_url}`;
+    r_url.current = `${urls.play}/${room_id}${role_url}`;
   }, [])
 
   return <div className='role' style={{ border: `1px solid ${role.status === 'connected' ? 'green' : role.status === 'finished' ? 'blue' : 'red'}` }}>
