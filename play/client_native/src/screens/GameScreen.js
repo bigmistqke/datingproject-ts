@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import Card from "../components/Card";
 // import Card from "../components/Card";
 // import CardComposition from "../components/card/CardComposition";
@@ -6,22 +6,12 @@ import Card from "../components/Card";
 import { Dimensions, Button, View, Text, Vibration } from 'react-native';
 import styled from 'styled-components/native';
 import Swipe from "../components/Swipe";
+import { For, Show } from '../components/solid-like-components';
+import { useStore } from "../store/Store";
 
-function Game({ design, instructions, swipeAction }) {
 
-  let screen_dimensions_ref = useRef({
-    x: Dimensions.get('window').width,
-    y: Dimensions.get('window').height
-  }).current;
-
-  let card_dimensions_ref = useRef({
-    y: screen_dimensions_ref.y - 0.1 * screen_dimensions_ref.y,
-    x: (screen_dimensions_ref.y - 0.1 * screen_dimensions_ref.y) * 0.5588507940957915
-  }).current;
-
-  const [visibleInstructions, setVisibleInstructions] = useState([]);
-
-  let [designs, setDesigns] = useState({});
+function Game({ design, instructions }) {
+  const [state, actions] = useStore();
 
   let r_overlay = useRef();
 
@@ -32,7 +22,6 @@ function Game({ design, instructions, swipeAction }) {
     try {
       Vibration.vibrate(200);
     } catch (e) { console.error(e) }
-    console.log("REASON WAIT YOUR TURN IS ", reason);
   }, [r_overlay]);
 
   const Overlay = styled.View`
@@ -68,49 +57,34 @@ function Game({ design, instructions, swipeAction }) {
         text-align: center;
     `;
 
-  useEffect(() => {
-    console.log('updated instructions : ', instructions);
-    setVisibleInstructions(instructions.slice(0,
-      instructions.length > 5 ? 5 : instructions.length
-    ).reverse())
-    // setVisibleInstructions(instructions);
-  }, [instructions])
+
+  const visible_instructions = useMemo(() =>
+    state.instructions.slice(0,
+      state.instructions.length < 10 ?
+        state.instructions.length :
+        10
+    ).reverse(),
+    [state.instructions]
+  )
 
 
   const Game = () => <>
     {/* <Overlay ref={r_overlay} onClick={hideOverlay} className='overlay hidden'>
-            <Text>Wait Your Turn</Text>
-        </Overlay> */}
+      <Text>Wait Your Turn</Text>
+    </Overlay> */}
     <View className="Cards">
-      {
-        visibleInstructions.map(
-          (instruction, i) => {
-            let zIndex = instructions.length - i;
-            let margin = visibleInstructions.length - i - 1;
-            return (
-              <Swipe
-                key={instruction.instruction_id}
-                screen_dimensions={screen_dimensions_ref}
-                card_dimensions={card_dimensions_ref}
-                waitYourTurn={waitYourTurn}
-                onSwipe={() => swipeAction(instruction)}
-                canSwipe={i === (instructions.length - 1)}
-
-                margin={margin}
-              >
-                <Card instruction={instruction}></Card>
-              </Swipe>
-
-
-            )
-          }
-        )
-      }
-      {
-        instructions.length < 2 ?
-          <End className='centered uiText'>The End</End> :
-          null
-      }
+      <For each={visible_instructions}>{(instruction, i) =>
+        <Card
+          key={instruction.instruction_id}
+          onSwipe={() => actions.swipe(instruction)}
+          canSwipe={i === (instructions.length - 1)}
+          margin={visible_instructions.length - i - 1}
+          instruction={instruction}
+        ></Card>
+      }</For>
+      <Show when={instructions.length < 2}>
+        <End className='centered uiText'>The End</End>
+      </Show>
     </View>
   </>
 

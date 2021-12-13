@@ -21,13 +21,13 @@ export default function createStore([state, setState]) {
       if (typeof part === "function") {
         let part_index = nestedObject.findIndex((i) => part(i));
         if (typeof value === "function") {
-          nestedObject[part_index] = nestedObject.filter((i) => value(i));
+          nestedObject[part_index] = value(nestedObject[part_index]);
         } else {
           nestedObject[part_index] = value;
         }
       } else {
         if (typeof value === "function") {
-          nestedObject[part] = nestedObject[part].filter((i) => value(i));
+          nestedObject[part] = value(nestedObject[part]);
         } else {
           nestedObject[part] = value;
         }

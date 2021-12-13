@@ -3,9 +3,10 @@ import { Dimensions, Pressable, Animated, PanResponder, View, Text, StyleSheet }
 import styled from 'styled-components/native';
 import Tweener from "../helpers/tweener.js";
 
-
+import { useStore } from '../store/Store.js';
 
 const Swipe = ({ screen_dimensions, card_dimensions, zIndex, canPlay, canSwipe, onSwipe, triggerSwipe, waitYourTurn, margin, children, flip }) => {
+  const [, actions] = useStore();
 
   const tweener = useRef(new Tweener()).current;
   const DRAG_TRESHOLD = useRef(100).current;
@@ -36,7 +37,6 @@ const Swipe = ({ screen_dimensions, card_dimensions, zIndex, canPlay, canSwipe, 
   const panResponder = useRef(PanResponder.create({
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: (e) => {
-      console.log("START TOUCH?");
       translate_start_ref = {
         x: translate_ref.x._value,
         y: translate_ref.y._value
@@ -55,7 +55,7 @@ const Swipe = ({ screen_dimensions, card_dimensions, zIndex, canPlay, canSwipe, 
           x: translate_start_ref.x + pan_ref.x._value,
           y: translate_start_ref.y + pan_ref.y._value
         });
-        rotateZ.setValue(2 * (translate_ref.x._value) / screen_dimensions.x * 30);
+        translationToRotation(translate_ref.x._value);
       }
     }),
     onPanResponderRelease: () => {
@@ -66,13 +66,13 @@ const Swipe = ({ screen_dimensions, card_dimensions, zIndex, canPlay, canSwipe, 
         snapBack();
       } else {
         swipeAway();
-        onSwipe();
+        setTimeout(() => onSwipe(), 0);
       }
-
-
-
     }
   })).current;
+
+  const translationToRotation = (x) => rotateZ.setValue(x / Dimensions.get('screen').width * 25);
+
 
   const swipeAway = useCallback(() => {
     translate_start_ref = {
@@ -81,16 +81,16 @@ const Swipe = ({ screen_dimensions, card_dimensions, zIndex, canPlay, canSwipe, 
     }
     const angle = Math.atan2(translate_start_ref.y, translate_start_ref.x)
     const new_dist = {
-      x: screen_dimensions.x * 1.75 * Math.cos(angle),
-      y: screen_dimensions.y * 1.25 * Math.sin(angle)
+      x: Dimensions.get('screen').width * 1.75 * Math.cos(angle),
+      y: Dimensions.get('screen').height * 1.25 * Math.sin(angle)
     }
-    tweener.tweenTo(0, 1, 500,
+    tweener.tweenTo(0, 1, 125,
       (alpha) => {
         translate_ref.setValue({
           x: translate_start_ref.x * (1 - alpha) + (new_dist.x) * alpha,
           y: translate_start_ref.y * (1 - alpha) + (new_dist.y) * alpha,
         })
-        rotateZ.setValue(2 * (translate_ref.x._value) / screen_dimensions.x * 30);
+        translationToRotation(translate_ref.x._value);
       }
     )
   }, [])
@@ -106,7 +106,7 @@ const Swipe = ({ screen_dimensions, card_dimensions, zIndex, canPlay, canSwipe, 
           x: translate_start_ref.x * alpha,
           y: translate_start_ref.y * alpha
         });
-        rotateZ.setValue(2 * (translate_ref.x._value) / screen_dimensions.x * 30);
+        translationToRotation(translate_ref.x._value);
       }
     );
   }, [])
@@ -121,8 +121,8 @@ const Swipe = ({ screen_dimensions, card_dimensions, zIndex, canPlay, canSwipe, 
           top: margin * 10,
           position: 'absolute',
           elevation: 10,
-          height: parseInt(card_dimensions.y),
-          width: parseInt(card_dimensions.x),
+          height: parseInt(actions.getCardDimensions().height),
+          width: parseInt(actions.getCardDimensions().height),
           transform: [
             { translateX: translate_ref.x },
             { translateY: translate_ref.y },

@@ -1,13 +1,13 @@
 import CardCompositor from './CardComposition';
 
-import { useStore } from '../../Store';
+import { useStore } from '../../store/Store';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import styled from 'styled-components/native';
 import createStore from '../../createStore';
 
 const CardRenderer = props => {
-  const [state, { getCardSize }] = useStore();
+  const [, { getCardSize }] = useStore();
 
   const [modes, setModes] = createStore(useState({
     timed: props.timespan,
@@ -15,23 +15,26 @@ const CardRenderer = props => {
   }));
 
   const CardContainer = styled.View`
-    /* position: absolute; */
+    position: absolute;
     /* transform: translate(-50%, -50%); */
     /* position: relative; */
     /* overflow: hidden; */
     left: 50%;
     top: 50%;
-    background: lightgrey;
-    box-shadow: 0px 0px 50px lightgrey;
+    background: transparent;
+    elevation: 10;
+    /* box-shadow: 0px 0px 50px lightgrey; */
+
     /* overflow: hidden; */
     z-index: 5;
   `;
+
 
   const formatted_text = useMemo(() => {
     let formatted_text = [{ type: 'normal', content: props.instruction.text }];
     // regex
     const regex_for_brackets = /[\["](.*?)[\]"][.!?\\-]?/g;
-    let matches = String(props.instruction.text).match(regex_for_brackets);
+    let matches = String(props.text).match(regex_for_brackets);
 
     if (!matches) {
       setModes('choice', false);

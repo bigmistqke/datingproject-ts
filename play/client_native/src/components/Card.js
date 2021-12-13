@@ -1,109 +1,127 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { Dimensions, Animated } from 'react-native';
+import React, { useEffect, useRef, useState, useCallback, useMemo, } from 'react';
+import { Dimensions, Animated, Text, StyleSheet } from 'react-native';
 import styled from 'styled-components/native';
 import Video from 'react-native-video';
 import Tweener from "../helpers/tweener.js";
-import { useStore } from '../Store.js';
+import { useStore } from '../store/Store.js';
 import CardRenderer from './card/CardRenderer';
+import VideoRenderer from './card/VideoRenderer.js';
 // import { SvgXml } from 'react-native-svg';
 
+import { Show } from './solid-like-components.jsx';
+
+import Swipe from './Swipe.js';
+
 const Card = (props) => {
-  const [state, { getCardSize }] = useStore();
-
-
-
+  const [, actions] = useStore();
+  const [countdown, setCountdown] = useState(props.instruction.timespan);
+  const countdown_interval = useRef(false);
   const tweener = useRef(new Tweener()).current;
 
-
-  const rotateY = useRef(new Animated.Value(1)).current;
-  const rotateY_ref = rotateY.interpolate({
+  const rotation_ref = useRef(new Animated.Value(1)).current;
+  const rotation = rotation_ref.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '180deg']
   })
-  const rotateY_back_ref = rotateY.interpolate({
+  const inversed_rotation = rotation_ref.interpolate({
     inputRange: [0, 1],
     outputRange: ['-180deg', '0deg']
   })
 
-  const flipCard = useCallback(() => {
-    console.log("flip it", props);
-    tweener.tweenTo(1, 0, 250,
-      (alpha) => rotateY.setValue(alpha)
+  // const flip = false;
+
+  const flip = useMemo(() => {
+    return props.instruction.prev_instruction_ids.length === 0
+  }
+    , [props.instruction.prev_instruction_ids]
+  )
+
+
+
+  useEffect(() => {
+    if (!flip) return;
+    tweener.tweenTo(1, 0, 125,
+      (alpha) => rotation_ref.setValue(alpha)
     );
-  }, [])
+  }, [flip])
+
+
 
   useEffect(() => {
-    if (!props.flip) return;
-    flipCard();
-  }, [props.flip])
-
-  useEffect(() => {
-    console.log(rotateY_ref);
-  }, [rotateY]);
-
-  const Instruction = styled.Text`
-        font-size: 50px;
-        font-family: "arial_rounded";   
-        color:white;
-        text-align: center;
-    `;
-
-
-
-  const Card = styled.View`
-        position: absolute;
-       
-        background: red;
-        elevation: 10;
-        /* backface-visibility: hidden; */
-        pointer-events: none;
-    `;
-
-  const Test = styled.View`
-    & .st0{
-      fill:#49247F;
+    if (flip && props.timespan && !countdown_interval.current) {
+      let start = performance.now();
+      countdown_interval.current = setInterval(() => {
+        let delta = (performance.now() - start) / 1000;
+        const c = props.timespan - delta;
+        setCountdown(c);
+        if (c <= 0) {
+          clearInterval(countdown_ref.current);
+          actions.swipe(props.instruction);
+        }
+      }, 1000 / 30)
     }
-  `
+  }, [flip, props.timespan])
+
+  let can_swipe = useMemo(() => {
+    if (!flip) return false;
+    if (props.instruction.timespan && props.instruction.countdown !== 0) return false;
+    return true;
+  }, [props.instruction]);
 
   return (<>
-    <Animated.View
-      style={{
-        // position: 'absolute',
-        height: getCardSize().height,
-        width: getCardSize().width,
-        borderRadius: 0.05 * getCardSize().height,
-        backgroundColor: 'yellow',
-        elevation: 10,
-        backfaceVisibility: 'hidden',
-        pointerEvents: 'none',
-        // transform: [{ rotateY: rotateY_ref }]
-      }}
+    <Swipe
+      setWaitYourTurn={props.setWaitYourTurn}
+      onSwipe={() => actions.swipe(props.instruction)}
+      can_swipe={can_swipe}
+      margin={props.margin}
     >
-      <CardRenderer {...props}></CardRenderer>
-    </Animated.View>
+      <Show when={flip}>
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: (Dimensions.get('window').width - parseInt(actions.getCardSize().width)) / 2,
+            top: (Dimensions.get('window').height - parseInt(actions.getCardSize().height)) / 4,
+            height: parseInt(actions.getCardSize().height),
+            width: parseInt(actions.getCardSize().width),
+            backfaceVisibility: 'hidden',
+            transform: [{ rotateY: rotation }]
+          }}
+        >
+          <Show when={props.instruction.type !== 'video'}>
+            <CardRenderer
+              countdown={countdown}
+              {...props}
+            ></CardRenderer>
+          </Show>
+          <Show when={props.instruction.type === 'video'}>
+            <VideoRenderer
+              url={props.instruction.text}
+              {...props}
+            ></VideoRenderer>
+          </Show>
+        </Animated.View>
+      </Show>
 
+      <Animated.View
+        style={{
 
-
-    {/*  <Animated.View
-      style={{
-        position: 'relative',
-        height: getCardSize().height,
-        width: getCardSize().width,
-        borderRadius: 0.05 * getCardSize().height,
-        backgroundColor: 'black',
-        elevation: 10,
-        // backfaceVisibility: 'hidden',
-        pointerEvents: 'none',
-        // overflow: 'hidden',
-        // transform: [{ rotateY: rotateY_back_ref }]
-      }}
-    >
-      <CardRenderer {...props}></CardRenderer>
-    </Animated.View> */}
+          height: parseInt(actions.getCardSize().height),
+          width: parseInt(actions.getCardSize().width),
+          left: (Dimensions.get('window').width - parseInt(actions.getCardSize().width)) / 2,
+          top: (Dimensions.get('window').height - parseInt(actions.getCardSize().height)) / 4,
+          borderRadius: parseInt(actions.getBorderRadius() * 10),
+          backgroundColor: 'blue',
+          backfaceVisibility: 'hidden',
+          transform: [{ rotateY: inversed_rotation }]
+        }}
+      >
+        <CardRenderer {...props} instruction={{ type: "back" }}></CardRenderer>
+      </Animated.View>
+    </Swipe>
   </>
-
   );
 }
+
 
 
 export default Card

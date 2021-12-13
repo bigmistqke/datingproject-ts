@@ -1,10 +1,10 @@
 import { For } from '../solid-like-components';
 import React, { useMemo } from 'react';
 
-import { useStore } from '../../Store';
+import { useStore } from '../../store/Store';
 
 const CountdownElement = props => {
-  const [state, { getTextStyles, getTimer }] = useStore();
+  const [, { getTextStyles, getTimer }] = useStore();
 
   const text_styles = useMemo(
     () => getTextStyles({ element: props.element, swatches: props.swatches }),

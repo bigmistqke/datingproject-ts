@@ -1,109 +1,48 @@
-import React, { createContext, useState, useRef, useEffect, useCallback } from 'react'
-import { Dimensions } from 'react-native';
-import createStore from './createStore';
-const StoreContext = createContext();
+import { Dimensions } from "react-native";
+import isColor from "../helpers/isColor";
 
-
-export function Provider(props) {
-
-
-
-  let [state, setStore, ref] = createStore(useState({
-    ids: {
-      game: null,
-      player: null,
-      role: null,
-      room: null
-    },
-
-    instructions: null,
-    design: null,
-    received_instruction_ids: [],
-    bools: {
-      isInitialized: false,
-    },
-    viewport: {
-      timer: null,
-      card_size: {
-        height: null,
-        width: null
-      },
-    }
-  }));
-
-  /* let unconfirmed_messages = useRef([]).current;
-  let received_instruction_ids = useRef([]).current;
- */
-
-  const setDesign = (design) => {
-
-    setStore("design", design);
+export default function DesignActions({ state, setState, actions, ref }) {
+  this.getCardSize = () => state.viewport.card_size;
+  this.getCardDimensions = () => state.design.card_dimensions;
+  this.getBorderRadius = () => {
+    return ref.design.border_radius
   };
-
-  useEffect(() => {
-    console.log("STATE DESIGN IS UPDATED!!!", state);
-    if (!state.design) return;
-    updateCardSize();
-  }, [state.design])
-
-  const setInstructions = (instructions) => setStore("instructions", instructions);
-
-  const setIds = (ids) => setStore("ids", ids);
-
-  const removeInstruction = (instruction_id) =>
-    setStore("instructions", i => i.instruction_id !== instruction_id)
-
-
-  const removeFromPrevInstructionIds = (instruction_id) => {
-    setStore(
-      "instructions",
-      i =>
-        i.prev_instruction_ids &&
-        i.prev_instruction_ids.indexOf(instruction_id) !== -1,
-      "prev_instruction_ids",
-      i => i !== instruction_id
-    )
-  }
-  /* s */
-
-  const getCardSize = () => ref.viewport.card_size;
-
-  const getElements = (type) => ref.design && ref.design.types[type] ?
-    ref.design.types[type].elements :
-    []
 
   const convert = (value, horizontal = false) => {
     return !horizontal
-      ? (parseFloat(value) * getCardSize().height) / 250
-      : parseFloat(value) * getCardSize().width;
+      ? (parseFloat(value) * state.viewport.card_size.height) / 250
+      : parseFloat(value) * state.viewport.card_size.width;
   };
 
-  const getSwatches = (type, timed = false) => ref.design && ref.design.types[type] ?
+
+
+
+  this.getElements = (type) => ref.design && ref.design.types[type] ?
+    ref.design.types[type].elements :
+    []
+
+
+
+  this.getSwatches = (type, timed = false) => ref.design && ref.design.types[type] ?
     ref.design.types[type].swatches.map(s => timed ? s.timed : s.normal) : []
 
-  const updateCardSize = () => {
-    console.log("UPDATE CARD SIZE", {
-      height: Dimensions.get("window").height * 0.9,
-      width:
-        (Dimensions.get("window").height * 0.9 * ref.design.card_dimensions.width) /
-        ref.design.card_dimensions.height,
-    });
-    setStore("viewport", "card_size", {
+  this.updateCardSize = () =>
+    setState("viewport", "card_size", {
       height: Dimensions.get("window").height * 0.9,
       width:
         (Dimensions.get("window").height * 0.9 * ref.design.card_dimensions.width) /
         ref.design.card_dimensions.height,
     })
-  }
 
-  const getType = (type) => {
+
+  this.getType = (type) => {
     return state.design.types[type];
   };
 
-  const getGlobalElement = (id) => state.design.globals[id];
+  this.getGlobalElement = (id) => state.design.globals[id];
 
-  const getLocalElement = ({ index, id, type }) => {
-    type = getType(type);
+  this.getLocalElement = ({ index, id, type }) => {
+    type = this.getType(type);
     if (!type) return false;
     if (id) {
       return type.elements.find((e) => e.id === id);
@@ -112,7 +51,7 @@ export function Provider(props) {
     }
   };
 
-  const getPosition = (element) => {
+  this.getPosition = (element) => {
     let position = element.global
       ? state.design.globals[element.id].position
       : element.position;
@@ -120,36 +59,35 @@ export function Provider(props) {
     // return { x: 0, y: 0 }
 
     return {
-      x: position.x * getCardSize().width / 100,
-      y: position.y * getCardSize().height / 100
+      x: position.x * state.viewport.card_size.width / 100,
+      y: position.y * state.viewport.card_size.height / 100
     }
 
   }
 
-  const getDimensions = (element) => {
+  this.getDimensions = (element) => {
     let dimensions = element.global
       ? state.design.globals[element.id].dimensions
       : element.dimensions;
 
-    // console.log("dimensions.x", dimensions.width, dimensions.width * getCardSize().width / 100);
-
     return {
-      width: dimensions.width * getCardSize().width / 100,
-      height: dimensions.height * getCardSize().height / 100
+      width: dimensions.width * state.viewport.card_size.width / 100,
+      height: dimensions.height * state.viewport.card_size.height / 100
     }
+
   }
 
 
-  const getStyles = ({ id, index, type, element, highlight }) => {
+  this.getStyles = ({ id, index, type, element, highlight }) => {
     const local_element = element
       ? element
-      : getLocalElement({ id, index, type });
+      : this.getLocalElement({ id, index, type });
     if (!local_element) return {};
 
     const style_type = highlight ? "highlight_styles" : "styles";
 
     if (local_element.global) {
-      let global_style = getGlobalElement(local_element.id)[style_type];
+      let global_style = this.getGlobalElement(local_element.id)[style_type];
       return {
         ...global_style,
         ...local_element[style_type],
@@ -161,14 +99,14 @@ export function Provider(props) {
     };
   };
 
-  const getTextStyles = ({ element, swatches }) => {
-    let styles = getStyles({ element });
+  this.getTextStyles = ({ element, swatches }) => {
+    let styles = this.getStyles({ element });
     return {
       // width: "100%",
       // height: "100%",
       display: "flex",
       // "flexDirection": "column",
-      "pointerEvents": "all",
+      // "pointerEvents": "all",
       // zIndex: props.zIndex,
       // "justifyContent": styles.alignmentVertical,
       // "alignItems": styles.alignmentHorizontal,
@@ -188,8 +126,8 @@ export function Provider(props) {
 
 
 
-  const getHighlightStyles = ({ element, swatches }) => {
-    let styles = getStyles({ element, highlight: true });
+  this.getHighlightStyles = ({ element, swatches }) => {
+    let styles = this.getStyles({ element, highlight: true });
 
     return {
       "fontFamily": styles.family,
@@ -231,32 +169,4 @@ export function Provider(props) {
       //     : null,
     };
   };
-
-  let actions = {
-    removeInstruction,
-    removeFromPrevInstructionIds,
-    setIds,
-    setDesign,
-    setInstructions,
-    getCardSize,
-    getElements,
-    getSwatches,
-    getPosition,
-    getDimensions,
-    getStyles,
-    getTextStyles,
-    getHighlightStyles,
-
-  }
-
-  let store = [state, actions];
-
-
-  return <StoreContext.Provider value={store}>
-    {props.children}
-  </StoreContext.Provider>
-}
-
-export function useStore() {
-  return React.useContext(StoreContext);
 }

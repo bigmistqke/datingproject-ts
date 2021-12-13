@@ -11,10 +11,10 @@ import CountdownElement from './CountdownElement';
 
 // import ResizeHandles from '../viewport/ResizeHandles';
 
-import { useStore } from '../../Store';
+import { useStore } from '../../store/Store';
 
 const CardElement = props => {
-  const [state, { getCardSize, getPosition, getDimensions }] = useStore();
+  const [, { getPosition, getDimensions }] = useStore();
 
 
   const Element = styled.View`
@@ -32,7 +32,6 @@ const CardElement = props => {
   let dimensions = useMemo(() => getDimensions(props.element),
     [props.element])
 
-  // useEffect(() => console.log("HALLO!!!", dimensions, position), [dimensions, position])
 
   return (
     <View
@@ -50,7 +49,6 @@ const CardElement = props => {
       }>
       <Element>
         <Show when={props.type === 'instruction'}>
-          {/* <Text>HALLO</Text> */}
           <InstructionElement {...props}></InstructionElement>
         </Show>
         <Show when={props.type === 'svg'}>

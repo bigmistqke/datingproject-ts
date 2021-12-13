@@ -3,7 +3,8 @@ import CardMask from './CardMask';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Show, For } from '../solid-like-components';
-import { useStore } from '../../Store';
+import { useStore } from '../../store/Store';
+import { View } from 'react-native';
 
 const CardComposition = props => {
   const [state, { getElements, getSwatches }] = useStore();
@@ -48,10 +49,10 @@ const CardComposition = props => {
 };
 
 const CardCompositor = props => {
-  const [state, { }] = useStore();
   return (
     <>
       <CardComposition {...props}></CardComposition>
+
       {/* <Show when={props.modes.timed}>
         <CardMask percentage={state.viewport.timer_percentage}>
           <CardComposition {...props} masked={true}></CardComposition>

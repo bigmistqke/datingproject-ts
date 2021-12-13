@@ -5958,6 +5958,13 @@ range-parser@~1.2.1:
   resolved "https://registry.npmjs.org/range-parser/-/range-parser-1.2.1.tgz"
   integrity sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==
 
+react-clip-path@^0.0.6:
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/react-clip-path/-/react-clip-path-0.0.6.tgz#d9181cf89166d472470207fc2bb4ca059feed207"
+  integrity sha512-q3uU3GfqKBMzGzSsMYy1g550ctosfGm8+leNJlQTxA2oSqdzrid0lbLEaXrsP7uU01mT6HjYrFxQO6b5uqwHFg==
+  dependencies:
+    styled-components "^5.2.1"
+
 react-devtools-core@^4.13.0:
   version "4.19.1"
   resolved "https://registry.npmjs.org/react-devtools-core/-/react-devtools-core-4.19.1.tgz"
@@ -6152,6 +6159,13 @@ react-shallow-renderer@^16.13.1:
   dependencies:
     object-assign "^4.1.1"
     react-is "^16.12.0 || ^17.0.0"
+
+react-solid-state@^0.27.1:
+  version "0.27.1"
+  resolved "https://registry.yarnpkg.com/react-solid-state/-/react-solid-state-0.27.1.tgz#6d19cc9ccb0561107dacebec958f4c42cf3d138c"
+  integrity sha512-VNvO29rFXIgwzel/W4nBa4+UKhomDb6aNBYN8UZPMP5Uu0tSjc68q4jh3ZZYxHiHS4UcVFf9fg7Y4G8i3u5wKg==
+  dependencies:
+    solid-js "^1.0.0"
 
 react-test-renderer@17.0.2:
   version "17.0.2"
@@ -6683,6 +6697,11 @@ snapdragon@^0.8.1:
     source-map-resolve "^0.5.0"
     use "^3.1.0"
 
+solid-js@^1.0.0:
+  version "1.2.5"
+  resolved "https://registry.yarnpkg.com/solid-js/-/solid-js-1.2.5.tgz#26175228ae562c95e92f476c73db744b6b36fc2c"
+  integrity sha512-XcPEULgqd/XbBu8LwtGWs5RGowvIpq88/ZNI/xgJ9PaxRJWwbVlSNsS+ywUWncxRdKsPoVe8vdcIsH4gBJjh3Q==
+
 source-map-resolve@^0.5.0:
   version "0.5.3"
   resolved "https://registry.npmjs.org/source-map-resolve/-/source-map-resolve-0.5.3.tgz"
@@ -6928,7 +6947,7 @@ strip-json-comments@^3.1.0, strip-json-comments@^3.1.1:
   resolved "https://registry.npmjs.org/strip-json-comments/-/strip-json-comments-3.1.1.tgz"
   integrity sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==
 
-styled-components@^5.3.3:
+styled-components@^5.2.1, styled-components@^5.3.3:
   version "5.3.3"
   resolved "https://registry.yarnpkg.com/styled-components/-/styled-components-5.3.3.tgz#312a3d9a549f4708f0fb0edc829eb34bde032743"
   integrity sha512-++4iHwBM7ZN+x6DtPPWkCI4vdtwumQ+inA/DdAsqYd4SVgUKJie5vXyzotA00ttcFdQkCng7zc6grwlfIfw+lw==

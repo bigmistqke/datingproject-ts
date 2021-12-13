@@ -2,10 +2,10 @@ import React, { useEffect, useMemo } from 'react';
 import { Show, For } from '../solid-like-components';
 import { View, Text } from "react-native";
 
-import { useStore } from '../../Store';
+import { useStore } from '../../store/Store';
 
 const InstructionElement = props => {
-  const [state, { getTextStyles, getHighlightStyles }] = useStore();
+  const [, { getTextStyles, getHighlightStyles }] = useStore();
 
   const text_styles = useMemo(() =>
     getTextStyles({
@@ -19,7 +19,6 @@ const InstructionElement = props => {
     getHighlightStyles({ element: props.element, swatches: props.swatches });
 
 
-  useEffect(() => console.log(text_styles), [text_styles]);
 
   return (
     <>
