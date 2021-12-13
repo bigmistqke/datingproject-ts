@@ -1,6 +1,4 @@
-import { createSignal, onMount, For, Show } from "solid-js";
-import { createStore } from "solid-js/store";
-
+import { onMount, For, Show, createEffect } from "solid-js";
 import { useParams } from "solid-app-router";
 
 import getData from "../helpers/getData";
@@ -10,44 +8,39 @@ import arrayOfObjectsToObject from "../helpers/arrayOfObjectsToObject";
 import Map from "../components/Map";
 import ProgressBars from "../components/ProgressBars";
 import Prompt from "../components/Prompt";
-import Block from "../components/Block.jsx";
-import Instruction from "../components/Instruction";
-import Roles from "../components/Roles";
+import Node from "../components/Node.jsx";
+
 import Connection from "../components/Connection";
 import TemporaryConnection from "../components/TemporaryConnection";
 import Errors from "../components/Errors";
-import TextArea from "../components/TextArea";
 import Menu from "../components/Menu";
 import Tooltip from "../components/Tooltip";
-
-import NumericInput from "../components/NumericInput";
-import SelectionBox from "../components/SelectionBox";
-
-import DataProcessor from "../managers/DataProcessor";
-import StoreManager from "../managers/StoreManager";
 
 import getRandomHue from "../helpers/getRandomHue";
 
 import flatten, { unflatten } from "flat";
-import RoleAdmin from "../components/RoleAdmin";
 import "./Editor.css";
 
 import { useStore } from "../managers/Store";
 
 import urls from "../urls";
 
-window.cursorPosition = {};
+import { styled } from "solid-styled-components";
+import Bubble from "../components/Bubble";
+
+/* window.cursorPosition = {};
 window.addEventListener("mousemove", (e) => {
   window.cursorPosition = { x: e.clientX, y: e.clientY };
 });
-
+ */
 window.unflatten = unflatten;
 window.flatten = flatten;
 
 function Editor(props) {
   const [state, actions] = useStore();
 
-  const { script_id } = useParams();
+  let { script_id, parent_ids } = useParams();
+  parent_ids = parent_ids ? parent_ids.split("/") : [];
 
   const mousemove = (e) => actions.setCursor({ x: e.clientX, y: e.clientY });
 
@@ -56,7 +49,7 @@ function Editor(props) {
       switch (e.code) {
         case "KeyD":
           e.preventDefault();
-          actions.duplicateSelectedBlocks({
+          actions.duplicateSelectedNodes({
             cursor,
             zoom: props.zoom,
           });
@@ -73,7 +66,7 @@ function Editor(props) {
     } else {
       switch (e.key) {
         case "Backspace":
-          // actions.deleteSelectedBlocks();
+          // actions.deleteSelectedNodes();
           break;
         case "Control":
           actions.setBool("isCtrlPressed", true);
@@ -91,33 +84,41 @@ function Editor(props) {
     }
     if (state.editor.bools.isShiftPressed && !e.shiftKey) {
       actions.setBool("isShiftPressed", false);
-      actions.emptySelectedBlockIds();
+      // actions.emptySelection();
     }
   };
 
   const saveScript = async () => {
     let result = await actions.processScript();
+
     // TODO: ALLOW UNSAFE GAME TO BE SAVED!
-    console.log("RESULT IS ", result);
-    if (!result.success) return;
-
-    console.log({ ...result.instructions });
-
-    let response = await postData(
-      `${urls.fetch}/api/script/save/${script_id}`,
-      {
-        blocks: state.script.blocks,
-        instructions: result.instructions,
-        roles: result.roles,
-      }
-    );
-
-    console.log(response);
+    /*     if (!result.success) {
+      let response = await postData(
+        `${urls.fetch}/api/script/save/${script_id}`,
+        {
+          nodes: state.script.nodes,
+          groups: state.script.groups,
+          instructions: result.instructions,
+          roles: result.roles,
+        }
+      );
+    } else { */
+    /* let result = await actions.openPrompt({
+        type: "confirm",
+        header: "the script is not playable, are you sure you want to save?",
+      });
+      if(!result) return; */
+    await postData(`${urls.fetch}/api/script/save/${script_id}`, {
+      nodes: state.script.nodes,
+      instructions: state.script.instructions,
+      roles: state.script.roles,
+      groups: state.script.groups,
+    });
+    // }
   };
 
   const createGame = async () => {
-    let result = await actions.process();
-    console.log("RESULT IS ", result);
+    let result = await actions.processScript();
 
     if (!result.success) return;
 
@@ -133,7 +134,6 @@ function Editor(props) {
   };
 
   const renameKeyOfObject = (object, old_key, new_key) => {
-    console.log(object[old_key], old_key in object);
     if (!(old_key in object)) return object;
     Object.defineProperty(
       object,
@@ -160,32 +160,44 @@ function Editor(props) {
     return roles;
   };
 
-  const reformatBlocks = (_blocks) => {
-    let blocks = {};
-    _blocks.forEach((block) => {
-      block = renameKeyOfObject(block, "connections", "roles");
-      console.log(block, block.roles);
-      /* block.roles = block.roles.map((role) => {
-        console.log(role.next_block_id);
-        if (!role.next_block_id) {
-          delete role.next_block_id;
+  const reformatNodes = (_nodes) => {
+    let nodes = {};
+    _nodes.forEach((node) => {
+      node = renameKeyOfObject(node, "connections", "roles");
+      /* node.in_outs = node.in_outs.map((role) => {
+         
+        if (!role.out_node_id) {
+          delete role.out_node_id;
         }
-        if (!role.prev_block_id) {
-          delete role.prev_block_id;
+        if (!role.in_node_id) {
+          delete role.in_node_id;
         }
         return role;
       });
        */
-      if (Array.isArray(block.roles)) {
-        block.roles = arrayOfObjectsToObject(block.roles, "role_id");
+      if (Array.isArray(node.in_outs)) {
+        node.in_outs = arrayOfObjectsToObject(node.in_outs, "role_id");
       }
-      blocks[block.block_id] = block;
-      // return block;
+      nodes[node.node_id] = node;
+      // return node;
     });
-    return blocks;
+    return nodes;
   };
 
+  /*   const addRootToNodes = (nodes) =>
+    Object.fromEntries(
+      Object.entries(nodes).map(([node_id, node]) => [
+        node_id,
+        { ...node, parent: "root" },
+      ])
+    ); */
+
   onMount(() => {
+    console.log(state.script, state.script.script_id);
+
+    actions.setParentIds(parent_ids);
+
+    if (state.script.script_id) return;
     actions.setScriptId(script_id);
 
     window.addEventListener("keydown", keydown);
@@ -198,14 +210,24 @@ function Editor(props) {
         if (!res) {
           return Promise.reject("error fetching data ", res);
         }
-        console.log(res.blocks, res.roles, res.instructions);
-        actions.setRoles(res.roles);
+
+        /* actions.setRoles(reformatRoles(res.roles));
         actions.setInstructions(res.instructions);
-        actions.setBlocks(res.blocks);
+        actions.setNodes(reformatNodes(res.nodes)); */
+
+        console.log(res);
+
+        actions.setRoles(res.roles ? res.roles : {});
+        actions.setInstructions(res.instructions ? res.instructions : {});
+        actions.setGroups(res.groups ? res.groups : {});
+        actions.setNodes(res.nodes);
+        // actions.setNodes(Object.fromEntries(Object.entries(res.nodes).map(([node_id, node])=> [node_id, {...node, type: "instruction"}])));
       })
       .catch((err) => {
         console.error(err);
         actions.setBool("isInitialized", true);
+        actions.addRoleToScript();
+        actions.addRoleToScript();
       });
 
     window.addEventListener("beforeunload", (e) => {
@@ -216,6 +238,23 @@ function Editor(props) {
   });
 
   const GRID_SIZE = 1;
+
+  const SelectionBox = styled("div")`
+    position: absolute;
+    border: 2px dashed white;
+    pointer-events: none;
+    z-index: 2;
+    background: #836dc841;
+  `;
+
+  const VisitedGroupIds = styled("div")`
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 5;
+  `;
+
+  createEffect(() => console.log("parent_id is ", parent_ids));
 
   return (
     <>
@@ -237,12 +276,28 @@ function Editor(props) {
       <Errors
         errors={[].concat.apply([], Object.values(state.editor.errors))}
       ></Errors>
-      <Menu saveScript={saveScript}></Menu>
+      <Menu createGame={createGame} saveScript={saveScript}></Menu>
+      <Show when={state.editor.visited_parent_ids.length > 0}>
+        <VisitedGroupIds>
+          <For each={state.editor.visited_parent_ids}>
+            {(parent_id, index) => (
+              <Bubble
+                onClick={() => actions.enterVisitedGroup({ parent_id, index })}
+                background_color="grey"
+                color="white"
+              >
+                hallo
+              </Bubble>
+            )}
+          </For>
+        </VisitedGroupIds>
+      </Show>
       <div
         classList={{
           viewport: true,
           isConnecting: state.editor.bools.isConnecting,
           isTranslating: state.editor.bools.isTranslating,
+          isZoomedOut: state.editor.bools.isZoomedOut,
         }}
       >
         <button
@@ -256,69 +311,45 @@ function Editor(props) {
         </button>
 
         <Map>
-          <For each={Object.values(state.script.blocks)}>
-            {(block, i) => {
-              return (
-                <Block
-                  block_id={block.block_id}
-                  position={{
-                    x: parseInt(block.position.x / GRID_SIZE) * GRID_SIZE,
-                    y: parseInt(block.position.y / GRID_SIZE) * GRID_SIZE,
-                  }}
-                >
-                  <Roles
-                    block_id={block.block_id}
-                    block={block}
-                    roles={block.roles}
-                    direction="in"
-                  ></Roles>
-                  <div className="instructions">
-                    <For each={block.instructions}>
-                      {(instruction_id, index) => {
-                        if (!(instruction_id in state.script.instructions)) {
-                          console.error(
-                            `block contains instruction_id ${instruction_id} which is not present in state.script.instructions`
-                          );
-                          return;
-                        }
-                        let instruction =
-                          state.script.instructions[instruction_id];
-
-                        return (
-                          <Instruction
-                            index={index() + 1}
-                            key={instruction_id}
-                            instruction_id={instruction_id}
-                            timespan={instruction.timespan}
-                            text={instruction.text}
-                            type={instruction.type}
-                            role_id={instruction.role_id}
-                            sound={instruction.sound}
-                            block_id={block.block_id}
-                            role_hue={
-                              state.script.roles[instruction.role_id].hue
-                            }
-                            roles={Object.fromEntries(
-                              Object.entries(state.script.roles).filter(
-                                ([role_id, role]) =>
-                                  Object.keys(block.roles).indexOf(role_id) !=
-                                  -1
-                              )
-                            )}
-                          />
-                        );
+          {/* <div style={{ "pointer-events": "none" }}>
+            <For each={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}>
+              {(index) => (
+                <For each={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}>
+                  {(index2) => (
+                    <div
+                      style={{
+                        
+                        position: "absolute",
+                        border: "5px solid black",
+                        height: state.editor.navigation.grid_size + "px",
+                        width: state.editor.navigation.grid_size + "px",
+                        left: index * state.editor.navigation.grid_size + "px",
+                        top: index2 * state.editor.navigation.grid_size + "px",
                       }}
-                    </For>
-                  </div>
+                    ></div>
+                  )}
+                </For>
+              )}
+            </For>
+          </div> */}
 
-                  <Roles
-                    block_id={block.block_id}
-                    block={block}
-                    roles={block.roles}
-                    instructions={block.instructions}
-                    direction="out"
-                  ></Roles>
-                </Block>
+          <For each={Object.entries(state.script.nodes)}>
+            {([node_id, node], i) => {
+              return (
+                <Show
+                  when={node.parent_id === parent_ids[parent_ids.length - 1]}
+                >
+                  <Node
+                    node={node}
+                    node_id={node_id}
+                    instructions={node.instructions}
+                    in_outs={node.in_outs}
+                    position={{
+                      x: parseInt(node.position.x / GRID_SIZE) * GRID_SIZE,
+                      y: parseInt(node.position.y / GRID_SIZE) * GRID_SIZE,
+                    }}
+                  ></Node>
+                </Show>
               );
             }}
           </For>
@@ -327,22 +358,22 @@ function Editor(props) {
             {(t_c) => (
               <TemporaryConnection
                 role_hue={state.script.roles[t_c.role_id].hue}
-                block_position={state.script.blocks[t_c.block_id].position}
+                node_position={state.script.nodes[t_c.node_id].position}
                 role_offset={actions.getRoleOffset({
-                  block_id: t_c.block_id,
+                  node_id: t_c.node_id,
                   role_id: t_c.role_id,
                   direction: t_c.direction,
                 })}
-                next_block_id={t_c.next_block_id}
-                next_block_position={
-                  t_c.next_block_id
-                    ? state.script.blocks[t_c.next_block_id].position
+                out_node_id={t_c.out_node_id}
+                next_node_position={
+                  t_c.out_node_id
+                    ? state.script.nodes[t_c.out_node_id].position
                     : null
                 }
                 next_role_offset={
-                  t_c.next_block_id
+                  t_c.out_node_id
                     ? actions.getRoleOffset({
-                        block_id: t_c.next_block_id,
+                        node_id: t_c.out_node_id,
                         role_id: t_c.role_id,
                         direction: t_c.direction,
                       })
@@ -355,30 +386,31 @@ function Editor(props) {
 
           <For
             each={
-              Object.values(state.script.blocks).length > 0
-                ? Object.values(state.script.blocks)
+              Object.values(state.script.nodes) &&
+              Object.values(state.script.nodes).length > 0
+                ? Object.entries(state.script.nodes)
                 : null
             }
           >
-            {(block) => {
-              return (
-                <For each={Object.entries(block.roles)}>
+            {([node_id, node]) => (
+              <Show when={node.parent_id === parent_ids[parent_ids.length - 1]}>
+                <For each={Object.entries(node.in_outs)}>
                   {([role_id, role]) =>
-                    role.next_block_id ? (
+                    role.out_node_id ? (
                       <Connection
-                        next_block_id={role.next_block_id}
+                        out_node_id={role.out_node_id}
                         role_hue={state.script.roles[role_id].hue}
-                        out_block_position={block.position}
+                        out_node_position={node.position}
                         out_role_offset={actions.getRoleOffset({
-                          block_id: block.block_id,
+                          node_id: node_id,
                           role_id,
                           direction: "out",
                         })}
-                        in_block_position={
-                          state.script.blocks[role.next_block_id].position
+                        in_node_position={
+                          state.script.nodes[role.out_node_id].position
                         }
                         in_role_offset={actions.getRoleOffset({
-                          block_id: role.next_block_id,
+                          node_id: role.out_node_id,
                           role_id,
                           direction: "in",
                         })}
@@ -386,11 +418,11 @@ function Editor(props) {
                     ) : null
                   }
                 </For>
-              );
-            }}
+              </Show>
+            )}
           </For>
           <Show when={state.editor.gui.selectionBox}>
-            <SelectionBox data={state.editor.gui.selectionBox}></SelectionBox>
+            <SelectionBox style={state.editor.gui.selectionBox}></SelectionBox>
           </Show>
         </Map>
       </div>

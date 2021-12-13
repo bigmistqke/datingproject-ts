@@ -19,7 +19,7 @@ const Instruction = (props) => {
   const removeRow = () => {
     actions.removeInstruction(props.instruction_id);
     actions.removeInstructionId({
-      block_id: props.block_id,
+      node_id: props.node_id,
       instruction_id: props.instruction_id,
     });
   };
@@ -27,7 +27,7 @@ const Instruction = (props) => {
   const addRow = () => {
     let { instruction_id } = actions.addInstruction(props.role_id);
     actions.addInstructionId({
-      block_id: props.block_id,
+      node_id: props.node_id,
       instruction_id: instruction_id,
       prev_instruction_id: props.instruction_id,
       index: props.index,
@@ -61,7 +61,6 @@ const Instruction = (props) => {
     const file = e.target.files[0];
     if (!types.test(file.type) || !types.test(file.name)) return;
     let upload = await actions.processVideo(file, props.instruction_id);
-    console.log("uploaded yeya", upload);
     if (!upload.success) console.error(upload.error);
     actions.setInstruction(props.instruction_id, {
       text: `/api${upload.response.substring(1)}`,
@@ -69,9 +68,11 @@ const Instruction = (props) => {
   };
 
   const getRoleOptions = createMemo(() =>
-    Object.entries(props.roles).map(([role_id, role]) => {
-      return { label: role.name, value: role_id };
-    })
+    Object.entries(state.script.roles)
+      .filter(
+        ([role_id, role]) => Object.keys(props.in_outs).indexOf(role_id) != -1
+      )
+      .map(([role_id, role]) => ({ label: role.name, value: role_id }))
   );
 
   return (
@@ -82,6 +83,7 @@ const Instruction = (props) => {
         instruction: true,
         error: error_ref,
       }}
+
       // className={`row flex instruction ${getClassByRole()} ${getClassByError()}`}
     >
       <div
@@ -92,7 +94,7 @@ const Instruction = (props) => {
       <Select
         options={getRoleOptions()}
         value={props.role_id}
-        onInput={() =>
+        onInput={(value) =>
           actions.setInstruction(props.instruction_id, {
             role_id: value,
           })
@@ -161,7 +163,6 @@ const Instruction = (props) => {
         </Show>
         <Show when={props.text !== ""}>
           <video className="flexing" src={urls.fetch + props.text}></video>
-          );
         </Show>
       </Show>
       <Show when={props.type !== "video"}>

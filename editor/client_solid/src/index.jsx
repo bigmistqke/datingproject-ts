@@ -11,15 +11,16 @@ import { Provider } from "./managers/Store";
 
 render(
   () => (
-    <Provider>
       <Router>
-        <Routes>
-          <Route path="/:script_id" element={<Editor />} />
-          <Route path="/scripts" element={<List />} />
-          <Route path="/test/:room_url" element={<Test />} />
-        </Routes>
+        <Provider>
+          <Routes>
+            <Route path="/:script_id" element={<Editor />} />
+            <Route path="/:script_id/*parent_ids" element={<Editor />} />
+            <Route path="/scripts" element={<List />} />
+            <Route path="/test/:room_url" element={<Test />} />
+          </Routes>
+      </Provider>
       </Router>
-    </Provider>
   ),
   document.getElementById("root")
 );

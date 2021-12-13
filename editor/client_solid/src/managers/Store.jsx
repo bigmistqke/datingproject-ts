@@ -8,12 +8,34 @@ import ScriptActions from "./ScriptActions";
 
 const StoreContext = createContext();
 
+const Q = function () {
+  let queue = [];
+  const process = () => {
+    queue[0].resolve(queue[0].action());
+    queue.shift();
+    if (queue.length === 0) return;
+    setTimeout(() => {
+      process();
+    }, 5);
+  };
+  this.add = (action) =>
+    new Promise((resolve) => {
+      queue.push({ action, resolve });
+      if (queue.length === 1) {
+        setTimeout(() => {
+          process();
+        }, 5);
+      }
+    });
+};
+
 export function Provider(props) {
   const check = (bool) => !(!bool && bool !== 0);
 
   const [state, setState] = createStore({
     script: {
-      blocks: {},
+      groups: {},
+      nodes: {},
       roles: {},
       instructions: {},
       description: "",
@@ -21,10 +43,15 @@ export function Provider(props) {
     },
     editor: {
       navigation: {
-        cursor: {},
+        cursor: { x: 0, y: 0 },
         origin: { x: 0, y: 0 },
+        origin_grid: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ],
         zoom: 1,
         zoomedOut: false,
+        grid_size: 2000,
       },
       gui: {
         prompt: false,
@@ -42,12 +69,14 @@ export function Provider(props) {
         isTranslating: false,
       },
       errors: {},
-      errored_block_ids: [],
-      selected_block_ids: [],
+      errored_node_ids: [],
+      selection: [],
       role_offsets: {},
-      block_dimensions: {},
+      node_dimensions: {},
       temporary_connections: [],
       uploaders: [],
+      visited_parent_ids: [],
+      parent_ids: [],
     },
   });
 
@@ -59,7 +88,6 @@ export function Provider(props) {
         console.error("multiple actions with the same name:", action_name);
         return;
       } else {
-        console.log();
         actions = { ...actions, [action_name]: action };
       }
     });
@@ -73,9 +101,9 @@ export function Provider(props) {
   // actions = { ...actions, ...new EditorActions({ state, setState, actions }) };
   // actions = { ...actions, ...new ScriptActions({ state, setState, actions }) };
 
-  console.log(actions);
+  let q = new Q();
 
-  let store = [state, actions];
+  let store = [state, actions, q];
 
   return (
     <StoreContext.Provider value={store}>

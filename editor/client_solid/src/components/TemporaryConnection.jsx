@@ -15,16 +15,16 @@ function TemporaryConnection(props) {
     // if (!props.role_offset) return { x: 0, y: 0 };
     return {
       x: parseInt(
-        props.block_position.x +
+        props.node_position.x +
           props.role_offset.width / 2 +
           props.role_offset.x +
           MARGIN
       ),
       y:
         props.direction === "in"
-          ? parseInt(props.block_position.y + props.role_offset.y + MARGIN)
+          ? parseInt(props.node_position.y + props.role_offset.y + MARGIN)
           : parseInt(
-              props.block_position.y +
+              props.node_position.y +
                 props.role_offset.y +
                 ROLE_HEIGHT +
                 MARGIN
@@ -33,12 +33,11 @@ function TemporaryConnection(props) {
   });
 
   const getPositionNextPort = createMemo(() => {
-    console.log(props.next_block_position, props.next_role_offset);
     // if (!props.role_offset) return { x: 0, y: 0 };
-    if (!props.next_block_position) return false;
+    if (!props.next_node_position) return false;
     return {
       x: parseInt(
-        props.next_block_position.x +
+        props.next_node_position.x +
           props.next_role_offset.width / 2 +
           props.next_role_offset.x +
           MARGIN
@@ -46,10 +45,10 @@ function TemporaryConnection(props) {
       y:
         props.direction === "out"
           ? parseInt(
-              props.next_block_position.y + props.next_role_offset.y + MARGIN
+              props.next_node_position.y + props.next_role_offset.y + MARGIN
             )
           : parseInt(
-              props.next_block_position.y +
+              props.next_node_position.y +
                 props.next_role_offset.y +
                 ROLE_HEIGHT +
                 MARGIN
@@ -59,13 +58,17 @@ function TemporaryConnection(props) {
 
   const getPositionCursor = createMemo(() => {
     return {
-      x: state.editor.navigation.cursor.x - state.editor.navigation.origin.x,
-      y: state.editor.navigation.cursor.y - state.editor.navigation.origin.y,
+      x:
+        (state.editor.navigation.cursor.x - state.editor.navigation.origin.x) /
+        state.editor.navigation.zoom,
+      y:
+        (state.editor.navigation.cursor.y - state.editor.navigation.origin.y) /
+        state.editor.navigation.zoom,
     };
   }, [state.editor.navigation.cursor, state.editor.navigation.origin]);
 
   /*   createEffect(() => {
-    console.log("every render: ", getPositionCursor(), getPositionPort());
+     
   }, [getPositionCursor(), getPositionPort()]); */
 
   const points = createMemo(() =>
@@ -73,8 +76,6 @@ function TemporaryConnection(props) {
       ? [getPositionNextPort(), getPositionCursor(), getPositionPort()]
       : [getPositionCursor(), getPositionPort()]
   );
-
-  createEffect(() => console.log(points()));
 
   return (
     <Bezier

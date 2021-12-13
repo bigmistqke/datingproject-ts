@@ -2,7 +2,6 @@ export default function Uploader() {
   this.progress = undefined;
 
   this.process = (url, data) => new Promise((resolve) => {
-    console.log('start the process!');
 
     const formData = new FormData();
     for (let key in data) {
@@ -12,7 +11,6 @@ export default function Uploader() {
     var xhr = new XMLHttpRequest();
 
     xhr.onload = function (e) {
-      console.log(e);
       if (this.readyState == 4 && this.status == 200) {
         let response;
         try {
@@ -32,7 +30,6 @@ export default function Uploader() {
       this.progress = { loaded: e.loaded, total: e.total, percentage: e.loaded / e.total * 100 }
     };
     xhr.open("POST", url, true);
-    console.log('send the data!');
     xhr.send(formData);
   })
 

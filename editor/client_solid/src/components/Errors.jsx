@@ -15,19 +15,16 @@ function Error(props) {
   const [state, actions] = useStore();
 
   const [getCounter, setCounter] = createSignal(0);
-  createEffect(() => {
-    console.log(props.block_ids);
-  }, [props.block_ids]);
 
-  const navigateToBlock = () => {
-    let block_id = props.block_ids[getCounter() % props.block_ids.length];
-    props.storeManager.editor.navigateToBlockId(block_id);
+  const navigateToNode = () => {
+    let node_id = props.node_ids[getCounter() % props.node_ids.length];
+    props.storeManager.editor.navigateToNodeId(node_id);
     setCounter(getCounter() + 1);
   };
 
   return (
     <div className="error">
-      <span onMouseDown={navigateToBlock}>{props.text}</span>
+      <span onMouseDown={navigateToNode}>{props.text}</span>
     </div>
   );
 }
@@ -44,7 +41,7 @@ function Errors(props) {
             return (
               <Error
                 text={error.text}
-                block_ids={error.block_ids}
+                node_ids={error.node_ids}
                 storeManager={props.storeManager}
               ></Error>
             );

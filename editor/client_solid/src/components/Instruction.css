@@ -1,3 +1,8 @@
+.isZoomedOut .instruction * {
+  /* display: none;0 */
+  /* visibility: hidden; */
+}
+
 .instruction-role {
   flex: 0 0 40px !important;
   margin-left: 4px;

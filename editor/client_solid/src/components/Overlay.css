@@ -23,6 +23,8 @@
   box-shadow: var(--dark-shadow);
   overflow: hidden;
   width: 500px;
+  left: 50%;
+  top: 50%;
   /* display: none; */
 }
 .overlay-body {
@@ -68,7 +70,7 @@
   /* white-space: nowrap; */
 }
 
-.overlay .selected_blocks {
+.overlay .selected_nodes {
   text-decoration: underline;
   text-decoration-color: var(--selected-color);
   text-decoration-thickness: 4px;

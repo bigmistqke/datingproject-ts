@@ -1,6 +1,6 @@
 async function getData(url = '') {
   // Default options are marked with *
-  ////console.log(url);
+
   const response = await fetch(url, {
     method: 'GET', // *GET, POST, PUT, DELETE, etc.
     mode: 'cors', // no-cors, *cors, same-origin

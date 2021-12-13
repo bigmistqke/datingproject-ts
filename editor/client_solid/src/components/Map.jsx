@@ -1,4 +1,4 @@
-import { createSignal, onMount } from "solid-js";
+import { createEffect, onMount } from "solid-js";
 
 import "./Map.css";
 
@@ -11,51 +11,18 @@ function Map(props) {
 
   let map;
 
-  onMount(() => {
-    console.info("mounted");
-    // console.log(props.storeManager);
-  });
+
+
 
   const select = ({ e, coords }) => {
     let selectionBox = {
-      width: (e.clientX - coords.x) / props.zoom,
-      height: (e.clientY - coords.y) / props.zoom,
-      top: (coords.y - props.origin.y) / props.zoom,
-      left: (coords.x - props.origin.x) / props.zoom,
+      width: (e.clientX - coords.x) / actions.getZoom() + "px",
+      height: (e.clientY - coords.y) / actions.getZoom() + "px",
+      top: (coords.y - actions.getOrigin().y) / actions.getZoom() + "px",
+      left: (coords.x - actions.getOrigin().x) / actions.getZoom() + "px",
     };
 
     actions.setSelectionBox(selectionBox);
-
-    /* let collisions = props.blocks
-      .filter((block) => {
-        if (!block.boundingBox) return;
-        return (
-          block.boundingBox.left < selectionBox.left + selectionBox.width &&
-          block.boundingBox.left + block.boundingBox.width >
-            selectionBox.left &&
-          block.boundingBox.top < selectionBox.top + selectionBox.height &&
-          block.boundingBox.top + block.boundingBox.height > selectionBox.top
-        );
-      })
-      .map((block) => block.block_id);
-
-    collisions.forEach(({ block_id }) =>
-      props.storeManager.blocks.select(block_id)
-    );
-
-    if (!ctrlPressed) {
-      const selected_block_ids = props.state.editor.selected_block_ids;
-
-      const block_ids_to_deselect = selected_block_ids.filter(
-        (selected_block_id) => collisions.indexOf(selected_block_id) != -1
-      );
-
-      if (block_ids_to_deselect.length == 0) return;
-
-      block_ids_to_deselect.forEach((block_id) => {
-        props.storeManager.blocks.deselect(block_id);
-      });
-    } */
   };
 
   const move = (e, coords) => {
@@ -64,8 +31,8 @@ function Map(props) {
       y: e.clientY - coords.y,
     };
     actions.setOrigin({
-      x: state.editor.navigation.origin.x + origin_delta.x,
-      y: state.editor.navigation.origin.y + origin_delta.y,
+      x: parseInt(state.editor.navigation.origin.x + origin_delta.x),
+      y: parseInt(state.editor.navigation.origin.y + origin_delta.y),
     });
   };
 
@@ -75,7 +42,7 @@ function Map(props) {
     let coords = { x: e.clientX, y: e.clientY };
     let now = performance.now();
 
-    actions.setBool("isTranslating", true);
+    // actions.setBool("isTranslating", true);
 
     await dragHelper((e) => {
       now = performance.now();
@@ -90,20 +57,23 @@ function Map(props) {
       }
     });
 
-    actions.setBool("isTranslating", false);
+    actions.setSelectionBox(false);
 
-    if (!state.editor.bools.isShiftPressed) {
-      actions.setSelectionBox(false);
-      actions.emptySelectedBlockIds();
-    }
+    // actions.setBool("isTranslating", false);
+    // actions.setSelectionBox(false);
+
+    /*  if (!state.editor.bools.isShiftPressed) {
+      // actions.setSelectionBox(false);
+      actions.emptySelection();
+    } */
   };
 
-  const createBlock = async (e) => {
+  const createNode = async (e) => {
     e.preventDefault();
 
     let type = await actions.openPrompt({
       type: "options",
-      header: "create a new block",
+      header: "create a new node",
       data: {
         options: ["instruction", "trigger"],
       },
@@ -119,14 +89,25 @@ function Map(props) {
         (e.clientY - state.editor.navigation.origin.y) /
         state.editor.navigation.zoom,
     };
-    actions.addBlock({ position, type });
+    actions.addNode({ position, type });
+  };
+
+  const scrollMap = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (state.editor.bools.isCtrlPressed) {
+      actions.offsetZoom(e.deltaY * 0.001);
+    } else {
+      actions.offsetOrigin({ x: e.deltaX * -1, y: e.deltaY * -1 });
+    }
   };
 
   return (
     <div
       className="map-container"
       onMouseDown={processNavigation}
-      onContextMenu={createBlock}
+      onContextMenu={createNode}
+      onWheel={scrollMap}
     >
       <div
         className={`map ${

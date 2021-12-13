@@ -41,7 +41,10 @@ export default function VideoUploader() {
   this.process = async (file, instruction_id) => {
     return new Promise((resolve) => {
       const uploader = new Uploader();
-      addUploader(instruction_id, uploader, resolve);
+      // addUploader(instruction_id, uploader, resolve);
+      setState
+
+
       uploader.process(`${urls.fetch}/api/uploadVideo/${state.script_id}/mp4`,
         { file, instruction_id });
       uploader.addEventListener('progress', (e) => {

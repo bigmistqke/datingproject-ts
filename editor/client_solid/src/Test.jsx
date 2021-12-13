@@ -12,7 +12,7 @@ export default function Test(props) {
         x: last_position.x - e.clientX,
         y: last_position.y - e.clientY,
       };
-      props.setState("blocks", props.block_id, "position", {
+      props.setState("nodes", props.node_id, "position", {
         x: props.position.x - offset.x,
         y: props.position.y - offset.y,
       });

@@ -7,28 +7,15 @@ import arrayOfObjectsToObject from "../helpers/arrayOfObjectsToObject";
 import Uploader from "../helpers/Uploader";
 import urls from "../urls";
 
-
+import prevOrNext from "../helpers/prevOrNext";
+import reverseDirection from "../helpers/reverseDirection";
 
 export default function ScriptActions({
   state,
   setState,
   actions
 }) {
-  // let scriptManager = this;
-
-  this.setInstructions = (instructions) =>
-    setState("script", "instructions", instructions);
-  this.setRoles = (roles) => setState("script", "roles", roles);
-  this.setBlocks = (blocks) => setState("script", "blocks", blocks);
-  this.setScriptId = (script_id) => setState("script", "script_id", script_id);
-
-  //
-
-  const prevOrNext = (direction) =>
-    direction === "out" ? "next_block_id" : "prev_block_id";
-  const oppositeDirection = (direction) => (direction === "out" ? "in" : "out");
-
-  //// INSTRUCTIONS
+  // default 
 
   const getDefaultInstruction = (role_id) => {
     return {
@@ -39,6 +26,37 @@ export default function ScriptActions({
     };
   };
 
+  const getDefaultNode = () => {
+    return {
+      type: null,
+      in_outs: {},
+      position: {},
+      parent_id: state.editor.parent_ids[state.editor.parent_ids.length - 1]
+    };
+  };
+
+  const getDefaultGroup = () => {
+    return {
+      description: "",
+      in_outs: {},
+      parent_id: state.editor.parent_ids[state.editor.parent_ids.length - 1]
+    };
+  };
+  // let scriptManager = this;
+  this.setInstructions = (instructions) =>
+    setState("script", "instructions", instructions);
+  this.setRoles = (roles) => setState("script", "roles", roles);
+  this.setGroups = (groups) => setState("script", "groups", groups);
+  this.setNodes = (nodes) => setState("script", "nodes", nodes);
+  this.setScriptId = (script_id) => setState("script", "script_id", script_id);
+  this.setParentIds = (parent_ids) => setState("editor", "parent_ids", parent_ids);
+
+  //
+
+
+  //// INSTRUCTIONS
+
+
   this.addInstruction = (role_id) => {
     let instruction = getDefaultInstruction(role_id);
     let instruction_id = uniqid();
@@ -47,7 +65,6 @@ export default function ScriptActions({
   };
 
   this.removeInstruction = (instruction_id) => {
-    console.log("REMOVE INSTRUCTION!!!!");
     let instructions = { ...state.script.instructions };
     instructions[instruction_id] = undefined;
     setState("script", "instructions", instructions);
@@ -61,34 +78,26 @@ export default function ScriptActions({
 
   //// BLOCKS
 
-  const updateBlock = (block_id, data) => {
-    let block = state.script.blocks[block_id];
-    if (!block) return;
-
-    Object.keys(data).forEach((key) => {
-      setState("script", "blocks", block_id, key, data[key]);
-    });
-  };
+  /*   const updateNode = (node_id, data) => {
+      let node = state.script.nodes[node_id];
+      if (!node) return;
+  
+      Object.keys(data).forEach((key) => {
+        setState("script", "nodes", node_id, key, data[key]);
+      });
+    }; */
 
   // INTERNAL FUNCTIONS
 
-  const getDefaultBlock = () => {
-    return {
-      block_id: uniqid(),
-      instructions: [],
-      roles: {},
-      position: {},
-    };
-  };
 
-  const offsetConnections = ({ block_ids, offset }) => {
+  const offsetConnections = ({ node_ids, offset }) => {
     let _connections = connections.map((_connection) => {
       let _pos = [..._connection.pos];
-      if (block_ids.includes(_connection.in_block_id)) {
+      if (node_ids.includes(_connection.in_node_id)) {
         if (!_pos[0]) {
           console.error(
-            "_connection.in_block_id",
-            _connection.in_block_id,
+            "_connection.in_node_id",
+            _connection.in_node_id,
             connections
           );
         } else {
@@ -96,11 +105,11 @@ export default function ScriptActions({
           _pos[0].y += offset.y;
         }
       }
-      if (block_ids.includes(_connection.out_block_id)) {
+      if (node_ids.includes(_connection.out_node_id)) {
         if (!_pos[1]) {
           console.error(
-            "_connection.out_block_id",
-            _connection.out_block_id,
+            "_connection.out_node_id",
+            _connection.out_node_id,
             connections
           );
         } else {
@@ -115,141 +124,149 @@ export default function ScriptActions({
     setConnections(_connections);
   };
 
-  const removeBlock = (block_id) => {
-    let block = state.script.blocks[block_id];
+  const removeNode = (node_id) => {
+    let node = state.script.nodes[node_id];
 
-    // remove all instructions that are a part of block
-    block.instructions.forEach((instruction_id) => {
-      // delete instructions[instruction_id];
-      setState("script", "instructions", instruction_id, undefined);
-    });
+    if (node.instructions) {
+      // remove all instructions that are a part of node
+      node.instructions.forEach((instruction_id) => {
+        // delete instructions[instruction_id];
+        setState("script", "instructions", instruction_id, undefined);
+      });
+    }
 
-    let roles = { ...block.roles };
+
+    let roles = { ...node.in_outs };
     let role_ids = Object.keys(roles);
 
-    // remove reference to block in connected blocks
+    // remove reference to node in connected nodes
     Object.entries(roles).forEach(([role_id, role]) => {
-      if (role.next_block_id != undefined) {
+      if (role.out_node_id != undefined) {
         setConnection({
-          block_id: role.next_block_id,
-          connecting_block_id: undefined,
+          node_id: role.out_node_id,
+          connecting_node_id: undefined,
           role_id,
           direction: "in",
         });
       }
-      if (role.prev_block_id != undefined) {
+      if (role.in_node_id != undefined) {
         setConnection({
-          block_id: role.prev_block_id,
-          connecting_block_id: undefined,
+          node_id: role.in_node_id,
+          connecting_node_id: undefined,
           role_id,
           direction: "out",
         });
       }
     });
 
-    setState("script", "blocks", block_id, undefined);
+    setState("script", "nodes", node_id, undefined);
     return { role_ids };
   };
 
   const setConnection = ({
-    block_id,
-    connecting_block_id,
+    node_id,
+    connecting_node_id,
     role_id,
     direction,
   }) => {
     setState("script",
-      "blocks",
-      block_id,
+      "nodes",
+      node_id,
       "roles",
       role_id,
       prevOrNext(direction),
-      connecting_block_id
+      connecting_node_id
     );
   };
 
   // METHODS
 
-  this.addBlock = () => {
-    let block = getDefaultBlock();
-    block.position = {
+  this.addNode = () => {
+    let node = getDefaultNode();
+    const node_id = uniqid();
+    node.type = 'instruction';
+    node.instructions = [];
+    node.position = {
       x:
-        state.editor.navigation.cursor.x - state.editor.navigation.origin.x - 450,
-      y: state.editor.navigation.cursor.y - state.editor.navigation.origin.y,
+        (state.editor.navigation.cursor.x - state.editor.navigation.origin.x) / state.editor.navigation.zoom - 450,
+      y: (state.editor.navigation.cursor.y - state.editor.navigation.origin.y) / state.editor.navigation.zoom,
     };
-    setState("script", "blocks", block.block_id, block);
-    return block.block_id;
+    setState("script", "nodes", node_id, node);
+    return node_id;
   };
 
-  this.removeSelectedBlocks = () => {
-    // console.error("removeSelectedBlocks is not yet implemented");
+  this.removeSelectedNodes = () => {
+    // console.error("removeSelectedNodes is not yet implemented");
     let all_affected_role_ids = [];
-    state.editor.selected_block_ids.forEach((block_id) => {
-      let { role_ids } = removeBlock(block_id);
+    state.editor.selection.forEach((node_id) => {
+      let { role_ids } = removeNode(node_id);
+
       role_ids.forEach((role_id) => {
         if (all_affected_role_ids.indexOf(role_id) !== -1) return;
         all_affected_role_ids = [...all_affected_role_ids, ...role_id];
       });
+
     });
     return { role_ids: all_affected_role_ids };
   };
 
-  this.addRoleToBlock = ({ block_id, role_id }) => {
-    if (Object.keys(state.script.blocks[block_id].roles).length === 0) {
+  this.addRoleToNode = ({ node_id, role_id }) => {
+    if (Object.keys(state.script.nodes[node_id].in_outs).length === 0) {
       let { instruction_id } = this.addInstruction(role_id);
-      this.addInstructionId({ block_id, instruction_id });
+      this.addInstructionId({ node_id, instruction_id });
     }
 
-    setState("script", "blocks", block_id, "roles", role_id, {
+    setState("script", "nodes", node_id, "in_outs", role_id, {
       role_id,
-      block_id,
+      node_id,
     });
     this.controlRole(role_id);
   };
 
-  this.removeRoleFromBlock = ({ block_id, role_id }) => {
-    let instruction_ids = state.script.blocks[block_id].instructions.filter(
+  this.removeRoleFromNode = ({ node_id, role_id }) => {
+    let instruction_ids = state.script.nodes[node_id].instructions.filter(
       (instruction_id) =>
         state.script.instructions[instruction_id].role_id === role_id
     );
 
-    // remove block_id from the roles' connected blocks
-    let roles = state.script.blocks[block_id].roles;
+    // remove node_id from the roles' connected nodes
+    let roles = state.script.nodes[node_id].in_outs;
     let role = roles[role_id];
 
     if (Object.keys(roles).length > 1) {
-      // null next_block_id from connected prev_block
-      if (role.prev_block_id) {
+      // null out_node_id from connected prev_node
+      if (role.in_node_id) {
         this.removeConnectionBothWays({
-          block_id,
+          node_id,
           role_id,
           direction: "in",
         });
       }
 
-      // null prev_block_id from connected next_block
-      if (role.next_block_id) {
+      // null in_node_id from connected next_node
+      if (role.out_node_id) {
         this.removeConnectionBothWays({
-          block_id,
+          node_id,
           role_id,
           direction: "out",
         });
       }
-      // remove all instructions from block with role_id
+      // remove all instructions from node with role_id
       setState("script",
-        "blocks",
-        block_id,
+        "nodes",
+        node_id,
         "instructions",
-        state.script.blocks[block_id].instructions.filter(
+        state.script.nodes[node_id].instructions.filter(
           (instruction_id) =>
             state.script.instructions[instruction_id].role_id !== role_id
         )
       );
 
       // remove role_id from roles
-      setState("script", "blocks", block_id, "roles", role_id, undefined);
+      setState("script", "nodes", node_id, "roles", role_id, undefined);
     } else {
-      // remove block completely
-      removeBlock(block_id);
+      // remove node completely
+      removeNode(node_id);
     }
 
     // remove from state.script.instructions
@@ -258,143 +275,131 @@ export default function ScriptActions({
     });
   };
 
-  this.convertRole = ({ block_id, source_role_id, target_role_id }) => {
-    state.script.blocks[block_id].instructions.forEach((instruction_id) => {
+  this.convertRole = ({ node_id, source_role_id, target_role_id }) => {
+    state.script.nodes[node_id].instructions.forEach((instruction_id) => {
       if (state.script.instructions[instruction_id].role_id !== source_role_id)
         return;
       setState("script", "instructions", instruction_id, "role_id", target_role_id);
     });
 
-    this.removeRoleFromBlock({ block_id, role_id: source_role_id });
+    this.removeRoleFromNode({ node_id, role_id: source_role_id });
   };
 
-  this.selectBlock = (block_id) => {
-    setState("script", "blocks", block_id, "meta", "selected", true);
-    actions.addToSelectedBlockIds(block_id);
-  };
+  this.addInstructionId = ({ node_id, instruction_id, index = false }) => {
 
-  this.deselectBlock = (block_id) => {
-    setState("script", "blocks", block_id, "meta", "selected", true);
-    actions.removeFromSelectedBlockIds(block_id);
-  };
+    console.log(state.script.nodes[node_id], state.script.nodes, node_id);
 
-  this.deselectAllBlocks = () => {
-    state.editor.selected_block_ids.forEach((selected_block_id) =>
-      this.deselectBlock(selected_block_id)
-    );
-  };
 
-  this.addInstructionId = ({ block_id, instruction_id, index = false }) => {
-    let instruction_ids = [...state.script.blocks[block_id].instructions];
+    let instruction_ids = [...state.script.nodes[node_id].instructions];
     if (index) {
       setState("script",
-        "blocks",
-        block_id,
+        "nodes",
+        node_id,
         "instructions",
         array_insert(instruction_ids, index, instruction_id)
       );
     } else {
-      setState("script", "blocks", block_id, "instructions", [
+      setState("script", "nodes", node_id, "instructions", [
         ...instruction_ids,
         instruction_id,
       ]);
     }
   };
 
-  this.removeInstructionId = ({ block_id, instruction_id, index }) => {
-    console.log([...state.script.blocks[block_id].instructions], instruction_id);
+  this.removeInstructionId = ({ node_id, instruction_id, index }) => {
     setState("script",
-      "blocks",
-      block_id,
+      "nodes",
+      node_id,
       "instructions",
       array_remove_element(
-        state.script.blocks[block_id].instructions,
+        state.script.nodes[node_id].instructions,
         instruction_id
       )
     );
   };
 
-  this.translateSelectedBlocks = ({ offset }) => {
-    let block, position;
-    state.editor.selected_block_ids.forEach((block_id) => {
-      block = state.script.blocks[block_id];
-      position = {
-        x: block.position.x + offset.x,
-        y: block.position.y + offset.y,
-      };
-      updateBlock(block_id, { position });
+  this.translateSelectedNodes = ({ offset }) => {
+    state.editor.selection.forEach((node_id) => {
+      setState("script", "nodes", node_id, "position", (position) => {
+        return ({
+          x: position.x + offset.x / state.editor.navigation.zoom,
+          y: position.y + offset.y / state.editor.navigation.zoom,
+        })
+      });
     });
   };
 
   this.addConnection = ({
-    block_id,
-    connecting_block_id,
+    node_id,
+    connecting_node_id,
     role_id,
     direction,
   }) => {
-    // check if connecting_block_id.roles[role_id][opposite_direction] is already connected to a block_id
-    // if yes: remove reference to connecting_block_id from connecting_block_id.roles[role_id][opposite_direction]
-    const opposite_direction = oppositeDirection(direction);
+    // check if connecting_node_id.in_outs[role_id][opposite_direction] is already connected to a node_id
+    // if yes: remove reference to connecting_node_id from connecting_node_id.in_outs[role_id][opposite_direction]
+    const opposite_direction = reverseDirection(direction);
 
-    let block_id_initially_connected_to_connecting_block =
-      state.script.blocks[connecting_block_id].roles[role_id] &&
-      state.script.blocks[connecting_block_id].roles[role_id][prevOrNext(opposite_direction)];
+    let node_id_initially_connected_to_connecting_node =
+      state.script.nodes[connecting_node_id].in_outs[role_id] &&
+      state.script.nodes[connecting_node_id].in_outs[role_id][prevOrNext(opposite_direction)];
 
-    if (block_id_initially_connected_to_connecting_block) {
-      // dereference connecting_block at block initially connected to connecting_block
+    if (node_id_initially_connected_to_connecting_node) {
+      // dereference connecting_node at node initially connected to connecting_node
       setConnection({
-        block_id: block_id_initially_connected_to_connecting_block,
-        connecting_block_id: undefined,
+        node_id: node_id_initially_connected_to_connecting_node,
+        connecting_node_id: undefined,
         role_id,
         direction,
       });
     }
-    // make reference to connecting_block_id at this block.roles[role_id]
+    // make reference to connecting_node_id at this node.in_outs[role_id]
     setConnection({
-      block_id,
-      connecting_block_id,
+      node_id,
+      connecting_node_id,
       role_id,
       direction,
     });
-    // make reference to block_id at connecting_block_id.roles[role_id]
+    // make reference to node_id at connecting_node_id.in_outs[role_id]
     setConnection({
-      block_id: connecting_block_id,
-      connecting_block_id: block_id,
+      node_id: connecting_node_id,
+      connecting_node_id: node_id,
       role_id,
       direction: opposite_direction,
     });
   };
 
-  this.removeConnectionBothWays = ({ block_id, role_id, direction }) => {
-    let connecting_block_id =
-      state.script.blocks[block_id].roles[role_id][prevOrNext(direction)];
+  this.removeConnectionBothWays = ({ node_id, role_id, direction }) => {
+    let connecting_node_id =
+      state.script.nodes[node_id].in_outs[role_id][prevOrNext(direction)];
 
-    if (connecting_block_id) {
-      // dereference this block_id at initial_connecting_block.roles[role_id][opposite_direciton]
+    if (connecting_node_id) {
+      // dereference this node_id at initial_connecting_node.in_outs[role_id][opposite_direciton]
       setConnection({
-        block_id: connecting_block_id,
-        connecting_block_id: undefined,
+        node_id: connecting_node_id,
+        connecting_node_id: undefined,
         role_id,
-        direction: oppositeDirection(direction),
+        direction: reverseDirection(direction),
       });
     }
-    // dereference block.roles[role_id][direction]
+    // dereference node.in_outs[role_id][direction]
     setConnection({
-      block_id,
-      connecting_block_id: undefined,
+      node_id,
+      connecting_node_id: undefined,
       role_id,
       direction,
     });
   };
 
-  this.hasRoleId = ({ block_id, role_id }) =>
-    role_id in state.script.blocks[block_id].roles;
+  this.hasRoleId = ({ node_id, role_id }) => {
+    console.log(state.script.nodes, node_id);
+    return role_id in state.script.nodes[node_id].in_outs;
+  }
 
   ////
 
   this.instructions = new (function () { })();
 
-  this.blocks = new (function () { })();
+  this.nodes = new (function () { })();
 
   // this.roles = new (function () {
   const getRoleLength = () => Object.keys(state.script.roles).length;
@@ -428,9 +433,9 @@ export default function ScriptActions({
   };
 
   this.removeRoleFromScript = async (role_id) => {
-    Object.entries(state.script.blocks).forEach(([block_id, block]) => {
-      if (Object.keys(block.roles).indexOf(role_id) == -1) return;
-      removeRoleFromBlock({ block_id, role_id });
+    Object.entries(state.script.nodes).forEach(([node_id, node]) => {
+      if (Object.keys(node.in_outs).indexOf(role_id) == -1) return;
+      this.removeRoleFromNode({ node_id, role_id });
     });
 
     // check if role has any instructions associated with it
@@ -440,10 +445,10 @@ export default function ScriptActions({
        );
    
        if (instructions_without_role.length < Object.keys(state.script.instructions).length) {
-         // remove instructions + references to role from blocks
-         Object.entries(state.script.blocks).forEach(([block_id, block]) => {
-           if (Object.keys(block.roles).indexOf(role_id) == -1) return;
-           scriptManager.blocks.removeRoleFromBlock({ block_id, role_id });
+         // remove instructions + references to role from nodes
+         Object.entries(state.script.nodes).forEach(([node_id, node]) => {
+           if (Object.keys(node.in_outs).indexOf(role_id) == -1) return;
+           scriptManager.nodes.removeRoleFromNode({ node_id, role_id });
          })
        }
    
@@ -454,7 +459,7 @@ export default function ScriptActions({
     delete roles[role_id];
 
     setState("script", {
-      blocks: state.script.blocks,
+      nodes: state.script.nodes,
       instructions: state.script.instructions,
       roles: { ...roles },
     });
@@ -482,12 +487,42 @@ export default function ScriptActions({
   this.setDescriptionScript = (description) =>
     setState("script", "description", description);
 
-  this.getEndBlockId = async ({ block_id, role_id }) => getEndBlock({ block_id, role_id })
-  this.traverseRole = async ({ block_id, role_id }) => traverseRole({ block_id, role_id })
+  this.getEndNodeId = async ({ node_id, role_id }) => getEndNode({ node_id, role_id })
+  this.traverseRole = ({ role_id, node_id }) => new Promise((resolve, reject) => {
+    if (!node_id) {
+      console.error("ERROR: node_id is incorrect");
+      return;
+    }
+    let traversed_node_ids = [];
+    function iterateRole(node_id) {
+      if (traversed_node_ids.indexOf(node_id) != -1) {
+        resolve({
+          success: false,
+          traversed_node_ids,
+          error: {
+            type: 'infinite_loop',
+            text: `found an infinite loop for role ${role_id}.`,
+            node_ids: traversed_node_ids
+          }
+        });
+        return;
+      }
+      traversed_node_ids.push(node_id);
+      let out_node_id = state.script.nodes[node_id].in_outs[role_id].out_node_id;
+      if (!out_node_id) {
+        resolve({
+          success: true,
+          traversed_node_ids
+        });
+      } else {
+        iterateRole(out_node_id)
+      }
+    }
+    iterateRole(node_id);
+  })
 
   this.controlRole = async (role_id) => {
     let result = await controlRole(role_id);
-    console.log(actions);
 
 
     actions.setErrorsRoleId({
@@ -496,42 +531,6 @@ export default function ScriptActions({
     })
   };
 
-
-  const traverseRole = ({ role_id, block_id }) => new Promise((resolve, reject) => {
-
-    if (!block_id) {
-      console.error("ERROR: block_id is incorrect");
-      return;
-    }
-
-    let traversed_block_ids = [];
-    function iterateRole(block_id) {
-
-      if (traversed_block_ids.indexOf(block_id) != -1) {
-        resolve({
-          success: false,
-          traversed_block_ids,
-          error: {
-            type: 'infinite_loop',
-            text: `found an infinite loop for role ${role_id}.`,
-            block_ids: traversed_block_ids
-          }
-        });
-        return;
-      }
-      traversed_block_ids.push(block_id);
-      let next_block_id = state.script.blocks[block_id].roles[role_id].next_block_id;
-      if (!next_block_id) {
-        resolve({
-          success: true,
-          traversed_block_ids
-        });
-      } else {
-        iterateRole(next_block_id)
-      }
-    }
-    iterateRole(block_id);
-  })
 
   const dedupArray = (array) => {
     let seen = {};
@@ -554,95 +553,104 @@ export default function ScriptActions({
     let start = performance.now();
     let instruction_ids = [];
     let errors = [];
-    // get blocks per role
-    let blocks = Object.entries(state.script.blocks).filter(
-      ([block_id, block]) => {
-        return Object.keys(block.roles).indexOf(role_id) !== -1
+    // get nodes per role
+    let nodes = Object.entries(state.script.nodes).filter(
+      ([node_id, node]) => {
+        return Object.keys(node.in_outs).indexOf(role_id) !== -1
       });
-    let block_ids = blocks.map(([block_id, block]) => block_id);
+    let node_ids = nodes.map(([node_id, node]) => node_id);
 
 
-    // test #1 check for multiple open start/end-blocks for role
-    let start_block_ids = blocks.filter(([block_id, block]) => {
-      return !("prev_block_id" in block.roles[role_id])
+    // test #1 check for multiple open start/end-nodes for role
+    let start_node_ids = nodes.filter(([node_id, node]) => {
+
+      return !node.in_outs[role_id].in_node_id
     }
-    ).map(([block_id, block]) => block_id);
+    ).map(([node_id, node]) => node_id);
 
-    let end_block_ids = blocks.filter(([block_id, block]) => {
-      return !("next_block_id" in block.roles[role_id])
-    }).map(([block_id, block]) => block_id);
+    let end_node_ids = nodes.filter(([node_id, node]) => {
+      return !("out_node_id" in node.in_outs[role_id])
+    }).map(([node_id, node]) => node_id);
 
-    let start_end_block_ids = [...start_block_ids, ...end_block_ids];
-    [start_end_block_ids] = dedupArray(start_end_block_ids);
+    let start_end_node_ids = [...start_node_ids, ...end_node_ids];
+    [start_end_node_ids] = dedupArray(start_end_node_ids);
 
-    if (start_block_ids.length > 1 || end_block_ids.length > 1) {
+    if (start_node_ids.length > 1 || end_node_ids.length > 1) {
       errors.push({
         type: 'multiple_open_start_ports',
         text: `more then 2 possible starts for role ${role_id}`,
-        block_ids: start_end_block_ids
+        node_ids: start_end_node_ids
       })
     }
 
     // test #2 look for infinite-loops by recursively iterating
-    // through the start_blocks
+    // through the start_nodes
 
     let promises = [];
-    promises = start_block_ids.map((block_id) => this.traverseRole({ role_id, block_id }))
+
+    promises = start_node_ids.map((node_id) => this.traverseRole({ role_id, node_id }))
     let results = await Promise.all(promises);
+
+
 
     results.forEach(result => { if (!result.success) errors.push(result.error) })
 
-    let total_traversed_block_ids = [].concat.apply([], results.map(result => result.traversed_block_ids));
+    let total_traversed_node_ids = [].concat.apply([], results.map(result => result.traversed_node_ids));
 
-    if (total_traversed_block_ids.length != block_ids.length) {
+    if (total_traversed_node_ids.length != node_ids.length) {
       // this can indicate
-      //      a. that there are infinite_loops which are not accessible from start/end-blocks
-      //      b. that there are block_ids which are connected to multiple start/end-blocks
+      //      a. that there are infinite_loops which are not accessible from start/end-nodes
+      //      b. that there are node_ids which are connected to multiple start/end-nodes
 
-      let [deduped_block_ids, duplicate_block_ids] = dedupArray(total_traversed_block_ids);
+      let [deduped_node_ids, duplicate_node_ids] = dedupArray(total_traversed_node_ids);
 
-      if (deduped_block_ids.length !== total_traversed_block_ids.length) {
-        console.error("block_ids were accessed via multiple start/end-blocks, most likely indicating a bug in the editor");
+      if (deduped_node_ids.length !== total_traversed_node_ids.length) {
+        console.error("node_ids were accessed via multiple start/end-nodes, most likely indicating a bug in the editor");
         errors.push({
-          type: 'multiple_traversed_block_ids',
-          text: `blocks were accessed multiple times for role ${role_id}, most likely indicating a bug in the editor`,
-          block_ids: duplicate_block_ids
+          type: 'multiple_traversed_node_ids',
+          text: `nodes were accessed multiple times for role ${role_id}, most likely indicating a bug in the editor`,
+          node_ids: duplicate_node_ids
         })
       }
-      total_traversed_block_ids = deduped_block_ids;
 
-      let unaccessible_block_ids = block_ids.filter(block_id =>
-        total_traversed_block_ids.indexOf(block_id) === -1
+
+      total_traversed_node_ids = deduped_node_ids;
+
+      let unaccessible_node_ids = node_ids.filter(node_id =>
+        total_traversed_node_ids.indexOf(node_id) === -1
       )
 
-      if (unaccessible_block_ids.length > 0) {
-        const traverseAllUnaccessibleBlocks = () => new Promise((resolve) => {
+
+
+      if (unaccessible_node_ids.length > 0) {
+        console.error("unaccessible_node_ids is not [] :", unaccessible_node_ids);
+        const traverseAllUnaccessibleNodes = () => new Promise((resolve) => {
           let results = [];
-          let traverseRoleFromUnaccessibleBlockId = async (block_id) => {
-            let result = await this.traverseRole({ role_id, block_id })
+          let traverseRoleFromUnaccessibleNodeId = async (node_id) => {
+            let result = await this.traverseRole({ role_id, node_id })
             results.push(result);
             /* if (!result.succes) {
                 errors.push(result.error);
             } */
-            unaccessible_block_ids = unaccessible_block_ids.filter(block_id =>
-              result.traversed_block_ids.indexOf(block_id) === -1
+            unaccessible_node_ids = unaccessible_node_ids.filter(node_id =>
+              result.traversed_node_ids.indexOf(node_id) === -1
             );
-            if (unaccessible_block_ids.length === 0) {
+            if (unaccessible_node_ids.length === 0) {
               resolve(results);
             } else {
-              traverseRoleFromUnaccessibleBlockId(unaccessible_block_ids[0])
+              traverseRoleFromUnaccessibleNodeId(unaccessible_node_ids[0])
             }
           }
-          traverseRoleFromUnaccessibleBlockId(unaccessible_block_ids[0])
+          traverseRoleFromUnaccessibleNodeId(unaccessible_node_ids[0])
         })
 
-        let results = await traverseAllUnaccessibleBlocks();
+        let results = await traverseAllUnaccessibleNodes();
         results.forEach(result => {
           if (!result.success) {
             errors.push(result.error)
           }
           else {
-            console.error("ERROR: unaccessible blocks should not be able to traverse successfully");
+            console.error("ERROR: unaccessible nodes should not be able to traverse successfully", role_id, result);
           }
         })
       }
@@ -653,7 +661,7 @@ export default function ScriptActions({
     return errors.length == 0 ?
       {
         success: true,
-        block_ids: total_traversed_block_ids
+        node_ids: total_traversed_node_ids
       } :
       {
         success: false,
@@ -669,74 +677,86 @@ export default function ScriptActions({
     return results;
   }
 
-  const getEndBlock = async ({ block_id, role_id }) => {
-    let { traversed_block_ids } = await this.traverseRole({ block_id, role_id });
-    return traversed_block_ids[traversed_block_ids.length - 1]
+  const getEndNode = async ({ node_id, role_id }) => {
+    let { traversed_node_ids } = await this.traverseRole({ node_id, role_id });
+    return traversed_node_ids[traversed_node_ids.length - 1]
   }
 
   const processInstructions = () => {
-    const getNextRoleIdsOfLast = (block) => {
+    const getNextRoleIdsOfLast = (node) => {
       let next_role_ids = [];
-      Object.values(block.roles).forEach((role) => {
-        if (!role.next_block_id) return
-        let connected_block = state.script.blocks[role.next_block_id];
-        let next_instruction_id = connected_block.instructions[0];
+      Object.values(node.in_outs).forEach((role) => {
+        if (!role.out_node_id) return
+        let connected_node = state.script.nodes[role.out_node_id];
+        let next_instruction_id = connected_node.instructions[0];
+        if (!instructions[next_instruction_id]) {
+          console.error('next_instruction_id', next_instruction_id, 'does not exist!');
+          return;
+        }
         if (next_role_ids.indexOf(instructions[next_instruction_id].role_id) !== -1) return;
         next_role_ids.push(instructions[next_instruction_id].role_id);
       })
       return next_role_ids;
     }
-    const getPrevInstructionIdsOfFirst = (block) => {
+    const getPrevInstructionIdsOfFirst = (node) => {
       let prev_instruction_ids = [];
-      Object.values(block.roles).forEach((role) => {
-        if (!role.prev_block_id) return;
-        let connected_block = state.script.blocks[role.prev_block_id];
-        let prev_instruction_id = connected_block.instructions[connected_block.instructions.length - 1];
-        if (prev_instruction_ids.indexOf(instructions[prev_instruction_id].role_id) !== -1) return;
+      Object.values(node.in_outs).forEach((role) => {
+        if (!role.in_node_id) return;
+        let connected_node = state.script.nodes[role.in_node_id];
+        let prev_instruction_id = connected_node.instructions[connected_node.instructions.length - 1];
+
+        if (!instructions[prev_instruction_id]) {
+          console.error('prev_instruction_id', prev_instruction_id, 'does not exist!');
+          return;
+        }
+
+
+
+        if (instructions[prev_instruction_id] && prev_instruction_ids.indexOf(instructions[prev_instruction_id].role_id) !== -1) return;
         prev_instruction_ids.push(prev_instruction_id);
       })
       return prev_instruction_ids
     }
-    const getNextRoleIds = ({ block, count }) => [instructions[block.instructions[count + 1]].role_id]
-    const getPrevInstructionIds = ({ block, count }) => [String(block.instructions[count - 1])]
+    const getNextRoleIds = ({ node, count }) => [instructions[node.instructions[count + 1]].role_id]
+    const getPrevInstructionIds = ({ node, count }) => [String(node.instructions[count - 1])]
 
     let instructions = { ...state.script.instructions };
 
-    for (let block_id in state.script.blocks) {
-      let block = state.script.blocks[block_id];
+    for (let node_id in state.script.nodes) {
+      let node = state.script.nodes[node_id];
       let count = 0;
-      for (let instruction_id of block.instructions) {
+      for (let instruction_id of node.instructions) {
         instructions[instruction_id] = { ...instructions[instruction_id] };
         instructions[instruction_id].prev_instruction_ids = [];
         instructions[instruction_id].next_role_ids = [];
 
-        console.log("count instruction: ", count, block.instructions.length - 1);
+
 
         // if instruction is the first
         if (count === 0) {
           instructions[instruction_id].prev_instruction_ids =
-            getPrevInstructionIdsOfFirst(block);
+            getPrevInstructionIdsOfFirst(node);
 
-          if (1 !== block.instructions.length) {
+          if (1 !== node.instructions.length) {
             instructions[instruction_id].next_role_ids =
-              getNextRoleIds({ block, count });
+              getNextRoleIds({ node, count });
           }
         }
         // if instruction is the last
-        if (count === block.instructions.length - 1) {
-          console.log("last block", block);
-          instructions[instruction_id].next_role_ids =
-            getNextRoleIdsOfLast(block);
+        if (count === node.instructions.length - 1) {
 
-          if (1 !== block.instructions.length) {
+          instructions[instruction_id].next_role_ids =
+            getNextRoleIdsOfLast(node);
+
+          if (1 !== node.instructions.length) {
             instructions[instruction_id].prev_instruction_ids =
-              getPrevInstructionIds({ block, count });
+              getPrevInstructionIds({ node, count });
           }
         }
         // in all other occasions
-        if (count !== 0 && count !== block.instructions.length - 1) {
-          instructions[instruction_id].next_role_ids = getNextRoleIds({ block, count });
-          instructions[instruction_id].prev_instruction_ids = getPrevInstructionIds({ block, count });
+        if (count !== 0 && count !== node.instructions.length - 1) {
+          instructions[instruction_id].next_role_ids = getNextRoleIds({ node, count });
+          instructions[instruction_id].prev_instruction_ids = getPrevInstructionIds({ node, count });
         }
         count++
       }
@@ -754,10 +774,12 @@ export default function ScriptActions({
     Object.entries(roles).forEach(([role_id, role]) => {
       roles[role_id] = { ...role };
 
+
+
       let instruction_ids = [];
       roles[role_id].instruction_ids = [];
-      results[role_id].block_ids.forEach(block_id =>
-        state.script.blocks[block_id].instructions.forEach(instruction_id => {
+      results[role_id].node_ids.forEach(node_id =>
+        state.script.nodes[node_id].instructions.forEach(instruction_id => {
 
           if (!state.script.instructions[instruction_id]) {
             console.error('instruction ', instruction_id, 'does not exist');
@@ -768,6 +790,7 @@ export default function ScriptActions({
           }
         })
       )
+
       roles[role_id].instruction_ids = instruction_ids;
     })
 
@@ -787,5 +810,46 @@ export default function ScriptActions({
       { file, instruction_id });
     resolve(result);
   })
+
+
+
+  this.groupSelectedNodes = () => {
+    const selection = [...state.editor.selection];
+
+    let group = getDefaultGroup();
+    // group.children = { ...state.editor.selection };
+    let group_id = uniqid();
+    let node = getDefaultNode();
+
+    node.type = "group";
+    node.parent_id = group_id;
+    node.position = {
+      x: state.editor.navigation.cursor.x - 450,
+      y: state.editor.navigation.cursor.y
+    };
+
+    selection.forEach(node_id => {
+      Object.keys(state.script.nodes[node_id].in_outs).forEach((role_id) => {
+        group.in_outs[role_id] = {
+          in_node_id: null,
+          out_node_id: null
+        }
+        node.in_outs[role_id] = {
+          in_node_id: null,
+          out_node_id: null
+        }
+      }
+      )
+    });
+
+    // Object.keys(group.in_outs).forEach(role_id => )
+
+    setState("script", "groups", group_id, group);
+    setState("script", "nodes", uniqid(), node);
+
+    selection.forEach((node_id) => {
+      setState("script", "nodes", node_id, "parent_id", group_id)
+    })
+  }
 };
 

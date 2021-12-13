@@ -21,7 +21,6 @@ function Bezier(props) {
     };
 
     points.forEach((point) => {
-      // console.log(point.x);
       if (!boundary.top_left.x || point.x < boundary.top_left.x) {
         boundary.top_left.x = point.x;
       }

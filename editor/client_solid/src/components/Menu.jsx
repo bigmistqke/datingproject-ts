@@ -84,7 +84,7 @@ const RoleMenu = function (props) {
   let [getView, setView] = createSignal(views[0]);
 
   const addRole = () => {
-    actions.addRole();
+    actions.addRoleToScript();
     roles_container.scrollTop = roles_container.scrollHeight;
   };
 
@@ -232,19 +232,21 @@ const RoleMenu = function (props) {
 const GamesMenu = function (props) {
   const [state, actions] = useStore();
   return (
-    <div classList={{ monitor_menu: true, sub_menu: true, open: props.open }}>
-      <header>
-        <h1 className="flex">
-          <span className="flexing">games manager</span>
-          <div className="bubble-container">
-            <Bubble onClick={props.createGame} color="black">
-              create game
-            </Bubble>
-          </div>
-        </h1>
-      </header>
-      <iframe src={`${urls.monitor}/${state.script.script_id}`}></iframe>
-    </div>
+    <Show when={props.open}>
+      <div classList={{ monitor_menu: true, sub_menu: true, open: props.open }}>
+        <header>
+          <h1 className="flex">
+            <span className="flexing">games manager</span>
+            <div className="bubble-container">
+              <Bubble onClick={props.createGame} color="black">
+                create game
+              </Bubble>
+            </div>
+          </h1>
+        </header>
+        <iframe src={`${urls.monitor}/${state.script.script_id}`}></iframe>
+      </div>
+    </Show>
   );
 };
 
@@ -268,6 +270,7 @@ export default function Menu(props) {
           state.editor.bools.isMenuOpen
         }
       ></RoleMenu>
+      
       <GamesMenu
         createGame={props.createGame}
         open={

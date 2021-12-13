@@ -17,15 +17,11 @@ function Test(props) {
       .then((res) => res.json())
       .then((res) => {
         if (!res) return Promise.reject("errrr");
-        console.log(res.role_urls);
-        console.log("state.role_urls", state.role_urls);
+
         setState("role_urls", res.role_urls);
-        console.log("state.role_urls", state.role_urls);
       })
       .catch((err) => {});
   });
-
-  createEffect(() => console.log(state.role_urls));
 
   return (
     <div className="flex-container">
