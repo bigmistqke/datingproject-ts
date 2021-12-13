@@ -86,7 +86,7 @@ function Node(props) {
         isVisible={true}
         // isVisible={isVisible()}
       ></InOuts>
-      <Show when={props.node.type === "instruction"}>
+      <Show when={props.node.type === "instruction" || !props.node.type}>
         <div className="instructions">
           <Show when={props.instructions.length === 0}>
             <button onClick={addRow}>add new row</button>

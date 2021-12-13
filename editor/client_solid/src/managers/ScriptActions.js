@@ -287,7 +287,7 @@ export default function ScriptActions({
 
   this.addInstructionId = ({ node_id, instruction_id, index = false }) => {
 
-    console.log(state.script.nodes[node_id], state.script.nodes, node_id);
+
 
 
     let instruction_ids = [...state.script.nodes[node_id].instructions];
@@ -391,7 +391,7 @@ export default function ScriptActions({
   };
 
   this.hasRoleId = ({ node_id, role_id }) => {
-    console.log(state.script.nodes, node_id);
+
     return role_id in state.script.nodes[node_id].in_outs;
   }
 

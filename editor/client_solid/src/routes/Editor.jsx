@@ -160,21 +160,45 @@ function Editor(props) {
     return roles;
   };
 
+  const reformatBlocks = (blocks) => {
+    let nodes = {};
+    Object.entries(blocks).forEach(([block_id, block]) => {
+      block = renameKeyOfObject(block, "roles", "in_outs");
+      block.in_outs = Object.fromEntries(
+        Object.entries(block.in_outs).map(([role_id, role]) => {
+          if (role.next_block_id) {
+            role.out_node_id = role.next_block_id;
+            delete role.next_block_id;
+          }
+          if (role.prev_block_id) {
+            role.in_node_id = role.prev_block_id;
+            delete role.prev_block_id;
+          }
+          return [role_id, role];
+        })
+      );
+      nodes[block_id] = block;
+      // return node;
+    });
+    return nodes;
+  };
+
   const reformatNodes = (_nodes) => {
     let nodes = {};
     _nodes.forEach((node) => {
       node = renameKeyOfObject(node, "connections", "roles");
-      /* node.in_outs = node.in_outs.map((role) => {
-         
-        if (!role.out_node_id) {
-          delete role.out_node_id;
+      node.in_outs = node.in_outs.map((role) => {
+        if (role.next_block_id) {
+          role.out_node_id = role.next_block_id;
+          delete role.next_block_id;
         }
-        if (!role.in_node_id) {
-          delete role.in_node_id;
+        if (role.prev_block_id) {
+          role.in_node_id = role.prev_block_id;
+          delete role.prev_block_id;
         }
         return role;
       });
-       */
+
       if (Array.isArray(node.in_outs)) {
         node.in_outs = arrayOfObjectsToObject(node.in_outs, "role_id");
       }
@@ -193,8 +217,6 @@ function Editor(props) {
     ); */
 
   onMount(() => {
-    console.log(state.script, state.script.script_id);
-
     actions.setParentIds(parent_ids);
 
     if (state.script.script_id) return;
@@ -215,12 +237,10 @@ function Editor(props) {
         actions.setInstructions(res.instructions);
         actions.setNodes(reformatNodes(res.nodes)); */
 
-        console.log(res);
-
         actions.setRoles(res.roles ? res.roles : {});
         actions.setInstructions(res.instructions ? res.instructions : {});
         actions.setGroups(res.groups ? res.groups : {});
-        actions.setNodes(res.nodes);
+        actions.setNodes(reformatBlocks(res.blocks));
         // actions.setNodes(Object.fromEntries(Object.entries(res.nodes).map(([node_id, node])=> [node_id, {...node, type: "instruction"}])));
       })
       .catch((err) => {
@@ -253,8 +273,6 @@ function Editor(props) {
     right: 6px;
     z-index: 5;
   `;
-
-  createEffect(() => console.log("parent_id is ", parent_ids));
 
   return (
     <>
@@ -393,7 +411,12 @@ function Editor(props) {
             }
           >
             {([node_id, node]) => (
-              <Show when={node.parent_id === parent_ids[parent_ids.length - 1]}>
+              <Show
+                when={
+                  node.parent_id === parent_ids[parent_ids.length - 1] ||
+                  !node.parent_id
+                }
+              >
                 <For each={Object.entries(node.in_outs)}>
                   {([role_id, role]) =>
                     role.out_node_id ? (

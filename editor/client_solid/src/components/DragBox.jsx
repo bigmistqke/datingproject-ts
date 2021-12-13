@@ -112,7 +112,6 @@ export default function DragBox(props) {
       ]
     );
     if (isSelected() && !collision) {
-      console.log("deselect ", props.id);
       actions.removeFromSelection(props.id);
     }
     if (!isSelected() && collision) {

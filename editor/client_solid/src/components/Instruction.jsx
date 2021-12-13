@@ -4,7 +4,7 @@ import NumericInput from "./NumericInput";
 // import
 // import Select from 'react-select';
 import "./Instruction.css";
-import { Show, createEffect, createMemo } from "solid-js";
+import { Show, onMount, createMemo } from "solid-js";
 import Select from "./Select";
 import getColorFromHue from "../helpers/getColorFromHue";
 

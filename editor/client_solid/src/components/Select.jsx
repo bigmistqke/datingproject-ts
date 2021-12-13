@@ -7,7 +7,6 @@ function Select(props) {
   let drop_down_dom;
 
   const getRemainingOptions = createMemo(() => {
-    console.log("getRemainingOptions", props.options, props.value);
     return props.options.filter((option) => {
       return option.value !== props.value;
     });
@@ -144,9 +143,6 @@ function Select(props) {
   // }
 
   const DropDown = () => {
-    createEffect(() => {
-      console.log("DROP DOWN!!!!", getRemainingOptions());
-    });
     return (
       <>
         <div
@@ -175,11 +171,6 @@ function Select(props) {
       </>
     );
   };
-
-  createEffect(() => {
-    console.log("SELECT MOUNTED");
-    console.log("HALLO", props.value, getSelectedLabel());
-  });
 
   return (
     <>

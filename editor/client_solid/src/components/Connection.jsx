@@ -1,4 +1,4 @@
-import { createMemo, createEffect, createSignal } from "solid-js";
+import { createMemo, createEffect, onMount } from "solid-js";
 import { createStore } from "solid-js/store";
 import "./Connection.css";
 import Bezier from "./Bezier";
@@ -25,7 +25,6 @@ const Connection = (props) => {
 
   createEffect(() => {
     if (!props.out_role_offset) return false;
-    console.log("props.out_role_offset", props.out_role_offset);
     setPositions("prev", {
       x:
         props.out_node_position.x +
@@ -40,9 +39,10 @@ const Connection = (props) => {
     });
   }, [props.out_node_position, props.out_role_offset]);
 
+  onMount(() => {});
+
   createEffect(() => {
     if (!props.in_role_offset) return false;
-    console.log("props.out_role_offset", props.out_role_offset, props.in_role_offset);
 
     setPositions("next", {
       x:

@@ -18,8 +18,6 @@ function Role(props) {
   const startConnection = async (e, role_id) => {
     if (e.buttons != 1) return;
 
-    console.log(props.role);
-
     // set editor-state connecting true so that hovering css is disabled
     // actions.setConnecting(true);
     // remove connections to roles 'both ways': dereference it in this and the connected node

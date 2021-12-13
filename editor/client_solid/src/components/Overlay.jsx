@@ -4,15 +4,12 @@ import { createMemo } from "solid-js";
 
 const Overlay = function (props) {
   const closeOverlay = (e) => {
-    console.log(props.header);
-    console.log(e);
     if (!e.target.classList.contains("overlay-container")) return;
     props.onClose();
   };
 
   const getStyle = createMemo(() => {
     let style = {};
-    console.log("props.style is ", props.style);
     if (props.style) {
       style = props.style;
     }
