@@ -11,21 +11,10 @@ import uniqid from 'uniqid';
 import Mqtt from "./Mqtt.js"
 import Game from "./routes/Game"
 import Home from "./routes/Home"
-
-
-
 import "./css/general.css";
 import "./css/card.css";
 
-const isDev = window.location.href.indexOf('localhost') != -1;
-
-window._url = {
-  mqtt: isDev ? "socket.datingproject.net/mqtt" : "socket.datingproject.net/mqtt",
-  fetch: isDev ? "https://fetch.datingproject.net/test" : "https://fetch.datingproject.net"
-}
-
-
-
+import urls from "./urls";
 
 function App() {
 
@@ -34,7 +23,7 @@ function App() {
   const [socket, setSocket] = useState();
 
   async function initSocket() {
-    let _socket = await new Mqtt(window._url.mqtt, true, true);
+    let _socket = await new Mqtt(urls.socket, true, true);
     setSocket(_socket);
   }
   let init = () => {
