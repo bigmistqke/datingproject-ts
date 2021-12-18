@@ -16,19 +16,18 @@ import MaskHandle from "./components/viewport/MaskHandle";
 import Prompt from "./components/Prompt";
 
 import { styled } from "solid-styled-components";
-import { useStore } from "./Store";
+import { useStore } from "./store/Store";
+
+import isColor from "./helpers/isColor";
+import delay from "./helpers/delay";
+
+import urls from "./urls";
 
 import {
   HeaderPanel,
-  LabeledInput,
-  LabeledColor,
-  LabeledCheckbox,
   FlexRow,
-  GridRow,
-  Label,
   Button,
   Span,
-  LabeledColorPicker,
   FullScreen,
   Overlay,
 } from "./components/panels/UI_Components";
@@ -36,27 +35,15 @@ import {
 import SidePanel from "./components/panels/SidePanel";
 
 function App(props) {
-  const { card_id } = useParams();
-  const [
-    state,
-    {
-      updateCardSize,
-      setDeck,
-      upload,
-      toggleTypeManager,
-      createNewCard,
-      setCardId,
-      setSelectedElementIndex,
-    },
-  ] = useStore();
+  const { design_id } = useParams();
+  const [state, actions] = useStore();
   const [instruction, setInstruction] = createStore({
     type: null,
     text: null,
     timespan: null,
   });
-  // window.instruction = instruction;
 
-  createEffect(() => setCardId(card_id));
+  createEffect(() => actions.setDesignId(design_id));
 
   createEffect(() => {
     setInstruction("type", state.viewport.type);
@@ -105,81 +92,40 @@ function App(props) {
     position: relative;
   `;
 
-  const fetchDeck = async (card_id) => {
+  const fetchDesign = async (design_id) => {
     try {
-      let result = await fetch(`${props.urls.fetch}/api/design/get/${card_id}`);
+      let result = await fetch(
+        `${urls.fetch}/api/design/get/${design_id}/development`
+      );
       let design = await result.json();
-      console.log("design is ", design);
+
+      let types = Object.fromEntries(
+        Object.entries(design.types).map(([type_id, type]) => {
+          type.elements = type.elements.map((el) =>
+            el.type !== "svg" || el.id ? el : { ...el, id: uniqid() }
+          );
+          return [type_id, type];
+        })
+      );
+
       if (!design) return false;
       return design;
     } catch (err) {
-      console.error(err);
-      return false;
-    }
-  };
-
-  const renderSvg = ({ svg, card_dimensions }) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = (svg.dimensions.width / 100) * card_dimensions.width * 100;
-    canvas.heigt = (svg.dimensions.height / 100) * card_dimensions.heigt * 100;
-  };
-
-  const processDeck = async () => {
-    let production_deck = {};
-    Object.entries(state.design.types).forEach(([type_name, type]) =>
-      type.elements.forEach((element) => {
-        switch (element.type) {
-          case "svg":
-            console.log(element);
-
-            break;
-          default:
-            break;
-        }
-      })
-    );
-  };
-
-  const saveDeck = async () => {
-    try {
-      // let development = state.design;
-      // let production = action.processDesign();
-
-      console.log(state.design);
-
-      let result = await fetch(
-        `${props.urls.fetch}/api/design/save/${card_id}`,
-        {
-          method: "POST",
-          mode: "cors",
-          cache: "no-cache",
-          credentials: "same-origin",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          redirect: "follow",
-          referrerPolicy: "no-referrer",
-          body: JSON.stringify(state.design),
-        }
-      );
-      result = await result.json();
-      console.log(result);
-      return true;
-    } catch (err) {
-      console.error(err);
+      console.error("err happens", err);
       return false;
     }
   };
 
   onMount(async () => {
-    window.addEventListener("resize", () => updateCardSize);
-    updateCardSize();
-    let design = await fetchDeck(card_id);
+    window.addEventListener("resize", () => actions.updateCardSize);
+    actions.updateCardSize();
+    let design = await fetchDesign(design_id);
+    console.log("design is", design);
     if (!design) {
-      createNewCard();
+      actions.createNewCard();
       return;
     }
-    setDeck(design);
+    actions.setDeck(design);
   });
 
   return (
@@ -189,7 +135,7 @@ function App(props) {
           className="prompt_container"
           onMouseDown={(e) =>
             e.target.classList.contains("type_manager")
-              ? toggleTypeManager
+              ? actions.toggleTypeManager
               : null
           }
         >
@@ -222,7 +168,7 @@ function App(props) {
       <App
         onDragOver={(e) => e.preventDefault()}
         onDragEnter={(e) => e.preventDefault()}
-        onDrop={upload}
+        onDrop={actions.upload}
         style={{ background: state.design.background }}
       >
         <Show when={state.viewport.prompt}>
@@ -238,7 +184,7 @@ function App(props) {
           onDragOver={(e) => e.preventDefault()}
           onDragEnter={(e) => e.preventDefault()}
           onMouseDown={(e) =>
-            e.buttons === 1 ? setSelectedElementIndex(false) : null
+            e.buttons === 1 ? actions.setSelectedElementIndex(false) : null
           }
         >
           <Rulers
@@ -256,7 +202,7 @@ function App(props) {
             instruction={instruction}
           ></CardRenderer>
         </Viewport>
-        <SidePanel processDeck={processDeck} saveDeck={saveDeck}></SidePanel>
+        <SidePanel saveDesign={actions.saveDesign}></SidePanel>
       </App>
     </>
   );

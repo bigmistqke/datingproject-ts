@@ -2,13 +2,13 @@ import CardCompositor from "./CardComposition";
 
 import { Show, createEffect, createMemo } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 import { styled } from "solid-styled-components";
 import check from "../../helpers/check";
 
 const CardRenderer = (props) => {
-  const [state, { getLocalElements }] = useStore();
+  const [state, actions] = useStore();
 
   const [card_state, setCardState] = createStore({
     modes: {
@@ -30,28 +30,6 @@ const CardRenderer = (props) => {
     box-shadow: 0px 0px 50px lightgrey;
     z-index: 5;
   `;
-
-  /*   const getSelectedType = () => props.design.types[props.instruction.type];
-  const getLocalElements = () =>
-    getSelectedType() ? getSelectedType().elements : [];
-
-  const getGlobalElement = (id) => props.design.globals[id];
-
-  const getLocalElement = ({ index, id }) => {
-    if (id) index = getLocalElements().findIndex((e) => e.id === id);
-    if (check(index)) return getLocalElements()[index];
-    return false;
-  };
-
-  const getStyles = ({ id, index, highlight }) => {
-    const local_element = getLocalElement({ id, index });
-    if (!local_element) return {};
-    const style_type = highlight ? "highlight_styles" : "styles";
-    return {
-      ...getGlobalElement(local_element.id)[style_type],
-      ...local_element[style_type],
-    };
-  }; */
 
   createEffect(() => {
     setCardState("modes", "timed", props.instruction.timespan ? true : false);
@@ -88,9 +66,6 @@ const CardRenderer = (props) => {
     setCardState("formatted_text", formatted_text);
   });
 
-  const getSelectedSwatches = (timed = false) =>
-    getSelectedType().swatches.map((s) => (timed ? s.timed : s.normal));
-
   return (
     <>
       <CardContainer
@@ -103,7 +78,9 @@ const CardRenderer = (props) => {
       >
         <div className="viewport">
           <CardCompositor
-            elements={getLocalElements({ type: props.instruction.type })}
+            elements={actions.getLocalElements({
+              type: props.instruction.type,
+            })}
             card_state={card_state}
             {...props}
           ></CardCompositor>

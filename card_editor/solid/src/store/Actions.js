@@ -1,55 +1,11 @@
-import { createStore, produce } from "solid-js/store";
-import { createContext, useContext } from "solid-js";
-import { array_move, array_remove } from "./helpers/Pure";
-import uniqid from "uniqid";
-// import check from "./helpers/check";
-const default_types = ["do", "say", "back"];
+import isColor from "../helpers/isColor";
+import urls from "../urls";
 
-const StoreContext = createContext();
 
-export function Provider(props) {
+export default function ({ state, setState, default_types }) {
   const check = (bool) => !(!bool && bool !== 0);
 
-  const [state, setState] = createStore({
-    card_id: null,
-    pressed_keys: [],
-    instruction: {},
-    bools: {
-      shouldSnap: false,
-      isShiftPressed: false,
-      isAltPressed: false,
-      areGuidesLocked: false,
-      areGuidesHidden: false,
-    },
-    guides: [],
-    design: {
-      background: "#efefef",
-      border_radius: "5",
-      card_dimensions: {
-        width: 55.88507940957915,
-        height: 100,
-      },
-      globals: {},
-      elements: {},
-      types: {},
-    },
-    viewport: {
-      timer_percentage: 90,
-      masked_styling: false,
-      selected_element_index: false,
-      type_manager: false,
-      modes: {
-        timed: false,
-        choice: false,
-      },
-      type: default_types[0],
-      prompt: false,
-      card_size: {
-        width: null,
-        height: null,
-      },
-    },
-  });
+  // DEFAULTS
 
   const getDefaultTextState = () => ({
     position: {
@@ -79,6 +35,23 @@ export function Provider(props) {
     timed: 1,
   });
 
+  const lorem_ipsum = {
+    normal: [
+      "A week ago, when I returned home from doing my weekly groceries, I passed a theatre, ...",
+      "For a minute, I lost myself.",
+      "but as a traveler, or rather a philosopher.” Well, long story short: I had a chat with this man, ",
+      "I know. This heatwave has me sweating like a pig in a butchers shop.",
+    ],
+    choice: [
+      "That boat is taking [cocaine / vaccines / refugees / Coca cola] to [Antwerp / Rotterdam / the UK / Calais]",
+      "I [ would / would not ] want to live there, because [ ... ]",
+      "I think that [death / paradise / hope / suffering / redemption] is waiting for us over there.",
+      "And that one is taking [4x4 cars / ayuhuasca / underpaid workers / cows and pigs] to Dubai.",
+    ],
+  };
+
+  // GENERAL PURPOSE FUNCTIONS
+
   const getStateFromArgs = (args) =>
     new Promise((resolve) => {
       const iterate = (nested_state, args) => {
@@ -90,6 +63,9 @@ export function Provider(props) {
       iterate(state, [...args]);
     });
 
+
+  // HISTORY / CTRL-Z
+
   let state_history = [];
 
   const archiveStateChanges = (state_changes) => {
@@ -99,7 +75,7 @@ export function Provider(props) {
     }
   };
 
-  const revertStateChange = () => {
+  this.revertStateChange = () => {
     if (state_history.length === 0) return;
     let last_state_changes = state_history.pop();
     last_state_changes.forEach(async (state_change) => {
@@ -116,70 +92,202 @@ export function Provider(props) {
     });
   };
 
-  const lorem_ipsum = {
-    normal: [
-      "A week ago, when I returned home from doing my weekly groceries, I passed a theatre, ...",
-      "For a minute, I lost myself.",
-      "but as a traveler, or rather a philosopher.” Well, long story short: I had a chat with this man, ",
-      "I know. This heatwave has me sweating like a pig in a butchers shop.",
-    ],
-    choice: [
-      "That boat is taking [cocaine / vaccines / refugees / Coca cola] to [Antwerp / Rotterdam / the UK / Calais]",
-      "I [ would / would not ] want to live there, because [ ... ]",
-      "I think that [death / paradise / hope / suffering / redemption] is waiting for us over there.",
-      "And that one is taking [4x4 cars / ayuhuasca / underpaid workers / cows and pigs] to Dubai.",
-    ],
+  // SAVE AND PROCESS STATE
+
+  const deswatchStyles = ({ styles, swatches, masked }) => {
+    return Object.fromEntries(
+      Object.entries(styles).map(([key, value]) => {
+        let styles_with_color = ["color", "background", "border-color"];
+        if (styles_with_color.includes(key) && !isColor(value)) {
+          value = swatches[value][masked ? "timed" : "normal"];
+        }
+        return [key, value];
+      })
+    );
+  };
+
+  const inlineStylesSvg = ({ svg, styles, swatches, masked }) => {
+    try {
+      Object.entries(styles).forEach(([name, style]) => {
+        let string = "";
+
+        Object.entries(style).forEach(([key, value]) => {
+          if (key === "fill" || key === "stroke") {
+            if (value === "none") {
+              string += `${key}:transparent; `;
+            } else {
+              const color = isColor(value)
+                ? value
+                : swatches[value][masked ? "timed" : "normal"];
+              if (!color) {
+                throw `color is undefined for key: ${key} with value ${value} and swatches ${swatches} `;
+              }
+              string += `${key}:${color}; `;
+            }
+          } else {
+            string += `${key}:${value}; `;
+          }
+        });
+        svg = svg.replaceAll(`class="${name}"`, `style="${string}"`);
+        svg = svg.replace(/<style[[\s\S]*style>/g, "");
+      });
+      return svg;
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const processDesign = () => {
+    const card_size = this.getCardSize();
+    let processed_deck = JSON.parse(JSON.stringify(state.design));
+    processed_deck.types = Object.fromEntries(
+      Object.entries(processed_deck.types).map(([type_name, type]) => {
+        const swatches = type.swatches;
+        type = type.elements.map((element) => {
+
+
+
+          if (element.type === "svg") {
+            // inline styles into svg
+            element.svg = {
+              masked: inlineStylesSvg({
+                svg: element.svg,
+                styles: this.getStyles({ element, type, swatches }),
+                type,
+                swatches,
+                masked: true,
+              }),
+              normal: inlineStylesSvg({
+                svg: element.svg,
+                styles: this.getStyles({ element, type, swatches }),
+                type,
+                swatches,
+                masked: false,
+              }),
+            };
+            delete element.styles;
+          } else {
+            element.styles = {
+              masked: deswatchStyles({
+                styles: this.getStyles({ element, type }),
+                swatches,
+                masked: true,
+              }),
+              normal: deswatchStyles({
+                styles: this.getStyles({ element, type }),
+                swatches,
+                masked: false,
+              }),
+            };
+            if (element.type === "instruction") {
+              element.highlight_styles = {
+                masked: deswatchStyles({
+                  styles: this.getStyles({ element, type, highlight: true }),
+                  swatches,
+                  masked: true,
+                }),
+                normal: deswatchStyles({
+                  styles: this.getStyles({ element, type, highlight: true }),
+                  swatches,
+                  masked: false,
+                }),
+              };
+            }
+          }
+
+          if (element.global) {
+            element.modes = { ...state.design.globals[element.id].modes };
+            element.position = { ...state.design.globals[element.id].position };
+            element.dimensions = { ...state.design.globals[element.id].dimensions };
+          }
+
+          delete element.global;
+          delete element.locked;
+          delete element.content;
+
+          return element;
+        });
+        return [type_name, type];
+      })
+    );
+    delete processed_deck.globals;
+    delete processed_deck.elements;
+    return processed_deck;
+  };
+
+  this.saveDesign = async () => {
+    try {
+      // console.log(processDesign());
+      if (!state.design_id) throw "design_id is not defined in state";
+
+      let result = await fetch(
+        `${urls.fetch}/api/design/save/${state.design_id}`,
+        {
+          method: "POST",
+          mode: "cors",
+          cache: "no-cache",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          redirect: "follow",
+          referrerPolicy: "no-referrer",
+          body: JSON.stringify({
+            development: state.design,
+            production: processDesign(),
+          }),
+        }
+      );
+      result = await result.json();
+      console.log(result);
+      return true;
+    } catch (err) {
+      console.error(err);
+      console.log(state);
+      return false;
+    }
   };
 
   // state getters and setters
 
-  const setCardId = (card_id) => setState("card_id", card_id);
+  this.setDesignId = (design_id) => setState("design_id", design_id);
 
   //    viewport
 
-  const toggleMaskedStyling = (e) => {
+  this.toggleMaskedStyling = (e) => {
     e.stopPropagation();
     setState("viewport", "masked_styling", (bool) => !bool);
   };
 
-  const setTimerPercentage = (percentage) => {
+  this.setCardId = (percentage) => {
     setState("viewport", "timer_percentage", percentage);
   };
 
-  const getTimerPercentage = (percentage) => state.viewport.timer_percentage;
+  this.getTimerPercentage = () => state.viewport.timer_percentage;
 
-  const toggleTypeManager = () =>
+  this.getTimer = () => parseInt(state.viewport.timer_percentage * 30 / 100);
+
+  this.toggleTypeManager = () =>
     setState("viewport", "type_manager", (bool) => !bool);
 
-  const toggleModeViewport = (type) => {
+  this.toggleModeViewport = (type) => {
     setState("viewport", "modes", type, (bool) => !bool);
-    if (type === "choice") changeInstructionText();
-  };
-
-  // const getTimer = () => state.viewport.timer;
-
-  // instruction:   an instruction constructed from the modes
-  //                which is used as an input for the card-renderer
-
-  const updateInstruction = () => {
-    let instruction = {
-      type: state.viewport.type,
-    };
+    if (type === "choice") this.changeInstructionText();
   };
 
   //   design
 
   //   design: general
 
-  const getCardSize = () => state.viewport.card_size;
+  this.getCardSize = () => state.viewport.card_size;
 
   const convert = (value, horizontal = false) => {
     return !horizontal
-      ? (parseFloat(value) * getCardSize().height) / 400
-      : parseFloat(value) * getCardSize().width;
+      ? (parseFloat(value) * this.getCardSize().height) / 400
+      : parseFloat(value) * this.getCardSize().width;
   };
 
-  const updateCardSize = () =>
+  this.updateCardSize = () =>
     setState("viewport", "card_size", calculateCardSize());
 
   const calculateCardSize = () => ({
@@ -189,31 +297,31 @@ export function Provider(props) {
       state.design.card_dimensions.height,
   });
 
-  const setCardDimension = (dimension, value) => {
+  this.setCardDimension = (dimension, value) => {
     archiveStateChanges([
       setStateArchive("design", "card_dimensions", dimension, value),
     ]);
   };
 
-  const setBackground = (background) =>
+  this.setBackground = (background) =>
     setState("design", "background", background);
 
-  const addElementToGlobals = (id, element) =>
+  this.addElementToGlobals = (id, element) =>
     setState("design", "globals", id, element);
 
   //  design: type
 
-  const setType = (type) => setState("viewport", "type", type);
+  this.setType = (type) => setState("viewport", "type", type);
 
-  const isTypeSelected = (type) => {
+  this.isTypeSelected = (type) => {
     return state.viewport.type === type;
   };
 
-  const getType = (type) => {
+  this.getType = (type) => {
     return state.design.types[type];
   };
 
-  const getSelectedType = () => {
+  this.getSelectedType = () => {
     let selected_type = state.design.types[state.viewport.type];
     if (!selected_type) return undefined;
     return selected_type;
@@ -223,14 +331,14 @@ export function Provider(props) {
 
   //  design: type: swatches
 
-  const getSelectedSwatches = (timed = false) => {
-    let selected_type = getSelectedType();
+  this.getSelectedSwatches = (timed = false) => {
+    let selected_type = this.getSelectedType();
     if (!selected_type) return [];
 
     return selected_type.swatches.map((s) => (timed ? s.timed : s.normal));
   };
 
-  const setSwatch = (index, color) =>
+  this.setSwatch = (index, color) =>
     setStateArchive(
       "design",
       "types",
@@ -241,7 +349,7 @@ export function Provider(props) {
       color
     );
 
-  const addSwatch = (index, color) => {
+  this.addSwatch = (index, color) => {
     setState(
       "design",
       "types",
@@ -257,17 +365,17 @@ export function Provider(props) {
 
   //      design: type: elements
 
-  const setSelectedElementIndex = (index) => {
+  this.setSelectedElementIndex = (index) => {
     setState("viewport", "selected_element_index", index);
   };
 
   //
 
-  const getLocalElement = ({ index, id, type }) => {
+  this.getLocalElement = ({ index, id, type }) => {
     if (!type) {
-      type = getSelectedType();
+      type = this.getSelectedType();
     } else {
-      type = getType(type);
+      type = this.getType(type);
     }
     if (!type) return false;
     if (id) {
@@ -278,7 +386,7 @@ export function Provider(props) {
   };
 
   const getLocalElementAsArgs = ({ index, id }) => {
-    if (id) index = getSelectedType().elements.findIndex((e) => e.id === id);
+    if (id) index = this.getSelectedType().elements.findIndex((e) => e.id === id);
     if (check(index)) return [...getSelectedTypeAsArgs(), "elements", index];
     return [];
   };
@@ -286,25 +394,40 @@ export function Provider(props) {
   const getGlobalElement = (id) => state.design.globals[id];
   const getGlobalElementAsArgs = (id) => ["design", "globals", id];
 
-  const getLocalElements = (from_where) => {
-    let selected_type = getSelectedType();
+  this.getLocalElements = (from_where) => {
+    let selected_type = this.getSelectedType();
     if (!selected_type) return [];
     return selected_type.elements;
   };
 
-  const getSelectedElement = () => {
+  this.getSelectedElement = () => {
     if (!check(state.viewport.selected_element_index)) return false;
-    let selected_type = getSelectedType();
+    let selected_type = this.getSelectedType();
     if (!selected_type) return false;
     return selected_type.elements[state.viewport.selected_element_index];
   };
 
-  const isSelectedElementOfType = (type) => {
+  this.isSelectedElementOfType = (type) => {
     return (
-      getSelectedElement() &&
-      getSelectedElement().type &&
-      getSelectedElement().type.indexOf(type) != -1
+      this.getSelectedElement() &&
+      this.getSelectedElement().type &&
+      this.getSelectedElement().type.indexOf(type) != -1
     );
+  };
+
+  this.isElementVisible = (element) => {
+    let modes;
+    if (element.global) {
+      modes = state.design.globals[element.id].modes;
+    } else {
+      modes = element.modes;
+    }
+    for (let [mode_type, activated] of Object.entries(state.viewport.modes)) {
+      if (modes[mode_type] !== 1 && modes[mode_type] !== (activated ? 2 : 0)) {
+        return false;
+      }
+    }
+    return true;
   };
 
   /*   const changeOrderElement = (from_index, to_index) => {
@@ -316,21 +439,21 @@ export function Provider(props) {
           from_index,
           to_index
         );
-      })
+     })
     );
-    setSelectedElementIndex(to_index);
+    this.setSelectedElementIndex(to_index);
   }; */
 
-  const changeOrderElement = (from_index, to_index) => {
+  this.changeOrderElement = (from_index, to_index) => {
     setState(
       ...getSelectedTypeAsArgs(),
       "elements",
-      array_move(getLocalElements(), from_index, to_index)
+      array_move(this.getLocalElements(), from_index, to_index)
     );
-    setSelectedElementIndex(to_index);
+    this.setSelectedElementIndex(to_index);
   };
 
-  const toggleModeElement = (index, type) => {
+  this.toggleModeElement = (index, type) => {
     setState(
       ...getLocalElementAsArgs({ index }),
       "modes",
@@ -351,8 +474,8 @@ export function Provider(props) {
     return { args, new_value, old_value };
   };
 
-  const translateElement = ({ index, delta }) => {
-    const element = getLocalElement({ index });
+  this.translateElement = ({ index, delta }) => {
+    const element = this.getLocalElement({ index });
     let args;
     let old_value, new_value;
     if (element.global) {
@@ -364,8 +487,8 @@ export function Provider(props) {
     setState(...args, (position) => {
       old_value = { ...position };
       new_value = {
-        x: position.x + (delta.x / getCardSize().width) * 100,
-        y: position.y + (delta.y / getCardSize().height) * 100,
+        x: position.x + (delta.x / this.getCardSize().width) * 100,
+        y: position.y + (delta.y / this.getCardSize().height) * 100,
       };
       return new_value;
     });
@@ -373,8 +496,8 @@ export function Provider(props) {
     return [{ old_value, new_value, args }];
   };
 
-  const resizeElement = ({ index, dimensions, position }) => {
-    const element = getLocalElement({ index });
+  this.resizeElement = ({ index, dimensions, position }) => {
+    const element = this.getLocalElement({ index });
     let args;
     if (element.global) {
       args = [...getGlobalElementAsArgs(element.id)];
@@ -392,37 +515,37 @@ export function Provider(props) {
     return [archived_position, archived_dimensions];
   };
 
-  const lockElement = (index, bool) => {
+  this.lockElement = (index, bool) => {
     if (state.viewport.selected_element_index === index && bool)
-      setSelectedElementIndex(false);
-    if (!bool) setSelectedElementIndex(index);
+      this.setSelectedElementIndex(false);
+    if (!bool) this.setSelectedElementIndex(index);
     setState(...getLocalElementAsArgs({ index }), "locked", bool);
   };
 
-  const removeElement = (index) => {
+  this.removeElement = (index) => {
     setState(
       ...getSelectedTypeAsArgs(),
       "elements",
-      array_remove(getLocalElements(), index)
+      array_remove(this.getLocalElements(), index)
     );
   };
 
-  const getDimensions = ({ element, type }) => {
+  this.getDimensions = ({ element, type }) => {
     return element.global
       ? state.design.globals[element.id].dimensions
       : element.dimensions;
   };
 
-  const getPosition = ({ element, type }) => {
+  this.getPosition = ({ element, type }) => {
     return element.global
       ? state.design.globals[element.id].positions
       : element.positions;
   };
 
-  const getStyles = ({ id, index, type, element, highlight }) => {
+  this.getStyles = ({ id, index, type, element, highlight }) => {
     const local_element = element
       ? element
-      : getLocalElement({ id, index, type });
+      : this.getLocalElement({ id, index, type });
     if (!local_element) return {};
 
     const style_type = highlight ? "highlight_styles" : "styles";
@@ -440,8 +563,8 @@ export function Provider(props) {
     };
   };
 
-  const getTextStyles = ({ element, swatches }) => {
-    let styles = getStyles({ element });
+  this.getTextStyles = ({ element, swatches }) => {
+    let styles = this.getStyles({ element });
     return {
       width: "100%",
       height: "100%",
@@ -458,17 +581,15 @@ export function Provider(props) {
       color: swatches[styles.color],
       "text-shadow":
         styles.shadowLeft || styles.shadowLeft || styles.shadowBlur
-          ? `${styles.shadowLeft ? convert(styles.shadowLeft) : 0}px ${
-              styles.shadowTop ? convert(styles.shadowTop) : 0
-            }px ${styles.shadowBlur ? convert(styles.shadowBlur) : 0}px ${
-              styles.shadowColor ? swatches[styles.shadowColor] : "black"
-            }`
+          ? `${styles.shadowLeft ? convert(styles.shadowLeft) : 0}px ${styles.shadowTop ? convert(styles.shadowTop) : 0
+          }px ${styles.shadowBlur ? convert(styles.shadowBlur) : 0}px ${styles.shadowColor ? swatches[styles.shadowColor] : "black"
+          }`
           : null,
     };
   };
 
-  const getHighlightStyles = ({ element, swatches }) => {
-    let styles = getStyles({ element, highlight: true });
+  this.getHighlightStyles = ({ element, swatches }) => {
+    let styles = this.getStyles({ element, highlight: true });
 
     return {
       "font-family": styles.family,
@@ -491,33 +612,28 @@ export function Provider(props) {
       "border-style": "solid",
       "box-shadow":
         styles &&
-        (styles.boxShadowLeft || styles.boxShadowLeft || styles.boxShadowBlur)
-          ? `${styles.boxShadowLeft ? convert(styles.boxShadowLeft) : 0}px ${
-              styles.boxShadowTop ? convert(styles.boxShadowTop) : 0
-            }px ${styles.boxShadowBlur ? convert(styles.boxShadowBlur) : 0}px ${
-              styles.boxShadowColor ? swatches[styles.boxShadowColor] : "black"
-            }`
+          (styles.boxShadowLeft || styles.boxShadowLeft || styles.boxShadowBlur)
+          ? `${styles.boxShadowLeft ? convert(styles.boxShadowLeft) : 0}px ${styles.boxShadowTop ? convert(styles.boxShadowTop) : 0
+          }px ${styles.boxShadowBlur ? convert(styles.boxShadowBlur) : 0}px ${styles.boxShadowColor ? swatches[styles.boxShadowColor] : "black"
+          }`
           : null,
       "text-shadow":
         styles &&
-        (styles.textShadowLeft ||
-          styles.textShadowLeft ||
-          styles.textShadowBlur)
-          ? `${styles.textShadowLeft ? convert(styles.textShadowLeft) : 0}px ${
-              styles.textShadowTop ? convert(styles.textShadowTop) : 0
-            }px ${
-              styles.textShadowBlur ? convert(styles.textShadowBlur) : 0
-            }px ${
-              styles.textShadowColor
-                ? swatches[styles.textShadowColor]
-                : "black"
-            }`
+          (styles.textShadowLeft ||
+            styles.textShadowLeft ||
+            styles.textShadowBlur)
+          ? `${styles.textShadowLeft ? convert(styles.textShadowLeft) : 0}px ${styles.textShadowTop ? convert(styles.textShadowTop) : 0
+          }px ${styles.textShadowBlur ? convert(styles.textShadowBlur) : 0
+          }px ${styles.textShadowColor
+            ? swatches[styles.textShadowColor]
+            : "black"
+          }`
           : null,
     };
   };
 
-  const setStyle = ({ index, id, type, value, highlight }) => {
-    const local_element = getLocalElement({ index, id });
+  this.setStyle = ({ index, id, type, value, highlight }) => {
+    const local_element = this.getLocalElement({ index, id });
     if (!local_element) return;
 
     let args;
@@ -536,7 +652,7 @@ export function Provider(props) {
     archiveStateChanges([setStateArchive(...args)]);
   };
 
-  const setSVGStyle = ({ key, type, value, highlight }) => {
+  this.setSVGStyle = ({ key, type, value, highlight }) => {
     archiveStateChanges([
       setStateArchive(
         ...getLocalElementAsArgs({
@@ -550,9 +666,9 @@ export function Provider(props) {
     ]);
   };
 
-  const changeInstructionText = async () => {
+  this.changeInstructionText = async () => {
     let type = state.viewport.modes.choice ? "choice" : "normal";
-    let current_text = getLocalElement({ id: "instruction" }).content;
+    let current_text = this.getLocalElement({ id: "instruction" }).content;
 
     const getRandomLoremIpsum = () =>
       new Promise((resolve) => {
@@ -580,18 +696,18 @@ export function Provider(props) {
 
   // general functions
 
-  const setDeck = (design) => setState("design", design);
+  this.setDeck = (design) => setState("design", design);
 
   const addElement = (element) => {
     archiveStateChanges([
       setStateArchive(
-        ...getLocalElementAsArgs({ index: getLocalElements().length }),
+        ...getLocalElementAsArgs({ index: this.getLocalElements().length }),
         element
       ),
     ]);
   };
 
-  const upload = (e) => {
+  this.upload = (e) => {
     e.preventDefault();
     e.preventDefault();
 
@@ -608,9 +724,10 @@ export function Provider(props) {
     reader.onload = async function ({ target }) {
       if (file_is_svg) {
         const { svg, styles } = await processSVG(target);
-        const index = getSelectedType().elements.length;
+        const index = this.getSelectedType().elements.length;
         addElement({
           type: "svg",
+          id: uniqid(),
           modes: getDefaultModes(),
           position: {
             x: 0,
@@ -625,7 +742,7 @@ export function Provider(props) {
           styles,
           content: splitted_name.slice(0, splitted_name.length - 1).join("."),
         });
-        setSelectedElementIndex(index);
+        this.setSelectedElementIndex(index);
       }
     };
     if (!file_is_svg) reader.readAsDataURL(file);
@@ -698,7 +815,7 @@ export function Provider(props) {
     return { svg, styles };
   };
 
-  const createNewCard = () => {
+  this.createNewCard = () => {
     const instruction = {
       ...getDefaultTextState(),
       modes: getDefaultModes(),
@@ -724,7 +841,7 @@ export function Provider(props) {
       },
     };
 
-    addElementToGlobals("instruction", instruction);
+    this.addElementToGlobals("instruction", instruction);
 
     const countdown = {
       modes: {
@@ -754,7 +871,7 @@ export function Provider(props) {
       },
     };
 
-    addElementToGlobals("countdown", countdown);
+    this.addElementToGlobals("countdown", countdown);
 
     let types = Object.fromEntries(
       default_types.map((type) => [
@@ -768,32 +885,32 @@ export function Provider(props) {
           elements:
             type !== "back"
               ? [
-                  {
-                    id: "instruction",
-                    type: "instruction",
-                    global: true,
-                    styles: {
-                      color: 0,
-                    },
-                    highlight_styles: {
-                      background: 1,
-                      color: 2,
-                    },
-                    content:
-                      lorem_ipsum["normal"][
-                        Math.floor(Math.random() * lorem_ipsum["normal"].length)
-                      ],
+                {
+                  id: "instruction",
+                  type: "instruction",
+                  global: true,
+                  styles: {
+                    color: 0,
                   },
-                  {
-                    id: "countdown",
-                    type: "countdown",
-                    global: true,
-                    styles: {
-                      color: 0,
-                    },
-                    content: 30 * (state.viewport.timer_percentage / 100),
+                  highlight_styles: {
+                    background: 1,
+                    color: 2,
                   },
-                ]
+                  content:
+                    lorem_ipsum["normal"][
+                    Math.floor(Math.random() * lorem_ipsum["normal"].length)
+                    ],
+                },
+                {
+                  id: "countdown",
+                  type: "countdown",
+                  global: true,
+                  styles: {
+                    color: 0,
+                  },
+                  content: 30 * (state.viewport.timer_percentage / 100),
+                },
+              ]
               : [],
         },
       ])
@@ -801,12 +918,12 @@ export function Provider(props) {
     setState("design", "types", types);
     setState("design", "modes", ["choice", "timed"]);
 
-    updateInstruction();
+    // updateInstruction();
   };
 
   // gui
 
-  const openPrompt = ({ type, data, position }) =>
+  this.openPrompt = ({ type, data, position }) =>
     new Promise((_resolve) => {
       const resolve = (data) => {
         setState("viewport", "prompt", false);
@@ -820,65 +937,4 @@ export function Provider(props) {
         resolve,
       });
     });
-
-  let actions = {
-    state,
-    setCardId,
-    toggleMaskedStyling,
-    setTimerPercentage,
-    getTimerPercentage,
-    toggleTypeManager,
-    toggleModeViewport,
-    updateCardSize,
-    getCardSize,
-    setCardDimension,
-    setBackground,
-    addElementToGlobals,
-    setType,
-    isTypeSelected,
-    getType,
-    getSelectedType,
-    getSelectedSwatches,
-    setSwatch,
-    addSwatch,
-    getLocalElements,
-    getLocalElement,
-    setSelectedElementIndex,
-    getSelectedElement,
-    isSelectedElementOfType,
-    changeOrderElement,
-    toggleModeElement,
-    setStateArchive,
-    getPosition,
-    getDimensions,
-    translateElement,
-    resizeElement,
-    lockElement,
-    removeElement,
-    getTextStyles,
-    getHighlightStyles,
-    getStyles,
-    setStyle,
-    setSVGStyle,
-    changeInstructionText,
-    setDeck,
-    addElement,
-    upload,
-    createNewCard,
-    openPrompt,
-    revertStateChange,
-    archiveStateChanges,
-  };
-
-  let store = [state, actions];
-
-  return (
-    <StoreContext.Provider value={store}>
-      {props.children}
-    </StoreContext.Provider>
-  );
-}
-
-export function useStore() {
-  return useContext(StoreContext);
 }

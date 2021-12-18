@@ -3,16 +3,16 @@ import { styled } from "solid-styled-components";
 
 import HierarchyElement from "./HierarchyElement";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 const Hierarchy = (props) => {
-  const [state, { getLocalElements, changeOrderElement }] = useStore();
+  const [state, actions] = useStore();
 
   const onDrop = (e) => {
     let from = parseInt(e.dataTransfer.getData("index"));
 
     if (!from && from !== 0) return;
-    changeOrderElement(from, 0);
+    actions.changeOrderElement(from, 0);
   };
 
   const allowDrag = (e) => e.preventDefault();
@@ -28,7 +28,7 @@ const Hierarchy = (props) => {
     <HeaderContainer label="Hierarchy">
       <div className="hierarchy-container" style={{ height: "100%" }}>
         <ReversedList onDrop={onDrop} onDragOver={allowDrag}>
-          <For each={getLocalElements()}>
+          <For each={actions.getLocalElements()}>
             {(element, index) => (
               <HierarchyElement
                 element={element}

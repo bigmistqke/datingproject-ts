@@ -8,7 +8,7 @@ import {
 } from "./UI_Components";
 // import Color from "./Color";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 // swatches={getSelectedSwatches()}
 // swatches={getSelectedSwatches(state.viewport.masked_styling)}

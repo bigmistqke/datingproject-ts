@@ -18,37 +18,14 @@ import Hierarchy from "./Hierarchy";
 
 import { createEffect } from "solid-js";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 const SidePanel = (props) => {
-  const [
-    state,
-    {
-      toggleTypeManager,
-      toggleMaskedStyling,
-      toggleModeViewport,
-      createNewCard,
-      isTypeSelected,
-      changeInstructionText,
-      revertStateChange,
-      getSelectedElement,
-      isSelectedElementOfType,
-      getSelectedSwatches,
-      getSelectedType,
-      getStyles,
-      setSVGStyle,
-      setCardDimension,
-      getLocalElement,
-      setBackground,
-      setStyle,
-      getTextStyles,
-      setType,
-    },
-  ] = useStore();
+  const [state, actions] = useStore();
 
   createEffect(() =>
     setTimeout(() => {
-      console.log(getLocalElement({ id: "instruction" }));
+      console.log(actions.getLocalElement({ id: "instruction" }));
     }, 1000)
   );
 
@@ -70,13 +47,12 @@ const SidePanel = (props) => {
             "align-self": "center",
           }}
         >
-          🃏 card editor for <i>{state.card_id}</i>
+          🃏 card editor for <i>{state.design_id}</i>
         </span>
-        <Button onClick={toggleTypeManager}>manage types</Button>
+        <Button onClick={actions.toggleTypeManager}>manage types</Button>
         <Button>overview</Button>
-        <Button onClick={createNewCard}>new card</Button>
-        <Button onClick={props.processDeck}>process deck</Button>
-        <Button onClick={props.saveDeck}>save deck</Button>
+        <Button onClick={actions.createNewCard}>new card</Button>
+        <Button onClick={props.saveDesign}>save deck</Button>
       </FlexRow>
       <LongPanel
         style={{
@@ -105,9 +81,9 @@ const SidePanel = (props) => {
                 <For each={Object.keys(state.design.types)}>
                   {(type) => (
                     <Button
-                      className={isTypeSelected(type) ? "focus" : ""}
+                      className={actions.isTypeSelected(type) ? "focus" : ""}
                       style={{ flex: 1 }}
-                      onClick={() => setType(type)}
+                      onClick={() => actions.setType(type)}
                     >
                       {type}
                     </Button>
@@ -121,7 +97,7 @@ const SidePanel = (props) => {
                 <LabeledCheckbox
                   label="choice "
                   checked={state.viewport.modes.choice}
-                  onClick={() => toggleModeViewport("choice")}
+                  onClick={() => actions.toggleModeViewport("choice")}
                   style={{
                     "padding-top": "0px",
                     "padding-bottom": "0px",
@@ -130,7 +106,7 @@ const SidePanel = (props) => {
                 <LabeledCheckbox
                   label="timed"
                   checked={state.viewport.modes.timed}
-                  onClick={() => toggleModeViewport("timed")}
+                  onClick={() => actions.toggleModeViewport("timed")}
                   style={{
                     "padding-top": "0px",
                     "padding-bottom": "0px",
@@ -141,13 +117,13 @@ const SidePanel = (props) => {
                 <Label style={{ "grid-column": "span 1" }}>instruction</Label>
 
                 <Button
-                  onClick={() => changeInstructionText()}
+                  onClick={() => actions.changeInstructionText()}
                   style={{ "grid-column": "span 2" }}
                 >
                   random instruction
                 </Button>
                 <Button
-                  onClick={() => revertStateChange()}
+                  onClick={() => actions.revertStateChange()}
                   style={{ "grid-column": "span 1" }}
                 >
                   ctrl+z
@@ -157,38 +133,47 @@ const SidePanel = (props) => {
           </HeaderPanel>
           <Swatches></Swatches>
 
-          <Show when={isSelectedElementOfType("svg")}>
+          <Show when={actions.isSelectedElementOfType("svg")}>
             <SVGStyling
               header="Custom Text Styling"
-              styles={getSelectedElement().styles}
-              swatches={getSelectedSwatches(state.viewport.masked_styling)}
-              setSVGStyle={setSVGStyle}
+              styles={actions.getSelectedElement().styles}
+              swatches={actions.getSelectedSwatches(
+                state.viewport.masked_styling
+              )}
+              setSVGStyle={actions.setSVGStyle}
               masked_styling={state.viewport.masked_styling}
-              toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
+              toggleMaskedStyling={(e) => actions.toggleMaskedStyling(e)}
               hide_modes={state.viewport.type === "back"}
             ></SVGStyling>
           </Show>
           <Show
-            when={getSelectedType() && getLocalElement({ id: "instruction" })}
+            when={
+              actions.getSelectedType() &&
+              actions.getLocalElement({ id: "instruction" })
+            }
           >
             <TextStyling
               header="Instruction Styling"
-              styles={getStyles({ id: "instruction" })}
-              swatches={getSelectedSwatches(state.viewport.masked_styling)}
+              styles={actions.getStyles({ id: "instruction" })}
+              swatches={actions.getSelectedSwatches(
+                state.viewport.masked_styling
+              )}
               onChange={(type, value) =>
-                setStyle({ id: "instruction", type, value })
+                actions.setStyle({ id: "instruction", type, value })
               }
               masked_styling={state.viewport.masked_styling}
-              toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
+              toggleMaskedStyling={(e) => actions.toggleMaskedStyling(e)}
               visible={true}
               hide_modes={state.viewport.type === "back"}
             ></TextStyling>
             <HighlightStyling
-              styles={getStyles({ id: "instruction", highlight: true })}
-              swatches={getSelectedSwatches(state.viewport.masked_styling)}
+              styles={actions.getStyles({ id: "instruction", highlight: true })}
+              swatches={actions.getSelectedSwatches(
+                state.viewport.masked_styling
+              )}
               // onChange={(type, value) => setHighlightStyle({ type, value })}
               onChange={(type, value) =>
-                setStyle({
+                actions.setStyle({
                   id: "instruction",
                   type,
                   value,
@@ -196,35 +181,39 @@ const SidePanel = (props) => {
                 })
               }
               masked_styling={state.viewport.masked_styling}
-              toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
+              toggleMaskedStyling={(e) => actions.toggleMaskedStyling(e)}
               visible={true}
               hide_modes={state.viewport.type === "back"}
             ></HighlightStyling>
             <TextStyling
               header="Countdown Styling"
-              styles={getStyles({ id: "countdown" })}
-              swatches={getSelectedSwatches(state.viewport.masked_styling)}
+              styles={actions.getStyles({ id: "countdown" })}
+              swatches={actions.getSelectedSwatches(
+                state.viewport.masked_styling
+              )}
               onChange={(type, value) =>
-                setStyle({
+                actions.setStyle({
                   id: "countdown",
                   type,
                   value,
                 })
               }
               masked_styling={state.viewport.masked_styling}
-              toggleMaskedStyling={(e) => toggleMaskedStyling(e)}
+              toggleMaskedStyling={(e) => actions.toggleMaskedStyling(e)}
               visible={false}
               hide_modes={state.viewport.type === "back"}
             ></TextStyling>
           </Show>
 
-          <Show when={isSelectedElementOfType("text")}>
+          <Show when={actions.isSelectedElementOfType("text")}>
             <TextStyling
               header="Custom Text Styling"
-              styles={getSelectedElement().styles}
-              swatches={getSelectedSwatches(state.viewport.masked_styling)}
+              styles={actions.getSelectedElement().styles}
+              swatches={actions.getSelectedSwatches(
+                state.viewport.masked_styling
+              )}
               onChange={(type, value) =>
-                setStyle({
+                actions.setStyle({
                   index: state.viewport.selected_element_index,
                   type,
                   value,
@@ -239,8 +228,8 @@ const SidePanel = (props) => {
               <LabeledColorPicker
                 label="background"
                 value={state.design.background}
-                onChange={setBackground}
-                swatches={getSelectedSwatches()}
+                onChange={actions.setBackground}
+                swatches={actions.getSelectedSwatches()}
               ></LabeledColorPicker>
 
               <LabeledInput

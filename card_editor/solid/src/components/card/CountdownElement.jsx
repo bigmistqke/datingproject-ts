@@ -7,13 +7,13 @@ import {
   createEffect,
 } from "solid-js";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 const CountdownElement = (props) => {
-  const [state, { getStyles, getTextStyles, getTimer }] = useStore();
+  const [state, actions] = useStore();
 
   const text_styles = createMemo(() =>
-    getTextStyles({ element: props.element, swatches: props.swatches })
+    actions.getTextStyles({ element: props.element, swatches: props.swatches })
   );
 
   const getTextAlignFromAlignment = () => {
@@ -37,7 +37,7 @@ const CountdownElement = (props) => {
                 "text-align": getTextAlignFromAlignment(),
               }}
             >
-              {getTimer()}
+              {actions.getTimer()}
             </span>
           )}
         </For>

@@ -1,4 +1,4 @@
-import DragBox from "./DragBox";
+import { DragBox } from "./DragBox";
 import dragHelper from "../helpers/dragHelper";
 import { createMemo, createEffect, For, onMount } from "solid-js";
 import { createStore } from "solid-js/store";
@@ -7,6 +7,8 @@ import { useStore } from "../managers/Store";
 import InOuts from "./InOuts";
 import Instruction from "./Instruction";
 import Bubble from "./Bubble";
+
+import { styled } from "solid-styled-components";
 
 function Node(props) {
   const [state, actions, q] = useStore();
@@ -65,6 +67,10 @@ function Node(props) {
     });
   };
 
+  const Instructions = styled("div")`
+    pointer-events: all;
+  `;
+
   return (
     <DragBox
       id={props.node_id}
@@ -87,7 +93,7 @@ function Node(props) {
         // isVisible={isVisible()}
       ></InOuts>
       <Show when={props.node.type === "instruction" || !props.node.type}>
-        <div className="instructions">
+        <Instructions>
           <Show when={props.instructions.length === 0}>
             <button onClick={addRow}>add new row</button>
           </Show>
@@ -118,7 +124,7 @@ function Node(props) {
               );
             }}
           </For>
-        </div>
+        </Instructions>
       </Show>
       <Show when={props.node.type === "group"}>
         <div style={{ "text-align": "center", padding: "6px" }}>

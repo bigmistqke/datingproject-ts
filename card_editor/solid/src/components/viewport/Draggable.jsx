@@ -1,7 +1,7 @@
 import { styled } from "solid-styled-components";
 
 import ArchiveHelper from "../helpers/ArchiveHelper.js";
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 import dragHelper from "../../helpers/dragHelper";
 

@@ -1,7 +1,7 @@
 // import Color from "./Color";
 
 import { createSignal, createEffect, createMemo, onMount } from "solid-js";
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 import { styled } from "solid-styled-components";
 import isColor from "../../helpers/isColor";

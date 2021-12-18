@@ -3,25 +3,16 @@ import { styled } from "solid-styled-components";
 
 import { Show } from "solid-js";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 const HierarchyElement = (props) => {
-  const [
-    state,
-    {
-      changeOrderElement,
-      lockElement,
-      toggleModeElement,
-      removeElement,
-      setSelectedElementIndex,
-    },
-  ] = useStore();
+  const [state, actions] = useStore();
   const onDrop = (e) => {
     e.stopPropagation();
     let to = props.index;
     let from = parseInt(e.dataTransfer.getData("index"));
     if (!from && from !== 0) return;
-    changeOrderElement(from, to);
+    actions.changeOrderElement(from, to);
   };
 
   const allowDrag = (e) => {
@@ -42,7 +33,7 @@ const HierarchyElement = (props) => {
   `;
 
   const toggleMode = (index, type) => {
-    toggleModeElement(index, JSON.parse(JSON.stringify(type)));
+    actions.toggleModeElement(index, JSON.parse(JSON.stringify(type)));
   };
 
   const mode_colors = ["var(--red)", "var(--yellow)", "var(--green)"];
@@ -54,7 +45,7 @@ const HierarchyElement = (props) => {
   return (
     <>
       <ColumnContainer
-        onMouseDown={() => setSelectedElementIndex(props.index)}
+        onMouseDown={() => actions.setSelectedElementIndex(props.index)}
         draggable="true"
         onDragStart={dragStart}
         onDragOver={allowDrag}
@@ -69,7 +60,9 @@ const HierarchyElement = (props) => {
             {props.element.type} : {String(props.element.content).slice(0, 25)}
           </Name>
 
-          <Button onMouseDown={() => lockElement(props.index, !props.locked)}>
+          <Button
+            onMouseDown={() => actions.lockElement(props.index, !props.locked)}
+          >
             {props.element.locked ? "unlock" : "lock"}
           </Button>
 
@@ -81,7 +74,7 @@ const HierarchyElement = (props) => {
           >
             <Button
               style={{ "font-size": "5pt" }}
-              onMouseDown={() => removeElement(props.index)}
+              onMouseDown={() => actions.removeElement(props.index)}
             >
               ✕
             </Button>

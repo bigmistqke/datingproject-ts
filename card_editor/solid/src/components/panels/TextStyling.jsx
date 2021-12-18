@@ -8,7 +8,7 @@ import {
   GridRow,
 } from "./UI_Components";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 import { Show, createEffect, createMemo } from "solid-js";
 

@@ -1,7 +1,7 @@
 // import fetchProgress from 'fetch-progress'
 import Uploader from "../helpers/Uploader";
 import Emitter from "../helpers/Emitter";
-export default function ImageUploader({ card_id, fetch_url }) {
+export default function ImageUploader({ design_id, fetch_url }) {
   Emitter.call(this);
 
   const dispatch = (type, detail) =>
@@ -41,7 +41,7 @@ export default function ImageUploader({ card_id, fetch_url }) {
       addUploader(element_id, uploader, resolve);
 
       uploader.process(
-        `${fetch_url}/api/card/uploadImage/${card_id}/${element_id}`,
+        `${fetch_url}/api/card/uploadImage/${design_id}/${element_id}`,
         { file }
       );
       uploader.addEventListener("progress", (e) => {

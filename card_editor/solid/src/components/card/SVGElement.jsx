@@ -2,10 +2,10 @@ import isColor from "../../helpers/isColor";
 import { styled } from "solid-styled-components";
 import { createEffect } from "solid-js";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 const SVGElement = (props) => {
-  const [state, { getStyles }] = useStore();
+  const [state, actions] = useStore();
 
   const getStyleString = ({ svg, styles }) => {
     let new_style_string = "";
@@ -51,7 +51,7 @@ const SVGElement = (props) => {
       <style>
         {getStyleString({
           svg: props.svg,
-          styles: getStyles({
+          styles: actions.getStyles({
             index: props.index,
             type: props.instruction.type,
           }),
@@ -66,6 +66,7 @@ const SVGElement = (props) => {
           height: "100%",
         }}
         innerHTML={props.element.svg}
+        id={`svg_${props.element.id}`}
         classList={{ masked: props.masked }}
       ></SVGContainer>
     </>

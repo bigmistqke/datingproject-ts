@@ -19,7 +19,6 @@ export default function ScriptActions({
 
   const getDefaultInstruction = (role_id) => {
     return {
-      script_id: state.script.script_id,
       role_id: role_id,
       type: "do",
       text: "",
@@ -64,7 +63,15 @@ export default function ScriptActions({
     return { instruction, instruction_id };
   };
 
-  this.removeInstruction = (instruction_id) => {
+  this.removeInstruction = ({ instruction_id, node_id }) => {
+    setState("script",
+      "nodes",
+      node_id,
+      "instructions",
+      (instructions) =>
+        instructions.filter(i => i !== instruction_id)
+    );
+
     let instructions = { ...state.script.instructions };
     instructions[instruction_id] = undefined;
     setState("script", "instructions", instructions);
@@ -169,10 +176,11 @@ export default function ScriptActions({
     role_id,
     direction,
   }) => {
+    console.info('set connection!!!')
     setState("script",
       "nodes",
       node_id,
-      "roles",
+      "in_outs",
       role_id,
       prevOrNext(direction),
       connecting_node_id
@@ -306,17 +314,17 @@ export default function ScriptActions({
     }
   };
 
-  this.removeInstructionId = ({ node_id, instruction_id, index }) => {
-    setState("script",
-      "nodes",
-      node_id,
-      "instructions",
-      array_remove_element(
-        state.script.nodes[node_id].instructions,
-        instruction_id
-      )
-    );
-  };
+  /*   this.removeInstructionId = ({ node_id, instruction_id, index }) => {
+      setState("script",
+        "nodes",
+        node_id,
+        "instructions",
+        array_remove_element(
+          state.script.nodes[node_id].instructions,
+          instruction_id
+        )
+      );
+    }; */
 
   this.translateSelectedNodes = ({ offset }) => {
     state.editor.selection.forEach((node_id) => {
@@ -522,34 +530,8 @@ export default function ScriptActions({
   })
 
   this.controlRole = async (role_id) => {
-    let result = await controlRole(role_id);
+    // let result = await controlRole(role_id);
 
-
-    actions.setErrorsRoleId({
-      role_id,
-      errors: result.success ? [] : result.errors,
-    })
-  };
-
-
-  const dedupArray = (array) => {
-    let seen = {};
-    let duplicates = {};
-    array = array.filter(function (item) {
-      if (seen.hasOwnProperty(item)) {
-        duplicates[item] = true;
-        return false;
-      }
-      seen[item] = true
-      return true;
-    });
-
-    return [array, Object.keys(duplicates)]
-  }
-
-  // METHODS
-
-  const controlRole = async (role_id) => {
     let start = performance.now();
     let instruction_ids = [];
     let errors = [];
@@ -562,10 +544,8 @@ export default function ScriptActions({
 
 
     // test #1 check for multiple open start/end-nodes for role
-    let start_node_ids = nodes.filter(([node_id, node]) => {
-
-      return !node.in_outs[role_id].in_node_id
-    }
+    let start_node_ids = nodes.filter(([node_id, node]) =>
+      !node.in_outs[role_id].in_node_id
     ).map(([node_id, node]) => node_id);
 
     let end_node_ids = nodes.filter(([node_id, node]) => {
@@ -588,10 +568,7 @@ export default function ScriptActions({
 
     let promises = [];
 
-    promises = start_node_ids.map((node_id) => this.traverseRole({ role_id, node_id }))
-    let results = await Promise.all(promises);
-
-
+    let results = await Promise.all(start_node_ids.map((node_id) => this.traverseRole({ role_id, node_id })));
 
     results.forEach(result => { if (!result.success) errors.push(result.error) })
 
@@ -613,14 +590,11 @@ export default function ScriptActions({
         })
       }
 
-
       total_traversed_node_ids = deduped_node_ids;
 
       let unaccessible_node_ids = node_ids.filter(node_id =>
         total_traversed_node_ids.indexOf(node_id) === -1
       )
-
-
 
       if (unaccessible_node_ids.length > 0) {
         console.error("unaccessible_node_ids is not [] :", unaccessible_node_ids);
@@ -658,6 +632,12 @@ export default function ScriptActions({
 
     console.info("control of role took: ", performance.now() - start, "ms");
     console.info("total errors of role", role_id, "after control ", errors);
+
+    actions.setErrorsRoleId({
+      role_id,
+      errors,
+    })
+
     return errors.length == 0 ?
       {
         success: true,
@@ -667,14 +647,36 @@ export default function ScriptActions({
         success: false,
         errors
       }
+
+  };
+
+
+  const dedupArray = (array) => {
+    let seen = {};
+    let duplicates = {};
+    array = array.filter(function (item) {
+      if (seen.hasOwnProperty(item)) {
+        duplicates[item] = true;
+        return false;
+      }
+      seen[item] = true
+      return true;
+    });
+
+    return [array, Object.keys(duplicates)]
   }
+
+  // METHODS
+
+  /*   const controlRole = async (role_id) => {
+      
+    } */
   const controlRoles = async () => {
-    let roles = state.script["roles"];
-    let results = {};
-    for (let role_id of Object.keys(roles)) {
-      results[role_id] = await controlRole(role_id)
+    let roles = {}
+    for (let role_id of Object.keys(state.script["roles"])) {
+      roles[role_id] = await this.controlRole(role_id);
     }
-    return results;
+    return roles;
   }
 
   const getEndNode = async ({ node_id, role_id }) => {
@@ -682,125 +684,116 @@ export default function ScriptActions({
     return traversed_node_ids[traversed_node_ids.length - 1]
   }
 
+  const getNextRoleIdsOfLast = (node) =>
+    Object.values(node.in_outs).filter(role => role.out_node_id).map(role => {
+      const connected_node = state.script.nodes[role.out_node_id];
+      const next_instruction_id = connected_node.instructions[0];
+      return state.script.instructions[next_instruction_id].role_id;
+    }).filter((value, index, self) => self.indexOf(value) === index)
+
+  const getPrevInstructionIdsOfFirst = (node) =>
+    Object.values(node.in_outs).filter(role => role.in_node_id).map(role => {
+      const connected_node = state.script.nodes[role.in_node_id];
+      return connected_node.instructions[connected_node.instructions.length - 1];
+    }).filter((value, index, self) => self.indexOf(value) === index)
+
+  const getNextRoleIds = ({ node, index }) =>
+    [state.script.instructions[node.instructions[index + 1]].role_id]
+
+  const getPrevInstructionIds = ({ node, index }) =>
+    [node.instructions[index - 1]]
+
+  const formatText = (text) => {
+    console.log('formatText');
+    let formatted_text = [{ type: 'normal', content: text }];
+    // regex
+    const regex_for_brackets = /[\["](.*?)[\]"][.!?\\-]?/g;
+    let matches = String(text).match(regex_for_brackets);
+    if (!matches) return formatted_text
+
+    for (let i = matches.length - 1; i >= 0; i--) {
+      let split = formatted_text.shift().content.split(`${matches[i]}`);
+
+      let multi_choice = matches[i].replace('[', '').replace(']', '');
+      let choices = multi_choice.split('/');
+
+      formatted_text = [
+        { type: 'normal', content: split[0] },
+        { type: 'choice', content: choices },
+        { type: 'normal', content: split[1] },
+        ...formatted_text,
+      ];
+    }
+    return formatted_text;
+  }
+
   const processInstructions = () => {
-    const getNextRoleIdsOfLast = (node) => {
-      let next_role_ids = [];
-      Object.values(node.in_outs).forEach((role) => {
-        if (!role.out_node_id) return
-        let connected_node = state.script.nodes[role.out_node_id];
-        let next_instruction_id = connected_node.instructions[0];
-        if (!instructions[next_instruction_id]) {
-          console.error('next_instruction_id', next_instruction_id, 'does not exist!');
-          return;
-        }
-        if (next_role_ids.indexOf(instructions[next_instruction_id].role_id) !== -1) return;
-        next_role_ids.push(instructions[next_instruction_id].role_id);
-      })
-      return next_role_ids;
+    try {
+      return Object.fromEntries(Object.entries(state.script.nodes).map(
+        ([node_id, node]) =>
+          node.instructions.map((instruction_id, index) => {
+            const instruction = { ...state.script.instructions[instruction_id] };
+            if (!instruction)
+              throw `could not find instruction_id ${instruction_id} in state.script.instructions`
+            if (instruction.type !== 'video')
+              instruction.text = formatText(instruction.text);
+            return [
+              instruction_id,
+              {
+                ...instruction,
+                prev_instruction_ids: index === 0 ?
+                  getPrevInstructionIdsOfFirst(node) :
+                  getPrevInstructionIds({ node, index }),
+                next_role_ids: index === node.instructions.length - 1 ?
+                  getNextRoleIdsOfLast(node) :
+                  getNextRoleIds({ node, index }),
+              }
+            ]
+          })).reduce((a, b) => {
+            console.log("a,b", a, b, a.concat(b));
+            return a.concat(b)
+          }))
+    } catch (err) {
+      console.error(`processInstructions : ${err}`)
+      return false;
     }
-    const getPrevInstructionIdsOfFirst = (node) => {
-      let prev_instruction_ids = [];
-      Object.values(node.in_outs).forEach((role) => {
-        if (!role.in_node_id) return;
-        let connected_node = state.script.nodes[role.in_node_id];
-        let prev_instruction_id = connected_node.instructions[connected_node.instructions.length - 1];
 
-        if (!instructions[prev_instruction_id]) {
-          console.error('prev_instruction_id', prev_instruction_id, 'does not exist!');
-          return;
-        }
-
-
-
-        if (instructions[prev_instruction_id] && prev_instruction_ids.indexOf(instructions[prev_instruction_id].role_id) !== -1) return;
-        prev_instruction_ids.push(prev_instruction_id);
-      })
-      return prev_instruction_ids
-    }
-    const getNextRoleIds = ({ node, count }) => [instructions[node.instructions[count + 1]].role_id]
-    const getPrevInstructionIds = ({ node, count }) => [String(node.instructions[count - 1])]
-
-    let instructions = { ...state.script.instructions };
-
-    for (let node_id in state.script.nodes) {
-      let node = state.script.nodes[node_id];
-      let count = 0;
-      for (let instruction_id of node.instructions) {
-        instructions[instruction_id] = { ...instructions[instruction_id] };
-        instructions[instruction_id].prev_instruction_ids = [];
-        instructions[instruction_id].next_role_ids = [];
-
-
-
-        // if instruction is the first
-        if (count === 0) {
-          instructions[instruction_id].prev_instruction_ids =
-            getPrevInstructionIdsOfFirst(node);
-
-          if (1 !== node.instructions.length) {
-            instructions[instruction_id].next_role_ids =
-              getNextRoleIds({ node, count });
-          }
-        }
-        // if instruction is the last
-        if (count === node.instructions.length - 1) {
-
-          instructions[instruction_id].next_role_ids =
-            getNextRoleIdsOfLast(node);
-
-          if (1 !== node.instructions.length) {
-            instructions[instruction_id].prev_instruction_ids =
-              getPrevInstructionIds({ node, count });
-          }
-        }
-        // in all other occasions
-        if (count !== 0 && count !== node.instructions.length - 1) {
-          instructions[instruction_id].next_role_ids = getNextRoleIds({ node, count });
-          instructions[instruction_id].prev_instruction_ids = getPrevInstructionIds({ node, count });
-        }
-        count++
-      }
-    }
-    return instructions
   }
 
 
 
   this.processScript = async () => {
-    let results = await controlRoles();
-    if (Object.values(results).find(result => !result.success)) return { success: false };
-    let roles = { ...state.script["roles"] };
+    try {
+      let processed_roles = await controlRoles();
+      let errored_roles = Object.entries(processed_roles).filter(([role_id, processed_role]) => !processed_role.success);
+      if (errored_roles.length > 0)
+        throw `controlRoles did not succeed with role_ids:  ${errored_roles.map(([role_id]) => role_id).join()}`;
 
-    Object.entries(roles).forEach(([role_id, role]) => {
-      roles[role_id] = { ...role };
+      let instructions = processInstructions();
+      if (!instructions)
+        throw `processInstructions failed`
 
-
-
-      let instruction_ids = [];
-      roles[role_id].instruction_ids = [];
-      results[role_id].node_ids.forEach(node_id =>
-        state.script.nodes[node_id].instructions.forEach(instruction_id => {
-
-          if (!state.script.instructions[instruction_id]) {
-            console.error('instruction ', instruction_id, 'does not exist');
-            return;
+      return Object.fromEntries(Object.entries(state.script["roles"])
+        .map(([role_id, role]) => ([
+          role_id,
+          {
+            name: role.name,
+            instructions: processed_roles[role_id].node_ids.map(node_id =>
+              state.script.nodes[node_id].instructions.filter(instruction_id =>
+                instructions[instruction_id].role_id === role_id).map(instruction_id => {
+                  const instruction = { ...instructions[instruction_id], instruction_id };
+                  delete instruction.role_id;
+                  return instruction;
+                })
+            ).reduce((a, b) => a.concat(b))
           }
-          if (state.script.instructions[instruction_id].role_id === role_id) {
-            instruction_ids.push(instruction_id);
-          }
-        })
+        ]))
       )
-
-      roles[role_id].instruction_ids = instruction_ids;
-    })
-
-    let instructions = processInstructions();
-
-    return {
-      success: true,
-      roles,
-      instructions
+    } catch (err) {
+      console.error(err);
+      return false;
     }
+
   }
 
   this.processVideo = (file, instruction_id) => new Promise(async (resolve) => {

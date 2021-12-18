@@ -13,7 +13,7 @@ const NodeRoles = (props) => {
   const addRoleMaybe = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-
+    console.info("adRoleMaybe");
     let remaining_roles = { ...state.script.roles };
 
     Object.entries(remaining_roles).forEach(([role_id, role]) => {
@@ -49,60 +49,60 @@ const NodeRoles = (props) => {
 
   const AddButon = styled("button")`
     color: white;
-    pointer-events: all;
     background: transparent !important;
     width: 80px;
+    pointer-events: all;
   `;
 
-  const Roles = styled("div")`
-    pointer-events: none;
+  const Roles = styled(Row)`
     background: var(--dark-grey);
+    pointer-events: none;
   `;
 
   return (
+    // <Row style={{background: `var(--dark-grey)`}}>
     <Roles>
-      <Row>
-        <Flex>
-          {
-            <For each={Object.entries(props.in_outs)}>
-              {([role_id, role]) => {
-                return (
-                  <Role
-                    // role_color={props.all_roles[role.role_id].color}
-                    node_id={props.node_id}
-                    role_id={role_id}
-                    role={role}
-                    connected_node_id={role[prevOrNext(props.direction)]}
-                    //
-                    role_hue={state.script.roles[role_id].hue}
-                    name={state.script.roles[role_id].name}
-                    description={state.script.roles[role_id].description}
-                    // all_roles={props.all_roles}
-                    in_outs={props.in_outs}
-                    node_id={props.node_id}
-                    direction={props.direction}
-                    hasError={checkErrors(role_id)}
-                    instructions={
-                      props.direction === "out" ? props.instructions : null
-                    }
-                    isVisible={props.isVisible}
-                    // isShiftPressed={props.isShiftPressed}
-                  ></Role>
-                );
-              }}
-            </For>
-          }
-        </Flex>
-        {Object.keys(props.in_outs).length <
-        Object.keys(state.script.roles).length ? (
-          <AddButon id={`add_${props.node_id}`} onClick={addRoleMaybe}>
-            add role
-          </AddButon>
-        ) : (
-          <span></span>
-        )}
-      </Row>
+      <Flex>
+        {
+          <For each={Object.entries(props.in_outs)}>
+            {([role_id, role]) => {
+              return (
+                <Role
+                  // role_color={props.all_roles[role.role_id].color}
+                  node_id={props.node_id}
+                  role_id={role_id}
+                  role={role}
+                  connected_node_id={role[prevOrNext(props.direction)]}
+                  //
+                  role_hue={state.script.roles[role_id].hue}
+                  name={state.script.roles[role_id].name}
+                  description={state.script.roles[role_id].description}
+                  // all_roles={props.all_roles}
+                  in_outs={props.in_outs}
+                  node_id={props.node_id}
+                  direction={props.direction}
+                  hasError={checkErrors(role_id)}
+                  instructions={
+                    props.direction === "out" ? props.instructions : null
+                  }
+                  isVisible={props.isVisible}
+                  // isShiftPressed={props.isShiftPressed}
+                ></Role>
+              );
+            }}
+          </For>
+        }
+      </Flex>
+      {Object.keys(props.in_outs).length <
+      Object.keys(state.script.roles).length ? (
+        <AddButon id={`add_${props.node_id}`} onClick={addRoleMaybe}>
+          add role
+        </AddButon>
+      ) : (
+        <span></span>
+      )}
     </Roles>
+    // </Roles>
   );
 };
 

@@ -3,7 +3,7 @@ import { styled } from "solid-styled-components";
 import Draggable from "./Draggable";
 import { createSignal, createEffect } from "solid-js";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 const MaskHandle = (props) => {
   const [state, { setTimerPercentage, getTimerPercentage }] = useStore();

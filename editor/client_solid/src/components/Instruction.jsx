@@ -17,10 +17,9 @@ const Instruction = (props) => {
   const myFormat = (num) => num + " sec";
 
   const removeRow = () => {
-    actions.removeInstruction(props.instruction_id);
-    actions.removeInstructionId({
-      node_id: props.node_id,
+    actions.removeInstruction({
       instruction_id: props.instruction_id,
+      node_id: props.node_id,
     });
   };
 

@@ -6,7 +6,33 @@ import dragHelper from "../helpers/dragHelper";
 import { overlaps } from "../helpers/collisionDetection";
 import { useStore } from "../managers/Store";
 
-export default function DragBox(props) {
+const DragBoxContainer = styled("div")`
+  display: block;
+  cursor: grab;
+  position: absolute;
+  box-sizing: border-box;
+  box-shadow: var(--dark-shadow);
+  border-radius: 25px;
+  background: var(--light-grey);
+  width: 900px;
+  transform: translate(0px, 0px);
+  &.selected {
+    z-index: 1;
+  }
+  &.selected .handle,
+  &.handle:hover {
+    border-radius: 28px;
+    border: 4px solid var(--selected-color);
+    margin: -4px;
+  }
+
+  &.isErrored > .handle {
+    background: hsl(0, 100%, 92%) !important;
+  }
+`;
+const DragBoxClassName = DragBoxContainer({}).className;
+
+function DragBox(props) {
   const [state, actions] = useStore();
   let [grid_position, setGridPosition] = createStore([
     { x: null, y: null },
@@ -149,29 +175,13 @@ export default function DragBox(props) {
     );
   });
 
-  const DragBox = styled("div")`
-    display: block;
-    cursor: grab;
-    position: absolute;
-    box-sizing: border-box;
-    box-shadow: var(--dark-shadow);
-    border-radius: 25px;
-    background: var(--light-grey);
-    width: 900px;
-    transform: translate(0px, 0px);
-    &.selected {
-      z-index: 1;
-    }
-    &.selected .handle,
-    &.handle:hover {
-      border-radius: 28px;
-      border: 4px solid var(--selected-color);
-      margin: -4px;
-    }
-
-    &.isErrored > .handle {
-      background: hsl(0, 100%, 92%) !important;
-    }
+  const DragBoxChildren = styled("div")`
+    margin: 11px;
+    position: relative;
+    z-index: 1;
+    border-radius: 16px;
+    overflow: hidden;
+    pointer-events: none;
   `;
 
   const DragBoxHandle = styled("div")`
@@ -185,20 +195,8 @@ export default function DragBox(props) {
     box-sizing: content-box;
   `;
 
-  const DragBoxChildren = styled("div")`
-    margin: 11px;
-    position: relative;
-    z-index: 1;
-    pointer-events: none;
-    border-radius: 16px;
-    overflow: hidden;
-    & > * {
-      pointer-events: all;
-    }
-  `;
-
   return (
-    <DragBox
+    <DragBoxContainer
       ref={drag_box}
       id={`drag_${props.id}`}
       classList={{
@@ -210,8 +208,8 @@ export default function DragBox(props) {
       style={{
         ...props.style,
         // transform: `translate(${props.position.x}px, ${props.position.y}px)`,
-        left: props.position.x + "px",
-        top: props.position.y + "px",
+        left: props.position ? props.position.x + "px" : "",
+        top: props.position ? props.position.y + "px" : "",
         // display: isVisible() ? "" : "none",
       }}
       visible={isVisible()}
@@ -224,6 +222,8 @@ export default function DragBox(props) {
       >
         {props.children}
       </DragBoxChildren>
-    </DragBox>
+    </DragBoxContainer>
   );
 }
+
+export { DragBox, DragBoxClassName };

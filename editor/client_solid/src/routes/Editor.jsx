@@ -28,6 +28,8 @@ import urls from "../urls";
 import { styled } from "solid-styled-components";
 import Bubble from "../components/Bubble";
 
+import { DragBoxClassName } from "../components/DragBox";
+
 /* window.cursorPosition = {};
 window.addEventListener("mousemove", (e) => {
   window.cursorPosition = { x: e.clientX, y: e.clientY };
@@ -89,48 +91,45 @@ function Editor(props) {
   };
 
   const saveScript = async () => {
-    let result = await actions.processScript();
+    try {
+      let production = await actions.processScript();
 
-    // TODO: ALLOW UNSAFE GAME TO BE SAVED!
-    /*     if (!result.success) {
-      let response = await postData(
-        `${urls.fetch}/api/script/save/${script_id}`,
-        {
+      if (!production) {
+        let result = await actions.openPrompt({
+          type: "confirm",
+          header: "the script is not playable, are you sure you want to save?",
+        });
+        if (!result) return;
+      }
+      await postData(`${urls.fetch}/api/script/save/${script_id}`, {
+        development: {
           nodes: state.script.nodes,
+          instructions: state.script.instructions,
+          roles: state.script.roles,
           groups: state.script.groups,
-          instructions: result.instructions,
-          roles: result.roles,
-        }
-      );
-    } else { */
-    /* let result = await actions.openPrompt({
-        type: "confirm",
-        header: "the script is not playable, are you sure you want to save?",
+        },
+        production,
       });
-      if(!result) return; */
-    await postData(`${urls.fetch}/api/script/save/${script_id}`, {
-      nodes: state.script.nodes,
-      instructions: state.script.instructions,
-      roles: state.script.roles,
-      groups: state.script.groups,
-    });
-    // }
+      // }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const createGame = async () => {
-    let result = await actions.processScript();
-
-    if (!result.success) return;
-
-    actions.setInstructions(result.instructions);
-    actions.setRoles(result.roles);
-
-    const { error } = await postData(
-      `${urls.fetch}/api/script/test/${script_id}`,
-      state.script
-    );
-    if (error) console.error(error);
-    actions.setSubMenu("monitor_menu");
+    try {
+      let result = await actions.processScript();
+      console.log(result);
+      if (!result) throw "processScript failed";
+      const { error } = await postData(
+        `${urls.fetch}/api/script/test/${script_id}`,
+        result
+      );
+      if (error) throw error;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
   };
 
   const renameKeyOfObject = (object, old_key, new_key) => {
@@ -216,6 +215,32 @@ function Editor(props) {
       ])
     ); */
 
+  const fetchScript = () => {
+    getData(`${urls.fetch}/api/script/get/${script_id}/development`)
+      .then((res) => res.json())
+      .then((res) => {
+        if (!res) {
+          return Promise.reject("error fetching data ", res);
+        }
+
+        /* actions.setRoles(reformatRoles(res.roles));
+      actions.setInstructions(res.instructions);
+      actions.setNodes(reformatNodes(res.nodes)); */
+
+        actions.setRoles(res.roles ? res.roles : {});
+        actions.setInstructions(res.instructions ? res.instructions : {});
+        actions.setGroups(res.groups ? res.groups : {});
+        actions.setNodes(res.nodes);
+        // actions.setNodes(Object.fromEntries(Object.entries(res.nodes).map(([node_id, node])=> [node_id, {...node, type: "instruction"}])));
+      })
+      .catch((err) => {
+        console.error(err);
+        actions.setBool("isInitialized", true);
+        actions.addRoleToScript();
+        actions.addRoleToScript();
+      });
+  };
+
   onMount(() => {
     actions.setParentIds(parent_ids);
 
@@ -226,29 +251,7 @@ function Editor(props) {
     window.addEventListener("keyup", keyup);
     window.addEventListener("mousemove", mousemove);
 
-    getData(`${urls.fetch}/api/script/get/${script_id}`)
-      .then((res) => res.json())
-      .then((res) => {
-        if (!res) {
-          return Promise.reject("error fetching data ", res);
-        }
-
-        /* actions.setRoles(reformatRoles(res.roles));
-        actions.setInstructions(res.instructions);
-        actions.setNodes(reformatNodes(res.nodes)); */
-
-        actions.setRoles(res.roles ? res.roles : {});
-        actions.setInstructions(res.instructions ? res.instructions : {});
-        actions.setGroups(res.groups ? res.groups : {});
-        actions.setNodes(reformatBlocks(res.blocks));
-        // actions.setNodes(Object.fromEntries(Object.entries(res.nodes).map(([node_id, node])=> [node_id, {...node, type: "instruction"}])));
-      })
-      .catch((err) => {
-        console.error(err);
-        actions.setBool("isInitialized", true);
-        actions.addRoleToScript();
-        actions.addRoleToScript();
-      });
+    fetchScript();
 
     window.addEventListener("beforeunload", (e) => {
       /*  if (!state.videoUploader.isUploading()) return;
@@ -273,6 +276,14 @@ function Editor(props) {
     right: 6px;
     z-index: 5;
   `;
+
+  const Viewport = styled("div")`
+    &.isConnecting .${DragBoxClassName} * {
+      pointer-events: none !important;
+    }
+  `;
+
+  /*  */
 
   return (
     <>
@@ -310,7 +321,7 @@ function Editor(props) {
           </For>
         </VisitedGroupIds>
       </Show>
-      <div
+      <Viewport
         classList={{
           viewport: true,
           isConnecting: state.editor.bools.isConnecting,
@@ -448,7 +459,7 @@ function Editor(props) {
             <SelectionBox style={state.editor.gui.selectionBox}></SelectionBox>
           </Show>
         </Map>
-      </div>
+      </Viewport>
       <ProgressBars></ProgressBars>
     </>
   );

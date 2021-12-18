@@ -7,6 +7,8 @@ import Bubble from "./Bubble";
 import { useStore } from "../managers/Store";
 import { styled } from "solid-styled-components";
 
+import { DragBoxClassName } from "./DragBox";
+
 function Role(props) {
   const [state, actions] = useStore();
 
@@ -19,7 +21,7 @@ function Role(props) {
     if (e.buttons != 1) return;
 
     // set editor-state connecting true so that hovering css is disabled
-    // actions.setConnecting(true);
+    actions.setConnecting(true);
     // remove connections to roles 'both ways': dereference it in this and the connected node
     actions.removeConnectionBothWays({
       node_id: props.node_id,
@@ -42,7 +44,7 @@ function Role(props) {
     // it returns event onPointerUp
     let { target } = await dragHelper();
 
-    // actions.setConnecting(false);
+    actions.setConnecting(false);
     // remove temporary connection from editor-state
     actions.removeTemporaryConnection({
       node_id: props.node_id,
@@ -59,8 +61,9 @@ function Role(props) {
     }
     // check if target is a node to which to connect to
 
-    if (target.classList.contains("drag_box-drag")) {
-      let connecting_node_id = target.parentElement.id.split("_")[1];
+    if (target.classList.contains(DragBoxClassName)) {
+
+      let connecting_node_id = target.id.split("_")[1];
       // if it does not have a role yet in the node, add the role
       if (
         !actions.hasRoleId({
@@ -255,6 +258,7 @@ function Role(props) {
     z-index: 50;
     font-size: 7pt;
     line-height: 8pt;
+    pointer-events: all;
   `;
 
   const RolesContainer = styled("div")`

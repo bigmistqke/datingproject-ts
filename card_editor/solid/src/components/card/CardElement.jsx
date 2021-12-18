@@ -8,22 +8,10 @@ import CountdownElement from "./CountdownElement";
 
 import ResizeHandles from "../viewport/ResizeHandles";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 const CardElement = (props) => {
-  const [
-    state,
-    {
-      openPrompt,
-      translateElement,
-      resizeElement,
-      removeElement,
-      archiveStateChanges,
-      setSelectedElementIndex,
-      /* getPosition,
-      getDimensions, */
-    },
-  ] = useStore();
+  const [state, actions] = useStore();
 
   const [isSelected, setIsSelected] = createSignal(false);
   const [position, setPosition] = createSignal({ x: null, y: null });
@@ -48,7 +36,7 @@ const CardElement = (props) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const result = await openPrompt({
+    const result = await actions.openPrompt({
       type: "options",
       position: { x: e.clientX, y: e.clientY },
       data: {
@@ -60,11 +48,11 @@ const CardElement = (props) => {
 
     switch (result) {
       case "delete":
-        removeElement();
+        actions.removeElement();
         break;
       case "fill":
-        archiveStateChanges(
-          resizeElement({
+        actions.archiveStateChanges(
+          actions.resizeElement({
             index: props.index,
             dimensions: { width: 100, height: 100 },
             position: { x: 0, y: 0 },
@@ -72,8 +60,8 @@ const CardElement = (props) => {
         );
         break;
       case "fill horizontally":
-        archiveStateChanges(
-          resizeElement({
+        actions.archiveStateChanges(
+          actions.resizeElement({
             index: props.index,
             dimensions: { width: 100, height: props.dimensions.height },
             position: { x: 0, y: props.position.y },
@@ -81,8 +69,8 @@ const CardElement = (props) => {
         );
         break;
       case "fill vertically":
-        archiveStateChanges(
-          resizeElement({
+        actions.archiveStateChanges(
+          actions.resizeElement({
             index: props.index,
             dimensions: { width: props.dimensions.width, height: 100 },
             position: { x: props.position.x, y: 0 },
@@ -92,12 +80,12 @@ const CardElement = (props) => {
     }
   };
   const onPointerDown = (e) => {
-    if (e.button === 0) setSelectedElementIndex(props.index);
+    if (e.button === 0) actions.setSelectedElementIndex(props.index);
     e.stopPropagation();
   };
 
   const onTranslate = (delta) =>
-    translateElement({ index: props.index, delta });
+    actions.translateElement({ index: props.index, delta });
 
   const Element = styled("div")`
     pointer-events: none;
@@ -148,7 +136,7 @@ const CardElement = (props) => {
           <ResizeHandles
             {...props}
             onResize={({ position, dimensions }) =>
-              resizeElement({ index: index(), position, dimensions })
+              actions.resizeElement({ index: index(), position, dimensions })
             }
             keep_ratio={props.type === "svg"}
           ></ResizeHandles>

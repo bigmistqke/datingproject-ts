@@ -7,20 +7,23 @@ import {
   createEffect,
 } from "solid-js";
 
-import { useStore } from "../../Store";
+import { useStore } from "../../store/Store";
 
 const TextElement = (props) => {
-  const [state, { getTextStyles, getHighlightStyles }] = useStore();
+  const [state, actions] = useStore();
 
   const text_styles = createMemo(() =>
-    getTextStyles({
+    actions.getTextStyles({
       element: props.element,
       swatches: props.swatches,
     })
   );
 
   const highlight_styles = createMemo(() =>
-    getHighlightStyles({ element: props.element, swatches: props.swatches })
+    actions.getHighlightStyles({
+      element: props.element,
+      swatches: props.swatches,
+    })
   );
 
   return (
