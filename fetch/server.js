@@ -16,6 +16,7 @@ const Monitor = require('./Monitor.js');
 const DatabaseManager = require('./managers/DatabaseManager.js');
 const RoomManager = require('./managers/RoomManager.js');
 
+const sharp = require('sharp');
 
 var app = express();
 app.use(cors())
@@ -111,20 +112,22 @@ app.get('/api/downloadVideo/:file_name', async (req, res, next) => {
 // save script
 app.post('/api/script/save/:script_id', async function (req, res, next) {
   // TODO:  sanitize content
-  let { blocks, roles, instructions, groups } = req.body;
+  let script = req.body;
   const script_id = req.params.script_id;
-  const result = await _db.saveScript({ script_id, blocks, roles, instructions, groups });
+  const result = await _db.saveScript({ script_id, script });
   res.json(result);
 })
 
 // get script
-app.get('/api/script/get/:script_id', async function (req, res, next) {
-  const script_id = req.params.script_id;
+app.get('/api/script/get/:script_id/:mode', async function (req, res) {
+  const { mode, script_id } = req.params;
   console.log('get script', script_id);
   let results = await _db.getScript(script_id);
-  console.log(results);
-  res.send(results);
-  return next();
+  if (results) {
+    res.status(200).send(results[mode])
+  } else {
+    res.sendStatus(404)
+  }
 })
 
 // test script
@@ -190,6 +193,8 @@ app.get('/api/room/join/:url', async function (req, res, next) {
   console.log('joining room', new Date(), room_id, player_id);
 
   let { role_id, instructions, error, design_id } = await _rooms.joinRoom({ room_id, player_id });
+  if (!design_id) design_id = "oldie_3";
+  let { production: design } = await _db.getDesign({ design_id });
 
   _mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'connected' }));
 
@@ -202,13 +207,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
     return;
   };
 
-  if (!design_id) {
-    design_id = 'oldie_2';
-  }
-
-  let design = await _db.getDesign({ design_id })
-
-  res.json({ success: true, role_id, instructions, room_id, player_id, design });
+  res.json({ success: true, role_id, instructions, room_id, player_id, design, design_id });
 })
 
 // get all the player_ids of a room (for the combo-test)
@@ -268,12 +267,12 @@ app.get('/api/room/update/:room_id/:script_id', async function (req, res, next) 
 
 // CARD
 
-app.post('/api/card/uploadImage/:card_id/:image_id', async function (req, res, next) {
-  let { card_id, image_id } = req.params;
-  let card_path = `./cards/${card_id}`;
+app.post('/api/design/uploadImage/:card_id/:image_id', async function (req, res, next) {
+  const { card_id, image_id } = req.params;
+  const card_path = `./designs/${card_id}`;
   !fs.existsSync(card_path) ? fs.mkdirSync(card_path) : null;
-  let new_filename = `${image_id}${path.extname(req.files.file.name)}`;
-  let new_path = `${card_path}/${new_filename}`;
+  const new_filename = `${image_id}${path.extname(req.files.file.name)}`;
+  const new_path = `${card_path}/${new_filename}`;
   fs.writeFile(new_path, req.files.file.data, async (err) => {
     if (!err) {
       res.send(new_path);
@@ -283,29 +282,78 @@ app.post('/api/card/uploadImage/:card_id/:image_id', async function (req, res, n
   })
 })
 
+const uploadSvgsAsPng = ({ design_id, design }) => {
+  const base_url = `./designs/${design_id}`;
+  const card_dimensions = design.production.card_dimensions;
+  let promises = [];
+
+  if (!fs.existsSync(base_url)) {
+    fs.mkdirSync(base_url);
+  }
+
+  Object.entries(design.production.types).forEach(
+    ([type_name, type]) =>
+      type.forEach(element => {
+
+        if (element.type !== "svg") return;
+        promises.push(new Promise(async (resolve) => {
+          const dim = {
+            width: parseInt((element.dimensions.width * card_dimensions.width / 100 * 600) / 100),
+            height: parseInt((element.dimensions.height * card_dimensions.height / 100 * 600) / 100),
+          };
+          await sharp(Buffer.from(element.svg.normal))
+            .resize(dim)
+            .toFile(`${base_url}/${element.id}_normal.png`);
+          await sharp(Buffer.from(element.svg.masked))
+            .resize(dim)
+            .toFile(`${base_url}/${element.id}_masked.png`);
+
+          delete element.svg;
+          resolve();
+        }))
+      })
+  )
+  return Promise.all(promises);
+}
+
 app.post('/api/design/save/:design_id', async function (req, res, next) {
-  // TODO:  sanitize content
-  console.log('save the card');
-  const { design_id } = req.params;
-  let saved = await _db.saveDesign({ design_id, design: req.body })
-  res.send(saved);
+  try {
+    // TODO:  sanitize content
+    const { design_id } = req.params;
+
+    const design = req.body;
+
+    await uploadSvgsAsPng({ design_id, design });
+
+    console.log(design);
+
+    let saved = await _db.saveDesign({ design_id, design })
+    res.status(200).send(saved);
+  } catch (err) {
+    console.error(`error ${err}`);
+    res.status(500).send(err)
+  }
+
 })
 
-app.get('/api/design/get/:design_id', async function (req, res, next) {
-  const { design_id } = req.params;
+app.get('/api/design/get/:design_id/:mode', async function (req, res, next) {
+  const { design_id, mode } = req.params;
   console.log('get design with card_id ', design_id);
   let card = await _db.getDesign({ design_id });
-  console.log('card is ', card);
-  res.json(card);
+  if (!card) {
+    res.status(404).send("could not find card");
+    return;
+  }
+  res.json(card[mode]);
 })
 
 app.get('/api/convertAllScripts', async function (req, res, next) {
   res.json(await _db.convertAllScripts());
 })
 
-app.use('/api/uploads', express.static(__dirname + '/uploads'))
+app.use('/api/uploads', express.static(__dirname + '/uploads'));
+app.use('/api/designs', express.static(__dirname + '/designs'))
 app.use('/api/system', express.static('system'))
-app.use('/api/cards', express.static('cards'))
 
 app.get('/api/video/:script_id/:file_id', () => {
   const { script_id, file_id } = req.params;

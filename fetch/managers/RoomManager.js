@@ -30,44 +30,35 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
 
 
   this.createRoom = async ({ script_id, script }) => {
-    // let _room = new _Room({ _redis, _mongo });
-    // let { room, room_id } = await _room.create({ script_id, script });
-    script = script ? script : await _mongo.getCollection('scripts').findDocument({ script_id });
-    script_id = script_id ? script_id : script.script_id;
+    try {
+      console.log("create room");
 
-    if (!script) return { error: 'did not find any script' };
+      script = script ? script : await _mongo.getCollection('scripts').findDocument({ script_id });
+      script_id = script_id ? script_id : script.script_id;
 
+      if (!script) throw 'did not find any script';
 
-    let room_id = crypto.randomBytes(3).toString('hex');
+      let room_id = crypto.randomBytes(3).toString('hex');
 
-    let room = {
-      script_id,
-      roles: {}
-    };
+      let room = {
+        script_id,
+        roles: Object.fromEntries(Object.entries(script).map(([role_id, role]) => ([
+          crypto.randomBytes(1).toString('hex'),
+          { role_id, ...role, status: 'uninitialized' }
+        ])))
+      };
 
+      room._players = { ...room.players };
 
-    Object.entries(script.roles).forEach(async ([role_id, role]) => {
-      let instruction_ids = role.instruction_ids;
-      let player_id = crypto.randomBytes(1).toString('hex');
+      let result = await _redis.set('r_' + room_id, room);
+      if (!result) throw "could not add room to redis";
+      console.log("successfully added a room")
+      return { room, room_id };
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
 
-      let instructions = instruction_ids.map(instruction_id => {
-        let instruction = Object.filter(
-          script.instructions[instruction_id], key =>
-          ['text', 'type', 'instruction_id', 'next_role_ids',
-            'prev_instruction_ids', 'timespan', 'sound'].indexOf(key) != -1
-
-        )
-        return { ...instruction, instruction_id };
-      });
-      room.roles[player_id] = { instructions, role_id, name: role.name, status: 'uninitialized' };
-    })
-
-    room._roles = { ...room.roles };
-
-
-    let result = await _redis.set('r_' + room_id, room);
-    console.info('room created ', result);
-    return { room, room_id };
   }
 
   this.updateScriptOfRoom = ({ room_id, script_id }) => _process(room_id, { room_id, script_id },

@@ -1,9 +1,6 @@
-const { unflatten } = require('flat')
+const { unflatten } = require('flat');
 
 function DatabaseManager({ _mongo, _redis }) {
-
-
-
   this.init = async () => {
     await _redis.init();
     await _mongo.init();
@@ -11,9 +8,8 @@ function DatabaseManager({ _mongo, _redis }) {
 
   // SCRIPT
 
-  this.saveScript = async ({ script_id, blocks, roles, instructions, groups }) =>
-    await _mongo.getCollection('scripts').
-      updateDocument({ script_id }, {script_id, blocks, roles, instructions , groups})
+  this.saveScript = async ({ script_id, script }) =>
+    await _mongo.getCollection('scripts').updateDocument({ script_id }, script)
 
   this.getScript = async (script_id) => _mongo.getCollection('scripts')
     .findDocument({ script_id });
@@ -66,15 +62,16 @@ function DatabaseManager({ _mongo, _redis }) {
 
   // CARD
 
-  this.saveDesign = async ({ design, design_id }) =>
-    _mongo.getCollection('cards').updateDocument({ card_id: design_id }, { design })
+  this.saveDesign = async ({ design, design_id }) => {
+
+    _mongo.getCollection('cards').updateDocument({ card_id: design_id }, { design });
+
+  }
 
   this.getDesign = async ({ design_id }) => {
     // TODO: check cache
     console.log('get the deck with card_id ', design_id)
     let data = await _mongo.getCollection('cards').findDocument({ card_id: design_id });
-    console.log("_database.getDeck data", data);
-
     if (!data) return false;
     return data.design
   }
