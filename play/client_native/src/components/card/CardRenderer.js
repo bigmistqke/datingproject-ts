@@ -6,13 +6,10 @@ import { View } from 'react-native';
 import styled from 'styled-components/native';
 import createStore from '../../createStore';
 
-const CardRenderer = props => {
-  const [, { getCardSize }] = useStore();
 
-  const [modes, setModes] = createStore(useState({
-    timed: props.timespan,
-    choice: false
-  }));
+
+const CardRenderer = React.memo(props => {
+  const [, actions] = useStore();
 
   const CardContainer = styled.View`
     position: absolute;
@@ -30,59 +27,40 @@ const CardRenderer = props => {
   `;
 
 
-  const formatted_text = useMemo(() => {
-    let formatted_text = [{ type: 'normal', content: props.instruction.text }];
-    // regex
-    const regex_for_brackets = /[\["](.*?)[\]"][.!?\\-]?/g;
-    let matches = String(props.text).match(regex_for_brackets);
-
-    if (!matches) {
-      setModes('choice', false);
-      return formatted_text;
-    }
-
-    for (let i = matches.length - 1; i >= 0; i--) {
-      let split = formatted_text.shift().content.split(`${matches[i]}`);
-
-      let multi_choice = matches[i].replace('[', '').replace(']', '');
-      let choices = multi_choice.split('/');
-
-      formatted_text = [
-        { type: 'normal', content: split[0] },
-        { type: 'choice', content: choices },
-        { type: 'normal', content: split[1] },
-        ...formatted_text,
-      ];
-    }
-    setCardState('choice', true);
-    return formatted_text;
-  }, [props.instruction.text]);
-
   return (
-    <>
-      <CardContainer
-        className="CardContainer"
-        style={{
-          height: getCardSize().height,
-          width: getCardSize().width,
-          borderRadius: 0.05 * getCardSize().height,
-          transform: [
-            { translateY: getCardSize().height * -0.5 },
-            { translateX: getCardSize().width * -0.5 }
-          ],
+    useMemo(() =>
+      <>
+        <CardContainer
+          className="CardContainer"
+          style={{
+            position: "relative",
+            flex: 1,
+            height: actions.getCardSize().height,
+            width: actions.getCardSize().width,
+            borderRadius: 0.05 * actions.getCardSize().height,
+            transform: [
+              { translateY: actions.getCardSize().height * -0.5 },
+              { translateX: actions.getCardSize().width * -0.5 }
+            ],
 
-          // 'border-radius': state.design ? '125px' : 0,
-        }}>
-        <View className="viewport">
+            // 'border-radius': state.design ? '125px' : 0,
+          }}>
+          {/* <View className="viewport"> */}
           <CardCompositor
-            formatted_text={formatted_text}
-            modes={modes}
+            modes={{
+              timed: props.instruction.timespan,
+              choice: props.text && props.text.length > 0
+            }}
             {...props}
           ></CardCompositor>
-        </View>
-      </CardContainer>
-    </>
+          {/* </View> */}
+        </CardContainer>
+      </>
+    )
+
   );
-};
+}, (prev, next) => {
+  return prev.canSwipe === next.canSwipe
+});
 
 export default CardRenderer;

@@ -6,10 +6,7 @@ import { useStore } from '../../store/Store';
 const CountdownElement = props => {
   const [, { getTextStyles, getTimer }] = useStore();
 
-  const text_styles = useMemo(
-    () => getTextStyles({ element: props.element, swatches: props.swatches }),
-    [],
-  );
+  const text_styles = getTextStyles({ element: props.element, masked: props.masked });
 
   const getTextAlignFromAlignment = () => {
     switch (text_styles.alignmentHorizontal) {
@@ -25,16 +22,7 @@ const CountdownElement = props => {
   return (
     <>
       <div className="text-container" style={text_styles}>
-        <For each={props.card_state.formatted_text}>
-          {instruction => (
-            <span
-              style={{
-                'textAlign': getTextAlignFromAlignment(),
-              }}>
-              {getTimer()}
-            </span>
-          )}
-        </For>
+        {getTimer()}
       </div>
     </>
   );

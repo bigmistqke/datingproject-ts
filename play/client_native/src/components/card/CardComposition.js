@@ -7,39 +7,21 @@ import { useStore } from '../../store/Store';
 import { View } from 'react-native';
 
 const CardComposition = props => {
-  const [state, { getElements, getSwatches }] = useStore();
-  // const [getSwatches, setSwatches] = useState([]);
+  const [, actions] = useStore();
 
+  let elements = useMemo(() => actions.getElementsOfType(props.instruction.type))
 
-  const isElementVisible = element => {
-    let modes;
-    if (element.global) {
-      modes = state.design.globals[element.id].modes;
-    } else {
-      modes = element.modes;
-    }
-    for (let [mode_type, activated] of Object.entries(props.modes)) {
-      if (modes[mode_type] !== 1 && modes[mode_type] !== (activated ? 2 : 0)) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  let elements = useMemo(() => getElements(props.instruction.type))
-  let swatches = useMemo(() => getSwatches(props.instruction.type, props.masked))
+  useEffect(() => console.log("random re-render check", props.instruction.instruction_id, props.instruction.type), [props.instruction])
 
   return (
     <For each={elements}>
       {(element, index) => (
         <Show key={element.id}
-          when={isElementVisible(element)}>
+          when={actions.isElementVisible({ element, modes: props.modes })}>
           <CardElement
             index={index}
             element={element}
             type={element.type}
-            locked={element.locked}
-            swatches={swatches}
             {...props}>
           </CardElement>
         </Show>
@@ -48,18 +30,17 @@ const CardComposition = props => {
   );
 };
 
-const CardCompositor = props => {
+const CardCompositor = React.memo(props => {
   return (
     <>
-      <CardComposition {...props}></CardComposition>
-
-      {/* <Show when={props.modes.timed}>
-        <CardMask percentage={state.viewport.timer_percentage}>
+      <CardComposition {...props} masked={false}></CardComposition>
+      <Show when={props.modes.timed}>
+        <CardMask percentage={50}>
           <CardComposition {...props} masked={true}></CardComposition>
         </CardMask>
-      </Show> */}
+      </Show>
     </>
   );
-};
+});
 
 export default CardCompositor;

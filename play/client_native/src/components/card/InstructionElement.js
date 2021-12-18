@@ -5,49 +5,34 @@ import { View, Text } from "react-native";
 import { useStore } from '../../store/Store';
 
 const InstructionElement = props => {
-  const [, { getTextStyles, getHighlightStyles }] = useStore();
-
-  const text_styles = useMemo(() =>
-    getTextStyles({
-      element: props.element,
-      swatches: props.swatches,
-    }),
-    [props.element, props.swatches]
-  )
-
-  const highlight_styles = () =>
-    getHighlightStyles({ element: props.element, swatches: props.swatches });
-
+  const [, actions] = useStore();
 
 
   return (
     <>
-      <View className="text-container" style={text_styles}>
-        <For each={props.formatted_text}>
+      <View className="text-container">
+        <For each={props.instruction.text}>
           {(instruction, index) => (
             <View key={index}>
               <Show when={instruction.type === 'normal'}>
                 <Text
-                  style={text_styles}>
+                  style={actions.getTextStyles({ element: props.element, masked: props.masked })}>
                   {instruction.content}
                 </Text>
               </Show>
               <Show when={instruction.type === 'choice'}>
-                <View
-                  style={{
-                    // 'textAlign': highlight_styles()['align-items'],
-                    // width: '100%',
-                  }}>
+                <View style={{
+                  display: "flex",
+                  // backgroundColor: "grey",
+                  justifyContent: "flex-end",
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                }}>
                   <For each={instruction.content}>
                     {(choice, index) => (
-                      <View key={index} /* style={{ ...highlight_styles() }} */>
-                        <Text
-                          style={{
-                            flex: 'none',
-                          }}>
-                          {choice}
-                        </Text>
-                      </View>
+                      <Text key={instruction.instruction_id} style={actions.getHighlightStyles({ element: props.element, masked: props.masked })}>
+                        {choice}
+                      </Text>
                     )}
                   </For>
                 </View>

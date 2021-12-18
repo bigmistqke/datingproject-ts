@@ -33,7 +33,7 @@ export default function createStore([state, setState]) {
         }
       }
     }
-    setState({ ...ref });
+    setState(ref);
   };
   return [state, set, ref];
 };

@@ -9,22 +9,13 @@ export default function DesignActions({ state, setState, actions, ref }) {
   };
 
   const convert = (value, horizontal = false) => {
+    if (!ref.viewport.card_size) this.updateCardSize();
     return !horizontal
-      ? (parseFloat(value) * state.viewport.card_size.height) / 250
-      : parseFloat(value) * state.viewport.card_size.width;
+      ? parseInt((parseFloat(value) * ref.viewport.card_size.height) / 300)
+      : parseInt(parseFloat(value) * ref.viewport.card_size.width);
   };
 
-
-
-
-  this.getElements = (type) => ref.design && ref.design.types[type] ?
-    ref.design.types[type].elements :
-    []
-
-
-
-  this.getSwatches = (type, timed = false) => ref.design && ref.design.types[type] ?
-    ref.design.types[type].swatches.map(s => timed ? s.timed : s.normal) : []
+  this.getElementsOfType = (type_id) => ref.design.types[type_id]
 
   this.updateCardSize = () =>
     setState("viewport", "card_size", {
@@ -35,72 +26,48 @@ export default function DesignActions({ state, setState, actions, ref }) {
     })
 
 
-  this.getType = (type) => {
-    return state.design.types[type];
+  this.getType = (type) => state.design.types[type]
+
+  this.isElementVisible = ({ element, modes }) => {
+    try {
+      if (!modes) throw 'modes is not defined'
+
+      for (let [mode_type, activated] of Object.entries(modes)) {
+        if (!(mode_type in element.modes)) {
+          console.error(`element does not have mode ${mode_type}`, element);
+        }
+        if (
+          element.modes[mode_type] !== 1 &&
+          element.modes[mode_type] !== (activated ? 2 : 0)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    } catch (err) {
+      console.error(err, element);
+      return false;
+    }
+
   };
 
-  this.getGlobalElement = (id) => state.design.globals[id];
+  this.getPosition = (element) => ({
+    x: element.position.x * state.viewport.card_size.width / 100,
+    y: element.position.y * state.viewport.card_size.height / 100
+  })
 
-  this.getLocalElement = ({ index, id, type }) => {
-    type = this.getType(type);
-    if (!type) return false;
-    if (id) {
-      return type.elements.find((e) => e.id === id);
-    } else {
-      return type.elements[index];
-    }
-  };
-
-  this.getPosition = (element) => {
-    let position = element.global
-      ? state.design.globals[element.id].position
-      : element.position;
-
-    // return { x: 0, y: 0 }
-
-    return {
-      x: position.x * state.viewport.card_size.width / 100,
-      y: position.y * state.viewport.card_size.height / 100
-    }
-
-  }
-
-  this.getDimensions = (element) => {
-    let dimensions = element.global
-      ? state.design.globals[element.id].dimensions
-      : element.dimensions;
-
-    return {
-      width: dimensions.width * state.viewport.card_size.width / 100,
-      height: dimensions.height * state.viewport.card_size.height / 100
-    }
-
-  }
+  this.getDimensions = (element) => ({
+    width: element.dimensions.width * state.viewport.card_size.width / 100,
+    height: element.dimensions.height * state.viewport.card_size.height / 100
+  })
 
 
-  this.getStyles = ({ id, index, type, element, highlight }) => {
-    const local_element = element
-      ? element
-      : this.getLocalElement({ id, index, type });
-    if (!local_element) return {};
+  this.getStyles = ({ element, highlight, masked }) =>
+    element[highlight ? "highlight_styles" : "styles"][masked ? "masked" : "normal"]
 
-    const style_type = highlight ? "highlight_styles" : "styles";
+  this.getTextStyles = ({ element, masked }) => {
+    let styles = this.getStyles({ element, masked });
 
-    if (local_element.global) {
-      let global_style = this.getGlobalElement(local_element.id)[style_type];
-      return {
-        ...global_style,
-        ...local_element[style_type],
-      };
-    }
-
-    return {
-      ...local_element[style_type],
-    };
-  };
-
-  this.getTextStyles = ({ element, swatches }) => {
-    let styles = this.getStyles({ element });
     return {
       // width: "100%",
       // height: "100%",
@@ -110,11 +77,11 @@ export default function DesignActions({ state, setState, actions, ref }) {
       // zIndex: props.zIndex,
       // "justifyContent": styles.alignmentVertical,
       // "alignItems": styles.alignmentHorizontal,
-      "fontSize": parseInt(convert(styles.size)),
+      "fontSize": convert(styles.size),
       "fontFamily": styles.family,
       // "letterSpacing": convert(styles.spacing, true),
       // "lineHeight": `${convert(styles.lineHeight)}pt`,
-      color: swatches[styles.color],
+      color: styles.color,
       // "textShadow":
       //   styles.shadowLeft || styles.shadowLeft || styles.shadowBlur
       //     ? `${styles.shadowLeft ? convert(styles.shadowLeft) : 0}px ${styles.shadowTop ? convert(styles.shadowTop) : 0
@@ -125,48 +92,38 @@ export default function DesignActions({ state, setState, actions, ref }) {
   };
 
 
+  const convertAlignmentToJustify = (alignment) => {
+    switch (alignment) {
+      case 'right':
+        return 'flex-end';
+      case 'center':
+        return 'center';
+      case 'left':
+        return 'flex-start';
+      default:
+        return alignment
+    }
+  }
 
-  this.getHighlightStyles = ({ element, swatches }) => {
-    let styles = this.getStyles({ element, highlight: true });
+  this.getHighlightStyles = ({ element, masked }) => {
+    let styles = this.getStyles({ element, highlight: true, masked });
 
     return {
+      ...this.getTextStyles({ element, masked }),
       "fontFamily": styles.family,
-      color: swatches[styles.color],
-      background: swatches[styles.background],
-      display: "inline-block",
-      "boxSizing": "border-box",
-      "alignItems": styles.alignmentHorizontal,
-      "paddingLeft": convert(styles.paddingHorizontal) + "px",
-      "paddingRight": convert(styles.paddingHorizontal) + "px",
-      "paddingTop": convert(styles.paddingVertical) + "px",
-      "paddingBottom": convert(styles.paddingVertical) + "px",
-      "marginLeft": convert(styles.marginHorizontal) + "px",
-      "marginRight": convert(styles.marginHorizontal) + "px",
-      "marginTop": convert(styles.marginVertical) + "px",
-      "marginBottom": convert(styles.marginVertical) + "px",
-      "borderRadius": convert(styles.borderRadius) + "px",
-      "borderWidth": styles.borderWidth + "px",
-      "borderColor": swatches[styles.borderColor],
-      "borderStyle": "solid",
-      // "boxShadow":
-      //   styles &&
-      //     (styles.boxShadowLeft || styles.boxShadowLeft || styles.boxShadowBlur)
-      //     ? `${styles.boxShadowLeft ? convert(styles.boxShadowLeft) : 0}px ${styles.boxShadowTop ? convert(styles.boxShadowTop) : 0
-      //     }px ${styles.boxShadowBlur ? convert(styles.boxShadowBlur) : 0}px ${styles.boxShadowColor ? swatches[styles.boxShadowColor] : "black"
-      //     }`
-      //     : null,
-      // "text-shadow":
-      //   styles &&
-      //     (styles.textShadowLeft ||
-      //       styles.textShadowLeft ||
-      //       styles.textShadowBlur)
-      //     ? `${styles.textShadowLeft ? convert(styles.textShadowLeft) : 0}px ${styles.textShadowTop ? convert(styles.textShadowTop) : 0
-      //     }px ${styles.textShadowBlur ? convert(styles.textShadowBlur) : 0
-      //     }px ${styles.textShadowColor
-      //       ? swatches[styles.textShadowColor]
-      //       : "black"
-      //     }`
-      //     : null,
+      color: styles.color,
+      backgroundColor: styles.background,
+      "justifyContent": convertAlignmentToJustify(styles.alignment),
+      flex: 0,
+      "paddingLeft": convert(styles.paddingHorizontal),
+      "paddingRight": convert(styles.paddingHorizontal),
+      "paddingTop": convert(styles.paddingVertical),
+      "paddingBottom": convert(styles.paddingVertical),
+      "marginLeft": convert(styles.marginHorizontal),
+      "marginRight": convert(styles.marginHorizontal),
+      "marginTop": convert(styles.marginVertical),
+      "marginBottom": convert(styles.marginVertical),
+      "borderRadius": convert(styles.borderRadius),
     };
   };
 }

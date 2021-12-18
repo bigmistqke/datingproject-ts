@@ -10,7 +10,7 @@ import { Show } from './components/solid-like-components';
 
 
 function App() {
-  const [, actions] = useStore();
+  const [{ previous_game_id }, actions] = useStore();
 
   useEffect(() => {
     actions.checkCachedGameId()
@@ -26,7 +26,7 @@ function App() {
       </Show>
       <Show when={actions.getPreviousGameId() && !actions.getInstructions()}>
         <Prompt
-          text='open previous game?'
+          text='open previous geme?'
           onSubmit={
             (result) => {
               if (result) {

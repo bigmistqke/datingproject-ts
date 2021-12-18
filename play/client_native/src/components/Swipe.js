@@ -65,8 +65,10 @@ const Swipe = ({ screen_dimensions, card_dimensions, zIndex, canPlay, canSwipe, 
       ) < DRAG_TRESHOLD) {
         snapBack();
       } else {
+        setTimeout(() => onSwipe(), 50)
         swipeAway();
-        setTimeout(() => onSwipe(), 0);
+        /*  swipeAway();
+         setTimeout(() => , 0); */
       }
     }
   })).current;

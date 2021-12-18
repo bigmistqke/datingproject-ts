@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo, } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo, memo } from 'react';
 import { Dimensions, Animated, Text, StyleSheet } from 'react-native';
 import styled from 'styled-components/native';
 import Video from 'react-native-video';
@@ -12,7 +12,7 @@ import { Show } from './solid-like-components.jsx';
 
 import Swipe from './Swipe.js';
 
-const Card = (props) => {
+const Card = React.memo((props) => {
   const [, actions] = useStore();
   const [countdown, setCountdown] = useState(props.instruction.timespan);
   const countdown_interval = useRef(false);
@@ -31,12 +31,11 @@ const Card = (props) => {
   // const flip = false;
 
   const flip = useMemo(() => {
+    console.log('this gets flipped?', performance.now());
     return props.instruction.prev_instruction_ids.length === 0
   }
     , [props.instruction.prev_instruction_ids]
   )
-
-
 
   useEffect(() => {
     if (!flip) return;
@@ -56,17 +55,20 @@ const Card = (props) => {
         setCountdown(c);
         if (c <= 0) {
           clearInterval(countdown_ref.current);
-          actions.swipe(props.instruction);
+          actions.swipe(props.instruction)
         }
       }, 1000 / 30)
     }
-  }, [flip, props.timespan])
+  }, [flip, props.timespan]);
+
 
   let can_swipe = useMemo(() => {
     if (!flip) return false;
     if (props.instruction.timespan && props.instruction.countdown !== 0) return false;
     return true;
   }, [props.instruction]);
+
+  useEffect(() => console.log("prop.instruction!", props.instruction), [props.instruction])
 
   return (<>
     <Swipe
@@ -89,8 +91,12 @@ const Card = (props) => {
         >
           <Show when={props.instruction.type !== 'video'}>
             <CardRenderer
-              countdown={countdown}
-              {...props}
+              // countdown={countdown}
+              instruction={{
+                instruction_id: props.instruction.instruction_id,
+                type: props.instruction.type,
+                text: props.instruction.text,
+              }}
             ></CardRenderer>
           </Show>
           <Show when={props.instruction.type === 'video'}>
@@ -115,12 +121,14 @@ const Card = (props) => {
           transform: [{ rotateY: inversed_rotation }]
         }}
       >
-        <CardRenderer {...props} instruction={{ type: "back" }}></CardRenderer>
+        <CardRenderer {...props}
+          instruction={{ instruction_id: props.instruction.instruction_id, type: "back" }}
+        ></CardRenderer>
       </Animated.View>
     </Swipe>
   </>
   );
-}
+})
 
 
 

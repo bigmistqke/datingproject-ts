@@ -76,7 +76,6 @@ function Game({ design, instructions }) {
       <For each={visible_instructions}>{(instruction, i) =>
         <Card
           key={instruction.instruction_id}
-          onSwipe={() => actions.swipe(instruction)}
           canSwipe={i === (instructions.length - 1)}
           margin={visible_instructions.length - i - 1}
           instruction={instruction}
