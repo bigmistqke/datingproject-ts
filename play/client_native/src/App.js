@@ -3,14 +3,14 @@ import ScanScreen from './screens/ScanScreen';
 import GameScreen from './screens/GameScreen';
 import LoadingScreen from './screens/LoadingScreen';
 import Prompt from './components/Prompt';
-
+import { Text } from "react-native";
 
 import { useStore } from "./store/Store"
 import { Show } from './components/solid-like-components';
 
 
 function App() {
-  const [{ previous_game_id }, actions] = useStore();
+  const [state, actions] = useStore();
 
   useEffect(() => {
     actions.checkCachedGameId()
@@ -18,24 +18,21 @@ function App() {
 
   return (
     <>
-      <Show when={!actions.getInstructions()}>
-        <ScanScreen onRead={actions.initGame}></ScanScreen>
+      <Show when={!state.instructions && !state.viewport.loading_percentage}>
+        <ScanScreen
+          onRead={actions.initGame}
+        />
       </Show>
-      <Show when={actions.getInstructions()}>
-        <GameScreen game_id={actions.getId("game")} instructions={actions.getInstructions()} />
+      <Show when={state.viewport.loading_percentage}>
+        <Text>loaded: {state.viewport.loading_percentage}%</Text>
       </Show>
-      <Show when={actions.getPreviousGameId() && !actions.getInstructions()}>
-        <Prompt
-          text='open previous geme?'
-          onSubmit={
-            (result) => {
-              if (result) {
-                actions.initGame(actions.getPreviousGameId());
-              }
-            }
-          }>
-        </Prompt>
+      <Show when={state.instructions}>
+        <GameScreen
+          game_id={state.ids.game}
+          instructions={state.instructions}
+        />
       </Show>
+
     </>
   );
 }

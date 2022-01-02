@@ -13,7 +13,9 @@ const InstructionElement = props => {
       <View className="text-container">
         <For each={props.instruction.text}>
           {(instruction, index) => (
-            <View key={index}>
+            <View
+              key={`${instruction.instruction_id}_${index}`}
+            >
               <Show when={instruction.type === 'normal'}>
                 <Text
                   style={actions.getTextStyles({ element: props.element, masked: props.masked })}>
@@ -29,8 +31,10 @@ const InstructionElement = props => {
                   flexWrap: "wrap",
                 }}>
                   <For each={instruction.content}>
-                    {(choice, index) => (
-                      <Text key={instruction.instruction_id} style={actions.getHighlightStyles({ element: props.element, masked: props.masked })}>
+                    {(choice, index2) => (
+                      <Text
+                        key={`${instruction.instruction_id}_${index}_${index2}`}
+                        style={actions.getHighlightStyles({ element: props.element, masked: props.masked })}>
                         {choice}
                       </Text>
                     )}

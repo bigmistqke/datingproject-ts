@@ -1,66 +1,68 @@
-import CardCompositor from './CardComposition';
-
 import { useStore } from '../../store/Store';
 import React, { useState, useEffect, useMemo } from 'react';
-import { View } from 'react-native';
 import styled from 'styled-components/native';
-import createStore from '../../createStore';
 
+import CardElement from './CardElement';
+import CardMask from './CardMask';
 
+import { Show, For } from '../solid-like-components';
 
-const CardRenderer = React.memo(props => {
-  const [, actions] = useStore();
-
-  const CardContainer = styled.View`
-    position: absolute;
-    /* transform: translate(-50%, -50%); */
-    /* position: relative; */
-    /* overflow: hidden; */
-    left: 50%;
-    top: 50%;
-    background: transparent;
+const CardContainer = styled.View`
+    position: relative; 
+    flex: 1;
+    height: 100%;
+    width: 100%;
+    background-color: transparent;
     elevation: 10;
-    /* box-shadow: 0px 0px 50px lightgrey; */
-
-    /* overflow: hidden; */
     z-index: 5;
-  `;
+`;
 
+const BackRenderer = props => (
+  <CardContainer>
+    <CardElements
+      design_type="back"
+      {...props}
+    />
+  </CardContainer>
+)
 
+const CardRenderer = props => (
+  <CardContainer>
+    <CardCompositor
+      {...props}
+    />
+  </CardContainer>
+)
+
+const CardCompositor = props => (
+  <>
+    <CardElements {...props} masked={false}></CardElements>
+    <Show when={props.modes && props.modes.timed}>
+      <CardMask {...props}>
+        <CardElements {...props} masked={true}></CardElements>
+      </CardMask>
+    </Show>
+  </>
+)
+
+const CardElements = props => {
+  const [state, actions] = useStore();
   return (
-    useMemo(() =>
-      <>
-        <CardContainer
-          className="CardContainer"
-          style={{
-            position: "relative",
-            flex: 1,
-            height: actions.getCardSize().height,
-            width: actions.getCardSize().width,
-            borderRadius: 0.05 * actions.getCardSize().height,
-            transform: [
-              { translateY: actions.getCardSize().height * -0.5 },
-              { translateX: actions.getCardSize().width * -0.5 }
-            ],
-
-            // 'border-radius': state.design ? '125px' : 0,
-          }}>
-          {/* <View className="viewport"> */}
-          <CardCompositor
-            modes={{
-              timed: props.instruction.timespan,
-              choice: props.text && props.text.length > 0
-            }}
-            {...props}
-          ></CardCompositor>
-          {/* </View> */}
-        </CardContainer>
-      </>
-    )
-
+    <For each={state.design.types[props.design_type]}>
+      {(element, index) => (
+        <Show key={element.id}
+          when={actions.isElementVisible({ element, modes: props.modes })}>
+          <CardElement
+            index={index}
+            element={element}
+            type={element.type}
+            {...props}>
+          </CardElement>
+        </Show>
+      )}
+    </For>
   );
-}, (prev, next) => {
-  return prev.canSwipe === next.canSwipe
-});
+};
 
-export default CardRenderer;
+export { CardRenderer, BackRenderer };
+

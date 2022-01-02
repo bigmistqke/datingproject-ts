@@ -1,70 +1,49 @@
-import React, { createContext, useState, useRef, useEffect, useCallback } from 'react'
-import { Dimensions } from 'react-native';
-import createStore from '../createStore';
-const StoreContext = createContext();
-import PlayActions from './PlayActions';
+import React from 'react';
 
+import PlayActions from './PlayActions';
 import GeneralActions from './GeneralActions';
 import DesignActions from './DesignActions';
 import SocketActions from './SocketActions';
 
-let state, setState, ref, actions;
+import { createState, useState } from '@hookstate/core';
 
-export function Provider(props) {
-
-  [state, setState, ref] = createStore(useState({
-    previous_game_id: undefined,
-    ids: {
-      game: null,
-      player: null,
-      role: null,
-      room: null
+const application_state = createState({
+  previous_game_id: undefined,
+  game_start: null,
+  timers: {},
+  ids: {
+    game: null,
+    player: null,
+    role: null,
+    room: null
+  },
+  instruction_index: 0,
+  instructions: null,
+  design: null,
+  bools: {
+    isInitialized: false,
+  },
+  viewport: {
+    loading_percentage: false,
+    timer: null,
+    window_size: {
+      width: null,
+      height: null
     },
-
-    instructions: undefined,
-    design: null,
-    bools: {
-      isInitialized: false,
+    card_size: {
+      height: null,
+      width: null
     },
-    viewport: {
-      timer: null,
-      card_size: {
-        height: null,
-        width: null
-      },
-    }
-  }));
+  }
+});
 
-  let actions = {
-    setInstructions: (instructions) => setState("instructions", instructions),
-    setIds: (ids) => setState("ids", ids),
-    setDesign: (design) => setState("design", design)
-  };
+let actions = {};
+Object.assign(actions, new SocketActions({ ref: application_state.value, state: application_state, actions }));
+Object.assign(actions, new DesignActions({ ref: application_state.value, state: application_state, actions }));
+Object.assign(actions, new PlayActions({ ref: application_state.value, state: application_state, actions }));
+Object.assign(actions, new GeneralActions({ ref: application_state.value, state: application_state, actions }));
 
-  const addToActions = (new_actions) => {
-    Object.entries(new_actions).forEach(([action_name, action]) => {
-      if (Object.keys(actions).indexOf(action_name) !== -1) {
-        console.error("multiple actions with the same name:", action_name);
-        return;
-      } else {
-        actions = { ...actions, [action_name]: action };
-      }
-    });
-  };
-
-  actions = { ...actions, ...new SocketActions({ state, setState, actions, ref }) };
-  actions = { ...actions, ...new DesignActions({ state, setState, actions, ref }) };
-  actions = { ...actions, ...new PlayActions({ state, setState, actions, ref }) };
-  actions = { ...actions, ...new GeneralActions({ state, setState, actions, ref }) };
-
-  let store = [state, actions, ref];
-
-
-  return <StoreContext.Provider value={store}>
-    {props.children}
-  </StoreContext.Provider>
-}
-
-export function useStore() {
-  return React.useContext(StoreContext);
+export function useStore(props) {
+  const state = useState(application_state);
+  return [state.value, actions];
 }

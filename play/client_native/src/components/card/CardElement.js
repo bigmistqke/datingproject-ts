@@ -16,25 +16,19 @@ import RNFS from "react-native-fs";
 import { useStore } from '../../store/Store';
 
 const CardElement = props => {
-  const [, actions] = useStore();
-
-
+  const [state] = useStore();
   const Element = styled.View`
     pointer-events: none;
-    & > * {
-      pointer-events: all;
-    }
+    
   `
-
   return (
     <View
-      // position={props.element.position}
       style={{
         position: 'absolute',
-        width: actions.getCardSize().width * props.element.dimensions.width / 100,
-        height: actions.getCardSize().height * props.element.dimensions.height / 100,
-        left: actions.getCardSize().width * props.element.position.x / 100,
-        top: actions.getCardSize().height * props.element.position.y / 100,
+        width: state.viewport.card_size.width * props.element.dimensions.width / 100,
+        height: state.viewport.card_size.height * props.element.dimensions.height / 100,
+        left: state.viewport.card_size.width * props.element.position.x / 100,
+        top: state.viewport.card_size.height * props.element.position.y / 100,
       }}>
       <Element>
         <Show when={props.type === 'instruction'}>
@@ -42,6 +36,9 @@ const CardElement = props => {
         </Show>
         <Show when={props.type === 'svg'}>
           <SVGElement {...props} />
+        </Show>
+        <Show when={props.type === 'countdown'}>
+          <CountdownElement {...props} />
         </Show>
       </Element>
     </View>

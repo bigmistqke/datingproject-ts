@@ -5,6 +5,11 @@ export function Show(props) {
 }
 
 export function For(props) {
+  props.each.forEach(el => {
+    if (!el) {
+      console.error('THIS IS UNDEFINED');
+    }
+  });
   return (
     <>
       {props.each

@@ -4,7 +4,7 @@ import styled from 'styled-components/native';
 import Video from 'react-native-video';
 import Tweener from "../helpers/tweener.js";
 import { useStore } from '../store/Store.js';
-import CardRenderer from './card/CardRenderer';
+import { CardRenderer, BackRenderer } from './card/CardRenderer';
 import VideoRenderer from './card/VideoRenderer.js';
 // import { SvgXml } from 'react-native-svg';
 
@@ -13,11 +13,14 @@ import { Show } from './solid-like-components.jsx';
 import Swipe from './Swipe.js';
 
 const Card = React.memo((props) => {
-  const [, actions] = useStore();
-  const [countdown, setCountdown] = useState(props.instruction.timespan);
-  const countdown_interval = useRef(false);
-  const tweener = useRef(new Tweener()).current;
 
+  const [state, actions] = useStore();
+
+  useEffect(() => console.log("re-render", props.instruction.instruction_id));
+
+
+  const tweener = useRef(new Tweener()).current;
+  const timer_ref = useRef(new Animated.Value(0)).current;
   const rotation_ref = useRef(new Animated.Value(1)).current;
   const rotation = rotation_ref.interpolate({
     inputRange: [0, 1],
@@ -28,106 +31,98 @@ const Card = React.memo((props) => {
     outputRange: ['-180deg', '0deg']
   })
 
-  // const flip = false;
-
-  const flip = useMemo(() => {
-    console.log('this gets flipped?', performance.now());
-    return props.instruction.prev_instruction_ids.length === 0
-  }
-    , [props.instruction.prev_instruction_ids]
-  )
-
   useEffect(() => {
-    if (!flip) return;
+    if (!props.flip) return;
     tweener.tweenTo(1, 0, 125,
       (alpha) => rotation_ref.setValue(alpha)
     );
-  }, [flip])
-
-
+  }, [props.flip])
 
   useEffect(() => {
-    if (flip && props.timespan && !countdown_interval.current) {
+    /* if (props.flip && props.timespan && !countdown_interval.current) {
       let start = performance.now();
       countdown_interval.current = setInterval(() => {
         let delta = (performance.now() - start) / 1000;
         const c = props.timespan - delta;
         setCountdown(c);
         if (c <= 0) {
-          clearInterval(countdown_ref.current);
-          actions.swipe(props.instruction)
+          clearInterval(timer_ref.current);
+          // actions.swipe(props.instruction)
+          props.onSwipe(props.instruction);
         }
       }, 1000 / 30)
-    }
-  }, [flip, props.timespan]);
+    } */
+  }, [props.flip, props.timespan]);
 
 
   let can_swipe = useMemo(() => {
-    if (!flip) return false;
+    if (!props.flip) return false;
     if (props.instruction.timespan && props.instruction.countdown !== 0) return false;
     return true;
   }, [props.instruction]);
 
-  useEffect(() => console.log("prop.instruction!", props.instruction), [props.instruction])
+
+  const card_style = {
+    position: 'absolute',
+    width: state.viewport.card_size.width,
+    height: state.viewport.card_size.height,
+    left: ((state.viewport.window_size.width - state.viewport.card_size.width) / 2),
+    top: ((state.viewport.window_size.height - state.viewport.card_size.height) / 2),
+    borderRadius: 0.05 * state.viewport.card_size.height,
+    elevation: 5,
+    backfaceVisibility: 'hidden',
+  }
+
+
 
   return (<>
-    <Swipe
-      setWaitYourTurn={props.setWaitYourTurn}
-      onSwipe={() => actions.swipe(props.instruction)}
-      can_swipe={can_swipe}
-      margin={props.margin}
-    >
-      <Show when={flip}>
-        <Animated.View
-          style={{
-            position: 'absolute',
-            left: (Dimensions.get('window').width - parseInt(actions.getCardSize().width)) / 2,
-            top: (Dimensions.get('window').height - parseInt(actions.getCardSize().height)) / 4,
-            height: parseInt(actions.getCardSize().height),
-            width: parseInt(actions.getCardSize().width),
-            backfaceVisibility: 'hidden',
-            transform: [{ rotateY: rotation }]
-          }}
-        >
-          <Show when={props.instruction.type !== 'video'}>
-            <CardRenderer
-              // countdown={countdown}
-              instruction={{
-                instruction_id: props.instruction.instruction_id,
-                type: props.instruction.type,
-                text: props.instruction.text,
-              }}
-            ></CardRenderer>
-          </Show>
-          <Show when={props.instruction.type === 'video'}>
-            <VideoRenderer
-              url={props.instruction.text}
-              {...props}
-            ></VideoRenderer>
-          </Show>
-        </Animated.View>
-      </Show>
 
+    <Show when={props.flip}>
       <Animated.View
         style={{
-
-          height: parseInt(actions.getCardSize().height),
-          width: parseInt(actions.getCardSize().width),
-          left: (Dimensions.get('window').width - parseInt(actions.getCardSize().width)) / 2,
-          top: (Dimensions.get('window').height - parseInt(actions.getCardSize().height)) / 4,
-          borderRadius: parseInt(actions.getBorderRadius() * 10),
-          backgroundColor: 'blue',
-          backfaceVisibility: 'hidden',
-          transform: [{ rotateY: inversed_rotation }]
+          ...card_style,
+          transform: [
+            { rotateY: rotation },
+          ]
         }}
       >
-        <CardRenderer {...props}
-          instruction={{ instruction_id: props.instruction.instruction_id, type: "back" }}
-        ></CardRenderer>
+        <Show when={props.instruction.type !== 'video'}>
+          <CardRenderer
+            modes={{
+              timed: props.instruction.timespan,
+              choice: props.text && props.text.length > 0
+            }}
+            design_type={props.instruction.type}
+            instruction={props.instruction}
+          />
+        </Show>
+        <Show when={props.instruction.type === 'video'}>
+          <VideoRenderer
+            url={props.instruction.url}
+            {...props}
+          />
+        </Show>
       </Animated.View>
-    </Swipe>
+    </Show>
+
+    <Animated.View
+      style={{
+        ...card_style,
+        transform: [{ rotateY: inversed_rotation }]
+      }}
+    >
+      <CardRenderer design_type="back" />
+    </Animated.View>
   </>
   );
+}, (prev, next) => {
+  try {
+    return prev.flip === next.flip
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+
 })
 
 

@@ -6,7 +6,7 @@ class Tweener {
         let tweenData = { val: from };
         this.tween = new TWEEN.Tween(tweenData)
             .to({ val: to }, timespan)
-            .easing(TWEEN.Easing.Quadratic.Out)
+            .easing(TWEEN.Easing.Linear.None)
             .onUpdate(() => {
                 update(tweenData.val);
             })
