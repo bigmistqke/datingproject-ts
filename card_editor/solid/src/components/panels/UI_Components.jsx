@@ -7,6 +7,8 @@ import { styled } from "solid-styled-components";
 import isColor from "../../helpers/isColor";
 import isFalse from "../../helpers/isFalse";
 
+let dragged_color = undefined;
+
 const Color = styled("div")`
   width: 16px;
   height: 16px;
@@ -314,7 +316,9 @@ const LabeledColor = (props) => {
     e.preventDefault();
     // e.stopPropagation();
 
-    let swatch_index = e.dataTransfer.getData("swatch_index");
+    let swatch_index = dragged_color;
+
+    console.log("this happens tooo??", e.dataTransfer.getData("text/plain"));
 
     if (swatch_index === props.value) return;
 
@@ -375,12 +379,14 @@ const ColorPicker = (props) => {
   const onChange = (e) => {
     let result = props.onInput(e.target.value);
     if (old_value !== e.target.value) {
-      archiveStateChanges([{ ...result, old_value }]);
+      // archiveStateChanges([{ ...result, old_value }]);
     }
   };
 
   const onDragStart = (e) => {
-    e.dataTransfer.setData("swatch_index", props.index);
+    dragged_color = props.index;
+    // e.dataTransfer.setData("text", props.index);
+    // console.log("ONDRAGSTART ", e.dataTransfer.getData("text/plain"));
   };
 
   const onDrop = (e) => {};

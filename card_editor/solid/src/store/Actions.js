@@ -1,5 +1,8 @@
 import isColor from "../helpers/isColor";
 import urls from "../urls";
+import uniqid from "uniqid";
+
+import { array_move, array_remove } from "../helpers/Pure";
 
 
 export default function ({ state, setState, default_types }) {
@@ -238,12 +241,13 @@ export default function ({ state, setState, default_types }) {
           }),
         }
       );
-      result = await result.json();
-      console.log(result);
+      // result = await result.json();
+      if (result.status !== 200) {
+        throw result.statusText
+      }
       return true;
     } catch (err) {
-      console.error(err);
-      console.log(state);
+      console.error("error while saving deck", err);
       return false;
     }
   };
@@ -259,9 +263,11 @@ export default function ({ state, setState, default_types }) {
     setState("viewport", "masked_styling", (bool) => !bool);
   };
 
-  this.setCardId = (percentage) => {
+  /* this.setCardId = (percentage) => {
     setState("viewport", "timer_percentage", percentage);
-  };
+  }; */
+  this.setTimerPercentage = (percentage) =>
+    setState("viewport", "timer_percentage", percentage)
 
   this.getTimerPercentage = () => state.viewport.timer_percentage;
 
@@ -334,6 +340,8 @@ export default function ({ state, setState, default_types }) {
   this.getSelectedSwatches = (timed = false) => {
     let selected_type = this.getSelectedType();
     if (!selected_type) return [];
+
+
 
     return selected_type.swatches.map((s) => (timed ? s.timed : s.normal));
   };
@@ -721,7 +729,7 @@ export default function ({ state, setState, default_types }) {
     const file_is_svg =
       splitted_name[splitted_name.length - 1].toLowerCase() === "svg";
 
-    reader.onload = async function ({ target }) {
+    reader.onload = async ({ target }) => {
       if (file_is_svg) {
         const { svg, styles } = await processSVG(target);
         const index = this.getSelectedType().elements.length;
@@ -788,10 +796,14 @@ export default function ({ state, setState, default_types }) {
       })
       .map((c) => ({ old_name: c }));
 
+    console.log('styles', styles);
+
     styles = styles.map((c) => {
       let regex = new RegExp(c.old_name + "(?![0-9])[^{]*[^}]*", "g");
+      console.log(regex);
       let style = {};
       [...style_text.matchAll(regex)].forEach((string) => {
+        console.log("STRING IS ", string);
         string = string[0].split("{")[1];
         let split_string = string.split(";");
         split_string.forEach((key_value) => {

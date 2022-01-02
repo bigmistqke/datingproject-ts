@@ -2,8 +2,11 @@ import dragHelper from "../../helpers/dragHelper";
 import Draggable from "./Draggable";
 import { createMemo } from "solid-js";
 import { styled } from "solid-styled-components";
+import { useStore } from "../../store/Store";
 
 const ResizeHandles = (props) => {
+  const [state, actions] = useStore();
+
   const top = {
     top: "0px",
   };
@@ -40,7 +43,8 @@ const ResizeHandles = (props) => {
     height: 100%;
     & > * {
       pointer-events: all;
-      background: rgba(200, 200, 200, 0.25);
+      background: white;
+      mix-blend-mode: difference;
     }
   `;
   const resize = ({ top, bottom, left, right }) => {
@@ -51,21 +55,21 @@ const ResizeHandles = (props) => {
 
     if (!props.keep_ratio) {
       if (top) {
-        top = (top / props.card_size.height) * 100;
+        top = (top / state.viewport.card_size.height) * 100;
         position.y = props.position.y + top;
         dimensions.height = props.dimensions.height - top;
       }
       if (bottom) {
-        bottom = (bottom / props.card_size.height) * 100;
+        bottom = (bottom / state.viewport.card_size.height) * 100;
         dimensions.height = props.dimensions.height + bottom;
       }
       if (left) {
-        left = (left / props.card_size.width) * 100;
+        left = (left / state.viewport.card_size.width) * 100;
         position.x = props.position.x + left;
         dimensions.width = props.dimensions.width - left;
       }
       if (right) {
-        right = (right / props.card_size.width) * 100;
+        right = (right / state.viewport.card_size.width) * 100;
         dimensions.width = props.dimensions.width + right;
       }
     } else {
@@ -74,7 +78,7 @@ const ResizeHandles = (props) => {
       const old_height = dimensions.height;
 
       if (top) {
-        top = (top / props.card_size.height) * 100;
+        top = (top / state.viewport.card_size.height) * 100;
         position.y = props.position.y + top;
         dimensions.height = props.dimensions.height - top;
         dimensions.width = dimensions.height * ratio;
@@ -86,7 +90,7 @@ const ResizeHandles = (props) => {
           position.x = props.position.x + (old_width - dimensions.width) / 2;
         }
       } else if (bottom) {
-        bottom = (bottom / props.card_size.height) * 100;
+        bottom = (bottom / state.viewport.card_size.height) * 100;
         dimensions.height = props.dimensions.height + bottom;
         dimensions.width = dimensions.height * ratio;
 
@@ -97,13 +101,13 @@ const ResizeHandles = (props) => {
           position.x = props.position.x + (old_width - dimensions.width) / 2;
         }
       } else if (left) {
-        left = (left / props.card_size.width) * 100;
+        left = (left / state.viewport.card_size.width) * 100;
         dimensions.width = props.dimensions.width - left;
         dimensions.height = dimensions.width / ratio;
         position.x = props.position.x + left / 2;
         position.y = props.position.y + (old_height - dimensions.height) / 2;
       } else if (right) {
-        right = (right / props.card_size.width) * 100;
+        right = (right / state.viewport.card_size.width) * 100;
         dimensions.width = props.dimensions.width + right;
         dimensions.height = dimensions.width / ratio;
         position.x = props.position.x - right / 2;

@@ -20,7 +20,7 @@ import { useStore } from "../../store/Store";
                 hide_modes={state.viewport.type === "back"} */
 // archiveStateChanges={archiveStateChanges}
 
-const Swatches = (props) => {
+const Swatches = () => {
   const [
     state,
     { getSelectedSwatches, setSwatch, addSwatch, toggleMaskedStyling },
@@ -37,13 +37,13 @@ const Swatches = (props) => {
         extra={
           <Show when={state.viewport.type !== "back"}>
             <Button onClick={toggleMaskedStyling}>
-              {props.masked_styling ? "timed" : "default"}
+              {state.viewport.masked_styling ? "timed" : "default"}
             </Button>
           </Show>
         }
       >
         <FlexRow onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
-          <Index each={getSelectedSwatches()}>
+          <Index each={getSelectedSwatches(state.viewport.masked_styling)}>
             {(color, index) => (
               <ColorPicker
                 onClick={() => {

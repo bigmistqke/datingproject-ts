@@ -29,6 +29,19 @@ const SidePanel = (props) => {
     }, 1000)
   );
 
+  const saveDesign = async (e) => {
+    e.target.innerHTML = "saving...";
+    let result = await actions.saveDesign();
+    if (result) {
+      e.target.innerHTML = "saved!";
+    } else {
+      e.target.innerHTML = "saving failed :-(";
+    }
+    setTimeout(() => {
+      e.target.innerHTML = "save deck";
+    }, 2000);
+  };
+
   return (
     <LongPanel className="right_panel">
       <FlexRow
@@ -49,10 +62,10 @@ const SidePanel = (props) => {
         >
           🃏 card editor for <i>{state.design_id}</i>
         </span>
-        <Button onClick={actions.toggleTypeManager}>manage types</Button>
+        {/*   <Button onClick={actions.toggleTypeManager}>manage types</Button>
         <Button>overview</Button>
-        <Button onClick={actions.createNewCard}>new card</Button>
-        <Button onClick={props.saveDesign}>save deck</Button>
+        <Button onClick={actions.createNewCard}>new card</Button> */}
+        <Button onClick={saveDesign}>save deck</Button>
       </FlexRow>
       <LongPanel
         style={{
@@ -113,7 +126,7 @@ const SidePanel = (props) => {
                   }}
                 ></LabeledCheckbox>
               </GridRow>
-              <GridRow style={{ "margin-bottom": "6px" }}>
+              {/* <GridRow style={{ "margin-bottom": "6px" }}>
                 <Label style={{ "grid-column": "span 1" }}>instruction</Label>
 
                 <Button
@@ -128,7 +141,7 @@ const SidePanel = (props) => {
                 >
                   ctrl+z
                 </Button>
-              </GridRow>
+              </GridRow> */}
             </Show>
           </HeaderPanel>
           <Swatches></Swatches>

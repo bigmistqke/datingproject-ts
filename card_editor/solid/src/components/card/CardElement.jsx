@@ -51,31 +51,31 @@ const CardElement = (props) => {
         actions.removeElement();
         break;
       case "fill":
-        actions.archiveStateChanges(
-          actions.resizeElement({
-            index: props.index,
-            dimensions: { width: 100, height: 100 },
-            position: { x: 0, y: 0 },
-          })
-        );
+        // actions.archiveStateChanges(
+        actions.resizeElement({
+          index: props.index,
+          dimensions: { width: 100, height: 100 },
+          position: { x: 0, y: 0 },
+        });
+        // );
         break;
       case "fill horizontally":
-        actions.archiveStateChanges(
-          actions.resizeElement({
-            index: props.index,
-            dimensions: { width: 100, height: props.dimensions.height },
-            position: { x: 0, y: props.position.y },
-          })
-        );
+        // actions.archiveStateChanges(
+        actions.resizeElement({
+          index: props.index,
+          dimensions: { width: 100, height: props.dimensions.height },
+          position: { x: 0, y: props.position.y },
+        });
+        // );
         break;
       case "fill vertically":
-        actions.archiveStateChanges(
-          actions.resizeElement({
-            index: props.index,
-            dimensions: { width: props.dimensions.width, height: 100 },
-            position: { x: props.position.x, y: 0 },
-          })
-        );
+        // actions.archiveStateChanges(
+        actions.resizeElement({
+          index: props.index,
+          dimensions: { width: props.dimensions.width, height: 100 },
+          position: { x: props.position.x, y: 0 },
+        });
+        // );
         break;
     }
   };
@@ -135,8 +135,13 @@ const CardElement = (props) => {
         <Show when={isSelected()}>
           <ResizeHandles
             {...props}
+            dimensions={dimensions()}
             onResize={({ position, dimensions }) =>
-              actions.resizeElement({ index: index(), position, dimensions })
+              actions.resizeElement({
+                index: props.index,
+                position,
+                dimensions,
+              })
             }
             keep_ratio={props.type === "svg"}
           ></ResizeHandles>

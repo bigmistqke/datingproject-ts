@@ -47,12 +47,12 @@ const TextStyles = (props) => {
                 value={props.styles.lineHeight}
                 onChange={(value) => props.onChange("lineHeight", value)}
               ></LabeledInput>
-              <LabeledInput
+              {/* <LabeledInput
                 label="Spacing"
                 value={props.styles.spacing}
                 min={-50}
                 onChange={(value) => props.onChange("spacing", value)}
-              ></LabeledInput>
+              ></LabeledInput> */}
               <LabeledColor
                 label="Color"
                 type="color"
@@ -86,7 +86,7 @@ const TextStyles = (props) => {
               ></LabeledSelect>
             </HeaderCategory>
 
-            <HeaderCategory label="Text Shadow">
+            {/* <HeaderCategory label="Text Shadow">
               <LabeledInput
                 label="left"
                 value={props.styles.shadowLeft}
@@ -109,7 +109,7 @@ const TextStyles = (props) => {
                 value={props.styles.shadowColor || 0}
                 onChange={(value) => props.onChange("shadowColor", value)}
               ></LabeledColor>
-            </HeaderCategory>
+            </HeaderCategory> */}
           </div>
         </GridRow>
       </HeaderPanel>

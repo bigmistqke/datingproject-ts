@@ -63,6 +63,7 @@ const Instruction = (props) => {
     if (!upload.success) console.error(upload.error);
     actions.setInstruction(props.instruction_id, {
       text: `/api${upload.response.substring(1)}`,
+      modified: new Date().getTime(),
     });
   };
 

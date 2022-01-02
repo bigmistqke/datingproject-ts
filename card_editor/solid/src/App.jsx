@@ -97,7 +97,10 @@ function App(props) {
       let result = await fetch(
         `${urls.fetch}/api/design/get/${design_id}/development`
       );
-      let design = await result.json();
+      if (result.status !== 200) {
+        throw result.statusText;
+      }
+      let { design } = await result.json();
 
       let types = Object.fromEntries(
         Object.entries(design.types).map(([type_id, type]) => {
@@ -111,7 +114,7 @@ function App(props) {
       if (!design) return false;
       return design;
     } catch (err) {
-      console.error("err happens", err);
+      console.error("error while fetching data", err);
       return false;
     }
   };
@@ -202,7 +205,7 @@ function App(props) {
             instruction={instruction}
           ></CardRenderer>
         </Viewport>
-        <SidePanel saveDesign={actions.saveDesign}></SidePanel>
+        <SidePanel></SidePanel>
       </App>
     </>
   );
