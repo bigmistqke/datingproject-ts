@@ -135,6 +135,7 @@ const CardElement = (props) => {
         <Show when={isSelected()}>
           <ResizeHandles
             {...props}
+            position={position()}
             dimensions={dimensions()}
             onResize={({ position, dimensions }) =>
               actions.resizeElement({

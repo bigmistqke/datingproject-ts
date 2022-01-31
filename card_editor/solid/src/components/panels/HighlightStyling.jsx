@@ -30,7 +30,7 @@ const HighlightStyling = (props) => {
             <HeaderCategory label="Font Styles" visible={true}>
               <LabeledSelect
                 label="Family"
-                data={["arial", "times", "custom"]}
+                data={["arial", "arial_rounded", "times"]}
                 value={props.styles.family}
                 onChange={(value) => props.onChange("family", value)}
               ></LabeledSelect>

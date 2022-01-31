@@ -24,9 +24,9 @@ const SVGStyles = (props) => {
           </Button>
         }
       >
-        <Index each={Object.entries(props.styles)}>
+        <For each={Object.entries(props.styles)}>
           {(style_entry, index) => {
-            const [key, style] = style_entry();
+            const [key, style] = style_entry;
             return (
               <RowContainer>
                 <label>{index()}</label>
@@ -63,13 +63,17 @@ const SVGStyles = (props) => {
                   value={style["stroke-width"] || 0}
                   style={{ flex: 1 }}
                   onChange={(value) =>
-                    props.setSVGStyle({ key, type: "stroke-width", value })
+                    props.setSVGStyle({
+                      key,
+                      type: "stroke-width",
+                      value: value ? value : false,
+                    })
                   }
                 ></LabeledInput>
               </RowContainer>
             );
           }}
-        </Index>
+        </For>
       </HeaderPanel>
     </>
   );

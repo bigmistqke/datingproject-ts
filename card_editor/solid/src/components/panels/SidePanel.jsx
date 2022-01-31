@@ -65,6 +65,7 @@ const SidePanel = (props) => {
         {/*   <Button onClick={actions.toggleTypeManager}>manage types</Button>
         <Button>overview</Button>
         <Button onClick={actions.createNewCard}>new card</Button> */}
+        <Button onClick={actions.openTypeManager}>manage types</Button>
         <Button onClick={saveDesign}>save deck</Button>
       </FlexRow>
       <LongPanel

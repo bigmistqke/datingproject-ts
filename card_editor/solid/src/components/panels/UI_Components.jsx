@@ -315,10 +315,9 @@ const LabeledColor = (props) => {
   const onDragOver = (e) => {
     e.preventDefault();
     // e.stopPropagation();
+    console.log("drag_over");
 
     let swatch_index = dragged_color;
-
-    console.log("this happens tooo??", e.dataTransfer.getData("text/plain"));
 
     if (swatch_index === props.value) return;
 

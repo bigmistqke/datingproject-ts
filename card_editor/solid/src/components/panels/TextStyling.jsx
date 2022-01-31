@@ -33,7 +33,7 @@ const TextStyles = (props) => {
             <HeaderCategory label="Font Styles" visible={true}>
               <LabeledSelect
                 label="Family"
-                data={["arial", "times", "custom"]}
+                data={["arial", "arial_rounded", "times"]}
                 value={props.styles.family}
                 onChange={(value) => props.onChange("family", value)}
               ></LabeledSelect>
@@ -86,7 +86,7 @@ const TextStyles = (props) => {
               ></LabeledSelect>
             </HeaderCategory>
 
-            {/* <HeaderCategory label="Text Shadow">
+            <HeaderCategory label="Text Shadow">
               <LabeledInput
                 label="left"
                 value={props.styles.shadowLeft}
@@ -109,7 +109,7 @@ const TextStyles = (props) => {
                 value={props.styles.shadowColor || 0}
                 onChange={(value) => props.onChange("shadowColor", value)}
               ></LabeledColor>
-            </HeaderCategory> */}
+            </HeaderCategory>
           </div>
         </GridRow>
       </HeaderPanel>

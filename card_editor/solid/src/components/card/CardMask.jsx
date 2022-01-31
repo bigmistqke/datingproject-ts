@@ -13,7 +13,7 @@ const CardMask = (props) => {
     <Mask
       className="masked"
       style={{
-        "clip-path": `polygon(0%  ${props.percentage}%, 100%  ${props.percentage}%, 100% 100%, 0% 100%)`,
+        "clip-path": `polygon(0%  0%, 100%  0%, 100% ${props.percentage}%, 0% ${props.percentage}%)`,
       }}
     >
       {props.children}

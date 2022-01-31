@@ -34,6 +34,8 @@ import {
 
 import SidePanel from "./components/panels/SidePanel";
 
+import TypeManager from "./components/TypeManager";
+
 function App(props) {
   const { design_id } = useParams();
   const [state, actions] = useStore();
@@ -133,41 +135,9 @@ function App(props) {
 
   return (
     <>
-      <Show when={state.viewport.type_manager}>
-        <FullScreen
-          className="prompt_container"
-          onMouseDown={(e) =>
-            e.target.classList.contains("type_manager")
-              ? actions.toggleTypeManager
-              : null
-          }
-        >
-          <Overlay
-            style={{
-              left: "50%",
-              top: "50%",
-              width: "200px",
-              transform: "translate(-50%,-50%)",
-            }}
-          >
-            <HeaderPanel
-              label="Type Manager"
-              extra={<Button>add new type</Button>}
-              always_visible={true}
-            >
-              <FlexRow>
-                <For each={Object.keys(state.design.types)}>
-                  {(type) => (
-                    <Span contenteditable style={{ flex: 1 }}>
-                      {type}
-                    </Span>
-                  )}
-                </For>
-              </FlexRow>
-            </HeaderPanel>
-          </Overlay>
-        </FullScreen>
-      </Show>
+      {/* <Show when={state.viewport.type_manager}>
+        <TypeManager />
+      </Show> */}
       <App
         onDragOver={(e) => e.preventDefault()}
         onDragEnter={(e) => e.preventDefault()}

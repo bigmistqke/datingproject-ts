@@ -28,7 +28,7 @@ const TextElement = (props) => {
 
   return (
     <>
-      <div className="text-container" style={text_styles()}>
+      <div className="text-container" style={{ ...text_styles() }}>
         <For each={props.card_state.formatted_text}>
           {(instruction) => (
             <Switch>

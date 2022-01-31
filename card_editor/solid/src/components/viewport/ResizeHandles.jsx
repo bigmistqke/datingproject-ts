@@ -48,6 +48,10 @@ const ResizeHandles = (props) => {
     }
   `;
   const resize = ({ top, bottom, left, right }) => {
+    /* if (!props.position) {
+      console.error("props.position is undefined");
+      return;
+    } */
     let position = { ...props.position };
     let dimensions = { ...props.dimensions };
 
@@ -114,7 +118,6 @@ const ResizeHandles = (props) => {
         position.y = props.position.y + (old_height - dimensions.height) / 2;
       }
     }
-
     return props.onResize({ position, dimensions });
   };
 
