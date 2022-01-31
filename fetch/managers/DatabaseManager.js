@@ -64,7 +64,7 @@ function DatabaseManager({ _mongo, _redis }) {
 
   this.saveDesign = async ({ design, design_id }) => {
 
-    _mongo.getCollection('cards').updateDocument({ card_id: design_id }, { design });
+    _mongo.getCollection('cards').updateDocument({ card_id: design_id }, { modified: new Date().getTime(), design });
 
   }
 
@@ -73,7 +73,7 @@ function DatabaseManager({ _mongo, _redis }) {
     console.log('get the deck with card_id ', design_id)
     let data = await _mongo.getCollection('cards').findDocument({ card_id: design_id });
     if (!data) return false;
-    return data.design
+    return data
   }
 }
 
