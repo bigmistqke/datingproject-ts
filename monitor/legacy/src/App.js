@@ -61,21 +61,19 @@ function App() {
 
       mqtt.subscribe(`/createRoom/${script_id}`, (message, topic) => {
         console.log("CREATE ROOM!!!");
-        let { room_id, roles, script_id } = JSON.parse(message);
+        let { room_id, players, script_id } = JSON.parse(message);
         console.log(`/createRoom/${script_id}`, JSON.parse(message))
 
-        addRoom({ room_id, roles, script_id });
+        addRoom({ room_id, players, script_id });
       });
 
       rooms.set(_rooms);
     }
   }, [script_id, rooms, mqtt])
 
-  const addRoom = useCallback(({ room_id, roles, script_id }) => {
+  const addRoom = useCallback(({ room_id, players, script_id }) => {
     let _rooms = { ...rooms.get() };
-    console.log(_rooms);
-
-    rooms.set({ ..._rooms, [room_id]: { roles, script_id } });
+    rooms.set({ ..._rooms, [room_id]: { players, script_id } });
   }, [rooms.state])
 
 
@@ -160,27 +158,25 @@ function Room({ mqtt, script_id, rooms, room, room_id, openQR }) {
     window.open(`${urls.editor}/test/${room_id}`)
   }, [])
 
-  var monitor = useCallback(({ room_id, roles }) => {
-    const update = ({ room_id, role_url, state }) => {
+  var monitor = useCallback(({ room_id, players }) => {
+    const update = ({ room_id, player_id, state }) => {
       let _rooms = rooms.get();
       if (!_rooms[room_id]) {
-        console.error(_rooms, room_id, role_url, state);
+        console.error(_rooms, room_id, player_id, state);
         return;
       }
 
-
-      const roles = _rooms[room_id].roles;
-      // const role = roles[role_url];
-
+      console.log(_rooms);
+      const players = _rooms[room_id].players;
 
       let new_state = {
         ..._rooms,
         [room_id]: {
           ..._rooms[room_id],
-          roles: {
-            ...roles, [role_url]:
+          players: {
+            ...players, [player_id]:
             {
-              ..._rooms[room_id].roles[role_url],
+              ..._rooms[room_id].players[player_id],
               ...state
             }
           }
@@ -188,27 +184,29 @@ function Room({ mqtt, script_id, rooms, room, room_id, openQR }) {
       }
       rooms.set(new_state)
     }
-    if (!roles) return;
-    Object.entries(roles).forEach(([role_url, role]) => {
+    if (!players) return;
+    Object.entries(players).forEach(([player_id, role]) => {
       if (!role) return;
-      mqtt.subscribe(`/monitor/${room_id}/${role_url}/card`, (message, topic) => {
-        let card = JSON.parse(message);
-        update({ room_id, role_url, state: { card } })
+      console.log("PLAYERS", role);
+
+      mqtt.subscribe(`/monitor/${room_id}/${role.role_id}/card`, (message, topic) => {
+        let instruction = JSON.parse(message);
+        update({ room_id, player_id, state: { instruction } })
       })
-      mqtt.subscribe(`/monitor/${room_id}/${role_url}/status`, (message, topic) => {
+      mqtt.subscribe(`/monitor/${room_id}/${role.role_id}/status`, (message, topic) => {
         try {
           let status = JSON.parse(message);
-          console.log(role_url, status);
-          update({ room_id, role_url, state: status })
+          console.log(player_id, status);
+          update({ room_id, player_id, state: { status } })
         } catch (e) {
           console.error(e, message);
         }
       })
-      mqtt.subscribe(`/monitor/${room_id}/${role_url}/ping`, (message, topic) => {
+      console.log(`/monitor/${room_id}/${role.role_id}/ping`);
+      mqtt.subscribe(`/monitor/${room_id}/${role.role_id}/ping`, (message, topic) => {
         try {
           const ping = JSON.parse(message);
-          console.log('receive ping', room_id, role_url);
-          update({ room_id, role_url, state: ping })
+          update({ room_id, player_id, state: { ping } })
         } catch (e) {
           console.error(e, message);
         }
@@ -225,7 +223,8 @@ function Room({ mqtt, script_id, rooms, room, room_id, openQR }) {
   }, [rooms.state]);
 
   useEffect(() => {
-    monitor({ room_id, roles: room.roles })
+    console.log("ROOM IS ", room);
+    monitor({ room_id, ...room })
   }, [])
 
   return (
@@ -243,10 +242,10 @@ function Room({ mqtt, script_id, rooms, room, room_id, openQR }) {
 
       <div className='roles'>
         {
-          room && room.roles ?
-            Object.entries(room.roles).sort((a, b) => a[1].name - b[1].name).map(([role_url, role]) => {
-              //console.log('entries rooom.roles', room, role_url, role);
-              return <Role mqtt={mqtt} room_id={room_id} key={role_url} role_url={role_url} role={role} openQR={openQR}></Role>
+          room && room.players ?
+            Object.entries(room.players).sort((a, b) => a[1].name - b[1].name).map(([player_id, role]) => {
+              //console.log('entries rooom.roles', room, player_id, role);
+              return <Role mqtt={mqtt} room_id={room_id} key={player_id} player_id={player_id} role={role} openQR={openQR}></Role>
 
             }
             ) : null
@@ -257,7 +256,7 @@ function Room({ mqtt, script_id, rooms, room, room_id, openQR }) {
 }
 
 // create active game and add to visualization
-function Role({ room_id, role, role_url, openQR, mqtt }) {
+function Role({ room_id, role, player_id, openQR, mqtt }) {
   let r_url = useRef();
 
   const openLink = useCallback(() => {
@@ -272,21 +271,28 @@ function Role({ room_id, role, role_url, openQR, mqtt }) {
 
   const forcedSwipe = useCallback((e) => {
     console.log('ok?');
-    let shouldSwipe = window.confirm('are you sure u want to force a swipe?');
-    if (!shouldSwipe) return;
+    let confirm = window.confirm('are you sure u want to force a swipe?');
+    if (!confirm) return;
     mqtt.send(`/${room_id}/${role.role_id}/forcedSwipe`, 'true');
   }, [mqtt])
 
   const forcedRefresh = useCallback((e) => {
     console.log('ok?');
-    let shouldRestart = window.confirm('are you sure u want to force a refresh?');
-    if (!shouldRestart) return;
+    let confirm = window.confirm('are you sure u want to force a refresh?');
+    if (!confirm) return;
     mqtt.send(`/${room_id}/${role.role_id}/restart`, 'true');
+  }, [mqtt])
+
+  const autoswipe = useCallback((e) => {
+    console.log('ok?');
+    let confirm = window.confirm('are you sure u want to autoswipe?');
+    if (!confirm) return;
+    mqtt.send(`/${room_id}/${role.role_id}/autoswipe`, JSON.stringify(true));
   }, [mqtt])
 
   useEffect(() => {
     console.log('room_id is ', room_id);
-    r_url.current = `${urls.play}/${room_id}${role_url}`;
+    r_url.current = `${urls.play}/${room_id}${player_id}`;
   }, [])
 
   return <div className='role' style={{ border: `1px solid ${role.status === 'connected' ? 'green' : role.status === 'finished' ? 'blue' : 'red'}` }}>
@@ -312,13 +318,20 @@ function Role({ room_id, role, role_url, openQR, mqtt }) {
       <div className='flex role_buttons'>
         <button onClick={openLink}>open </button>
         <button onClick={copyLink}>copy</button>
-        <button onClick={() => { openQR({ url: r_url.current, game_url: room_id + role_url }) }}>qr</button>
+        <button onClick={() => { openQR({ url: r_url.current, game_url: room_id + player_id }) }}>qr</button>
 
       </div><br></br>
       <div className='flex'>
         <button onClick={forcedSwipe}>swipe</button>
         <button onClick={forcedRefresh}>refresh</button>
+
+      </div><br></br>
+
+      <div className='flex'>
+        <button onClick={autoswipe}>start autoswipe</button>
       </div>
+
+
 
 
     </> : null
