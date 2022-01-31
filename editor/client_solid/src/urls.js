@@ -6,7 +6,7 @@ const urls = {
     : "https://fetch.datingproject.net/test",
   play: isDev ? "http://localhost:3001" : "https://play.datingproject.net",
   monitor: isDev
-    ? "http://localhost:3003"
+    ? "https://monitor.datingproject.net"
     : "https://monitor.datingproject.net",
 };
 

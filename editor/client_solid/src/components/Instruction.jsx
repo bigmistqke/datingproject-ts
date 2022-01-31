@@ -10,6 +10,7 @@ import getColorFromHue from "../helpers/getColorFromHue";
 
 import { useStore } from "../managers/Store";
 import urls from "../urls";
+import { styled } from "solid-styled-components";
 
 const Instruction = (props) => {
   const [state, actions] = useStore();
@@ -67,6 +68,11 @@ const Instruction = (props) => {
     });
   };
 
+  const Poster = styled("img")`
+    height: 150px;
+    object-fit: contain;
+  `;
+
   const getRoleOptions = createMemo(() =>
     Object.entries(state.script.roles)
       .filter(
@@ -77,6 +83,7 @@ const Instruction = (props) => {
 
   return (
     <div
+      id={"instruction_" + props.instruction_id}
       classList={{
         row: true,
         flex: true,
@@ -105,19 +112,31 @@ const Instruction = (props) => {
           { value: "do", label: "do" },
           { value: "say", label: "say" },
           { value: "think", label: "think" },
+          { value: "narrator", label: "narrator" },
           { value: "video", label: "video" },
         ]}
         value={props.type}
         onInput={changeType}
-        className="tiny"
+        style={{
+          flex: "0 0 60px",
+        }}
+        // className="tiny"
       ></Select>
 
-      <div className="timer-container tiny">
+      <div
+        className="timer-container"
+        style={{
+          flex: "0 0 50px",
+        }}
+      >
         <input
           type="number"
           onChange={(e) =>
             actions.setInstruction(props.instruction_id, {
-              timespan: e.target.value,
+              timespan:
+                parseInt(e.target.value) === 0
+                  ? undefined
+                  : parseInt(e.target.value),
             })
           }
           min={0}
@@ -131,8 +150,11 @@ const Instruction = (props) => {
       <div
         classList={{
           "timer-sound": true,
-          tiny: true,
+          // tiny: true,
           on: props.sound,
+        }}
+        style={{
+          flex: "0 0 45px",
         }}
       >
         <div>
@@ -162,7 +184,17 @@ const Instruction = (props) => {
           ></input>
         </Show>
         <Show when={props.text !== ""}>
-          <video className="flexing" src={urls.fetch + props.text}></video>
+          <Poster
+            className="flexing"
+            src={urls.fetch + props.text.split(".")[0] + ".jpg"}
+            onLoad={() => props.updateNodeDimensions()}
+            // onError={createPoster}
+          />
+          {/* <video
+            controls
+            className="flexing"
+            src={urls.fetch + props.text}
+          ></video> */}
         </Show>
       </Show>
       <Show when={props.type !== "video"}>

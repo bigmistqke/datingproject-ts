@@ -61,8 +61,9 @@ function Role(props) {
     }
     // check if target is a node to which to connect to
 
-    if (target.classList.contains(DragBoxClassName)) {
+    console.log("IS SHIFT PRESSED??? ", state.editor.bools.isShiftPressed);
 
+    if (target.classList.contains(DragBoxClassName)) {
       let connecting_node_id = target.id.split("_")[1];
       // if it does not have a role yet in the node, add the role
       if (
@@ -85,7 +86,7 @@ function Role(props) {
         direction: props.direction,
       });
 
-      if (props.isShiftPressed && props.connected_node_id) {
+      if (state.editor.bools.isShiftPressed && props.connected_node_id) {
         let end_node_id = await actions.getEndNodeId({
           role_id: props.role_id,
           node_id: connecting_node_id,
@@ -107,7 +108,7 @@ function Role(props) {
       }
     } else if (
       target.classList.contains("map-container") &&
-      props.isShiftPressed
+      state.editor.bools.isShiftPressed
     ) {
       let node_id = actions.addNode();
       actions.addRoleToNode({
@@ -121,31 +122,36 @@ function Role(props) {
         role_id: props.role_id,
         direction: props.direction,
       });
-      if (props.connected_node_id) {
+      /*  if (props.connected_node_id) {
         actions.addConnection({
           node_id: node_id,
           connecting_node_id: props.connected_node_id,
           role_id: props.role_id,
           direction: props.direction,
         });
-      }
+      } */
     }
 
     actions.controlRole(props.role_id);
   };
 
   const updateRoleOffset = () => {
+    // setTimeout(() => {
     actions.updateRoleOffset({
       node_id: props.node_id,
       role_id: props.role_id,
       direction: props.direction,
       offset: {
-        x: role_dom.offsetLeft, // size of the border around the node
-        y: role_dom.offsetTop, // size of the border around the node
+        x: role_dom.offsetLeft + 1, // size of the border around the node
+        y:
+          props.direction === "out"
+            ? role_dom.offsetTop + 5
+            : role_dom.offsetTop, // size of the border around the node
         width: role_dom.offsetWidth,
         height: role_dom.offsetHeight,
       },
     });
+    // }, 0);
   };
 
   createEffect(() => {
@@ -155,11 +161,14 @@ function Role(props) {
       is_initialized = true;
     }
   });
+
   createEffect(() => {
-    const instructions = props.instructions;
+    const i = props.instructions;
+    const u = props.updateRoleOffset;
     if (!props.isVisible) return;
     updateRoleOffset();
   });
+
   const convertRole = async () => {
     let remaining_roles = { ...props.in_outs };
     delete remaining_roles[props.role_id];
@@ -174,7 +183,7 @@ function Role(props) {
 
     if (Object.keys(remaining_roles).length === 0) return;
 
-    let target_role_id = await actions.openPrompt({
+    let [target_role_id] = await actions.openPrompt({
       type: "options",
       header: (
         <>
@@ -193,8 +202,8 @@ function Role(props) {
 
     if (!!!target_role_id) return;
 
-    actions.convertRole({
-      node_id: props.node_id,
+    actions.convertRoles({
+      node_ids: [props.node_id],
       source_role_id: props.role_id,
       target_role_id,
     });

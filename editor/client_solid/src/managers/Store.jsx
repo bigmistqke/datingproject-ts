@@ -40,6 +40,7 @@ export function Provider(props) {
       instructions: {},
       description: "",
       script_id: null,
+      design_id: null,
     },
     editor: {
       navigation: {

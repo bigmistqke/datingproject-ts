@@ -1,6 +1,6 @@
 import "./Overlay.css";
 
-import { createMemo } from "solid-js";
+import { createMemo, onMount } from "solid-js";
 
 const Overlay = function (props) {
   const closeOverlay = (e) => {

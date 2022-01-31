@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { For, onMount } from "solid-js";
 import { styled } from "solid-styled-components";
 
 import { useStore } from "../managers/Store";
@@ -58,49 +58,56 @@ const NodeRoles = (props) => {
     background: var(--dark-grey);
     pointer-events: none;
   `;
-
   return (
     // <Row style={{background: `var(--dark-grey)`}}>
     <Roles>
-      <Flex>
-        {
-          <For each={Object.entries(props.in_outs)}>
-            {([role_id, role]) => {
-              return (
-                <Role
-                  // role_color={props.all_roles[role.role_id].color}
-                  node_id={props.node_id}
-                  role_id={role_id}
-                  role={role}
-                  connected_node_id={role[prevOrNext(props.direction)]}
-                  //
-                  role_hue={state.script.roles[role_id].hue}
-                  name={state.script.roles[role_id].name}
-                  description={state.script.roles[role_id].description}
-                  // all_roles={props.all_roles}
-                  in_outs={props.in_outs}
-                  node_id={props.node_id}
-                  direction={props.direction}
-                  hasError={checkErrors(role_id)}
-                  instructions={
-                    props.direction === "out" ? props.instructions : null
-                  }
-                  isVisible={props.isVisible}
-                  // isShiftPressed={props.isShiftPressed}
-                ></Role>
-              );
-            }}
-          </For>
-        }
-      </Flex>
-      {Object.keys(props.in_outs).length <
-      Object.keys(state.script.roles).length ? (
-        <AddButon id={`add_${props.node_id}`} onClick={addRoleMaybe}>
-          add role
-        </AddButon>
-      ) : (
-        <span></span>
-      )}
+      <Show when={props.in_outs}>
+        <Flex>
+          {
+            <For
+              each={Object.entries(props.in_outs).sort(
+                ([a], [b]) =>
+                  state.script.roles[a].name > state.script.roles[b].name
+              )}
+            >
+              {([role_id, role]) => {
+                return (
+                  <Role
+                    // role_color={props.all_roles[role.role_id].color}
+                    node_id={props.node_id}
+                    role_id={role_id}
+                    role={role}
+                    connected_node_id={role[prevOrNext(props.direction)]}
+                    //
+                    role_hue={state.script.roles[role_id].hue}
+                    name={state.script.roles[role_id].name}
+                    description={state.script.roles[role_id].description}
+                    // all_roles={props.all_roles}
+                    in_outs={props.in_outs}
+                    node_id={props.node_id}
+                    direction={props.direction}
+                    hasError={checkErrors(role_id)}
+                    instructions={
+                      props.direction === "out" ? props.instructions : null
+                    }
+                    isVisible={props.isVisible}
+                    updateRoleOffset={props.updateRoleOffset}
+                    // isShiftPressed={props.isShiftPressed}
+                  ></Role>
+                );
+              }}
+            </For>
+          }
+        </Flex>
+        {Object.keys(props.in_outs).length <
+        Object.keys(state.script.roles).length ? (
+          <AddButon id={`add_${props.node_id}`} onClick={addRoleMaybe}>
+            add role
+          </AddButon>
+        ) : (
+          <span></span>
+        )}
+      </Show>
     </Roles>
     // </Roles>
   );

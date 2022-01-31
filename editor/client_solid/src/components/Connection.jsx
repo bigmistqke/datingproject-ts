@@ -24,7 +24,7 @@ const Connection = (props) => {
   });
 
   createEffect(() => {
-    if (!props.out_role_offset) return false;
+    if (!props.in_role_offset || !props.out_role_offset) return false;
     setPositions("prev", {
       x:
         props.out_node_position.x +
@@ -39,10 +39,8 @@ const Connection = (props) => {
     });
   }, [props.out_node_position, props.out_role_offset]);
 
-  onMount(() => {});
-
   createEffect(() => {
-    if (!props.in_role_offset) return false;
+    if (!props.in_role_offset || !props.out_role_offset) return false;
 
     setPositions("next", {
       x:

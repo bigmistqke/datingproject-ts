@@ -183,6 +183,7 @@ function Select(props) {
           select: true,
           focus: getFocus(),
         }}
+        style={props.style}
       >
         {getSelectedLabel()}
       </div>

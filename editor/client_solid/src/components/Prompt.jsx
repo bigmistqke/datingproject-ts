@@ -69,7 +69,11 @@ const PromptTypes = {
                 color: option.color ? option.color : "var(--light-grey)",
               }}
             >
-              {option.value ? option.value : option}
+              {option.label
+                ? option.label
+                : option.value
+                ? option.value
+                : option}
             </Bubble>
           </div>
         );
@@ -81,8 +85,7 @@ function Prompt(props) {
   let [getPosition, setPosition] = createSignal();
 
   const closePrompt = () => {
-    props.resolve();
-    props.closePrompt();
+    props.resolve(false);
   };
 
   onMount(() => {

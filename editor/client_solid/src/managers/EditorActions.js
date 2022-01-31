@@ -91,14 +91,14 @@ export default function EditorActions({ state, setState, actions }) {
   this.closeGui = (type) => setState("editor", "gui", type, false);
   this.toggleGui = (type) => setState("editor", "gui", type, (bool) => !bool);
 
-  this.openPrompt = async function ({ type, header, data }) {
+  this.openPrompt = async function ({ type, header, data, position }) {
     return new Promise((_resolve) => {
       const resolve = (data) => {
         setState("editor", "gui", "prompt", false);
         _resolve(data);
       };
 
-      setState("editor", "gui", "prompt", { type, header, data, resolve });
+      setState("editor", "gui", "prompt", { type, header, data, position, resolve });
     });
   };
   this.closePrompt = () => setState("editor", "gui", "prompt", false);
@@ -123,7 +123,7 @@ export default function EditorActions({ state, setState, actions }) {
     }
   }
 
-  const zoom_range = { min: 0.1, max: 1 }
+  const zoom_range = { min: 0.0125, max: 1 }
   const limitZoom = (zoom) => Math.min(zoom_range.max, Math.max(zoom_range.min, zoom))
 
   const updateZoomState = (zoom, delta) => {
@@ -153,24 +153,26 @@ export default function EditorActions({ state, setState, actions }) {
     setState("editor", "navigation", "zoom", (zoom) => updateZoomState(zoom, zoom * -0.3));
   };
 
-  this.addToSelection = (node_id) => {
+  this.addToSelection = (node_ids) => {
+    if (!Array.isArray(node_ids))
+      node_ids = [node_ids]
 
-    if (state.editor.selection.indexOf(node_id) !== -1) return;
     setState(
       "editor",
       "selection",
-      (selection) => [...selection, node_id]
-    );
-
-
+      (selection) => [...selection, ...node_ids.filter(node_id => selection.indexOf(node_id) === -1)]
+    )
   };
 
-  this.removeFromSelection = (node_id) => {
+  this.removeFromSelection = (node_ids) => {
+    if (!Array.isArray(node_ids))
+      node_ids = [node_ids]
+
     setState(
       "editor",
       "selection",
-      (selection) => selection.filter(id => id !== node_id)
-    );
+      (selection) => selection.filter(node_id => node_ids.indexOf(node_id) === -1)
+    )
   };
 
   this.emptySelection = () => setState("editor", "selection", []);

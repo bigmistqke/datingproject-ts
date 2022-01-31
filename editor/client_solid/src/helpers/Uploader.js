@@ -27,6 +27,7 @@ export default function Uploader() {
       resolve({ success: false })
     }
     xhr.upload.onprogress = (e) => {
+      console.log(e.loaded / e.total * 100);
       this.progress = { loaded: e.loaded, total: e.total, percentage: e.loaded / e.total * 100 }
     };
     xhr.open("POST", url, true);

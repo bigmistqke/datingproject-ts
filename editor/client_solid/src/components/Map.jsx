@@ -11,9 +11,6 @@ function Map(props) {
 
   let map;
 
-
-
-
   const select = ({ e, coords }) => {
     let selectionBox = {
       width: (e.clientX - coords.x) / actions.getZoom() + "px",
@@ -112,7 +109,7 @@ function Map(props) {
       <div
         className={`map ${
           state.editor.navigation.zoomedOut ? "zoomedOut" : ""
-        } ${state.editor.bools.isConnecting ? "connecting" : ""}`}
+        }`}
         ref={map}
         style={{
           transform: `translateX(${state.editor.navigation.origin.x}px) translateY(${state.editor.navigation.origin.y}px)`,

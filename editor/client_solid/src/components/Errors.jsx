@@ -18,7 +18,7 @@ function Error(props) {
 
   const navigateToNode = () => {
     let node_id = props.node_ids[getCounter() % props.node_ids.length];
-    props.storeManager.editor.navigateToNodeId(node_id);
+    actions.navigateToNodeId(node_id);
     setCounter(getCounter() + 1);
   };
 

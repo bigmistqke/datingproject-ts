@@ -9,13 +9,12 @@ import urls from "../urls";
 
 import prevOrNext from "../helpers/prevOrNext";
 import reverseDirection from "../helpers/reverseDirection";
+import { unwrap } from "solid-js/store";
+import clone from "../helpers/clone";
+import { batch } from "solid-js";
 
-export default function ScriptActions({
-  state,
-  setState,
-  actions
-}) {
-  // default 
+export default function ScriptActions({ state, setState, actions }) {
+  // default
 
   const getDefaultInstruction = (role_id) => {
     return {
@@ -30,7 +29,7 @@ export default function ScriptActions({
       type: null,
       in_outs: {},
       position: {},
-      parent_id: state.editor.parent_ids[state.editor.parent_ids.length - 1]
+      parent_id: state.editor.parent_ids[state.editor.parent_ids.length - 1],
     };
   };
 
@@ -38,23 +37,40 @@ export default function ScriptActions({
     return {
       description: "",
       in_outs: {},
-      parent_id: state.editor.parent_ids[state.editor.parent_ids.length - 1]
+      parent_id: state.editor.parent_ids[state.editor.parent_ids.length - 1],
     };
   };
-  // let scriptManager = this;
   this.setInstructions = (instructions) =>
     setState("script", "instructions", instructions);
   this.setRoles = (roles) => setState("script", "roles", roles);
   this.setGroups = (groups) => setState("script", "groups", groups);
   this.setNodes = (nodes) => setState("script", "nodes", nodes);
   this.setScriptId = (script_id) => setState("script", "script_id", script_id);
-  this.setParentIds = (parent_ids) => setState("editor", "parent_ids", parent_ids);
+  this.setDesignId = (design_id) => setState("script", "design_id", design_id);
+
+  this.setParentIds = (parent_ids) =>
+    setState("editor", "parent_ids", parent_ids);
 
   //
 
+  this.iterateNodes = (nodes) => {
+
+    const start = new Date().getTime();
+    batch(() => {
+      for (let i = 0; i < 50; i++) {
+
+        let [node_id, node] = nodes.shift();
+        setState("script", "nodes", node_id, node);
+        if (nodes.length === 0) {
+          break
+        }
+      }
+    })
+    if (nodes.length === 0) return
+    setTimeout(() => this.iterateNodes(nodes), 0);
+  }
 
   //// INSTRUCTIONS
-
 
   this.addInstruction = (role_id) => {
     let instruction = getDefaultInstruction(role_id);
@@ -64,12 +80,8 @@ export default function ScriptActions({
   };
 
   this.removeInstruction = ({ instruction_id, node_id }) => {
-    setState("script",
-      "nodes",
-      node_id,
-      "instructions",
-      (instructions) =>
-        instructions.filter(i => i !== instruction_id)
+    setState("script", "nodes", node_id, "instructions", (instructions) =>
+      instructions.filter((i) => i !== instruction_id)
     );
 
     let instructions = { ...state.script.instructions };
@@ -95,7 +107,6 @@ export default function ScriptActions({
     }; */
 
   // INTERNAL FUNCTIONS
-
 
   const offsetConnections = ({ node_ids, offset }) => {
     let _connections = connections.map((_connection) => {
@@ -131,42 +142,69 @@ export default function ScriptActions({
     setConnections(_connections);
   };
 
+  this.setNodeDimensions = ({ node_id, width, height }) => {
+    setState("script", "nodes", node_id, "dimensions", { width, height })
+  }
+
+
+  let observer = new IntersectionObserver((entries, observer) => {
+    batch(() => {
+      entries.forEach(entry => {
+        let node_id = entry.target.id.split("_")[1];
+        setState("script", "nodes", node_id, "visible", entry.isIntersecting)
+      })
+    })
+
+  }, {
+    rootMargin: '50px'
+  });
+
+  this.observe = ({ dom }) => observer.observe(dom)
+  this.unobserve = ({ dom }) => observer.unobserve(dom)
+
+
   const removeNode = (node_id) => {
-    let node = state.script.nodes[node_id];
+    let role_ids;
+    batch(() => {
+      let node = state.script.nodes[node_id];
 
-    if (node.instructions) {
-      // remove all instructions that are a part of node
-      node.instructions.forEach((instruction_id) => {
-        // delete instructions[instruction_id];
-        setState("script", "instructions", instruction_id, undefined);
+      if (node.instructions) {
+        // remove all instructions that are a part of node
+        node.instructions.forEach((instruction_id) => {
+          // delete instructions[instruction_id];
+          setState("script", "instructions", instruction_id, undefined);
+        });
+      }
+
+      let roles = { ...node.in_outs };
+      role_ids = Object.keys(roles);
+
+      // remove reference to node in connected nodes
+      Object.entries(roles).forEach(([role_id, role]) => {
+        if (role.out_node_id != undefined) {
+          setConnection({
+            node_id: role.out_node_id,
+            connecting_node_id: undefined,
+            role_id,
+            direction: "in",
+          });
+        }
+        if (role.in_node_id != undefined) {
+          setConnection({
+            node_id: role.in_node_id,
+            connecting_node_id: undefined,
+            role_id,
+            direction: "out",
+          });
+        }
       });
-    }
+      setState("editor", "selection", (selection) =>
+        selection.filter((id) => id !== node_id)
+      );
 
-
-    let roles = { ...node.in_outs };
-    let role_ids = Object.keys(roles);
-
-    // remove reference to node in connected nodes
-    Object.entries(roles).forEach(([role_id, role]) => {
-      if (role.out_node_id != undefined) {
-        setConnection({
-          node_id: role.out_node_id,
-          connecting_node_id: undefined,
-          role_id,
-          direction: "in",
-        });
-      }
-      if (role.in_node_id != undefined) {
-        setConnection({
-          node_id: role.in_node_id,
-          connecting_node_id: undefined,
-          role_id,
-          direction: "out",
-        });
-      }
+      setState("script", "nodes", node_id, undefined);
     });
 
-    setState("script", "nodes", node_id, undefined);
     return { role_ids };
   };
 
@@ -176,8 +214,9 @@ export default function ScriptActions({
     role_id,
     direction,
   }) => {
-    console.info('set connection!!!')
-    setState("script",
+    console.info("set connection!!!");
+    setState(
+      "script",
       "nodes",
       node_id,
       "in_outs",
@@ -192,30 +231,121 @@ export default function ScriptActions({
   this.addNode = () => {
     let node = getDefaultNode();
     const node_id = uniqid();
-    node.type = 'instruction';
+    node.type = "instruction";
     node.instructions = [];
     node.position = {
       x:
-        (state.editor.navigation.cursor.x - state.editor.navigation.origin.x) / state.editor.navigation.zoom - 450,
-      y: (state.editor.navigation.cursor.y - state.editor.navigation.origin.y) / state.editor.navigation.zoom,
+        (state.editor.navigation.cursor.x - state.editor.navigation.origin.x) /
+        state.editor.navigation.zoom -
+        450,
+      y:
+        (state.editor.navigation.cursor.y - state.editor.navigation.origin.y) /
+        state.editor.navigation.zoom,
     };
     setState("script", "nodes", node_id, node);
     return node_id;
   };
 
-  this.removeSelectedNodes = () => {
-    // console.error("removeSelectedNodes is not yet implemented");
-    let all_affected_role_ids = [];
-    state.editor.selection.forEach((node_id) => {
-      let { role_ids } = removeNode(node_id);
 
-      role_ids.forEach((role_id) => {
-        if (all_affected_role_ids.indexOf(role_id) !== -1) return;
-        all_affected_role_ids = [...all_affected_role_ids, ...role_id];
+
+  this.removeSelectedNodes = () => {
+    let all_role_ids = new Set();
+    batch(() => {
+      state.editor.selection.forEach((node_id) => {
+        let { role_ids } = removeNode(node_id);
+        role_ids.forEach(all_role_ids.add, all_role_ids);
+      });
+    });
+    all_role_ids.forEach((role_id) => this.controlRole(role_id))
+    return { role_ids: all_role_ids };
+  };
+
+  this.duplicateSelectedNodes = () => {
+
+    batch(() => {
+      // console.error("removeSelectedNodes is not yet implemented");
+      // let all_affected_role_ids = [];
+      //
+
+      let node_map = {};
+
+      state.editor.selection.forEach(
+        (node_id) => (node_map[node_id] = uniqid())
+      );
+
+      Object.entries(node_map).forEach(([node_id, new_node_id]) => {
+        const new_node = clone(state.script.nodes[node_id]);
+        new_node.position.x += 600;
+        new_node.instructions = new_node.instructions.map((instruction_id) => {
+          const id = uniqid();
+          setState("script", "instructions", id, {
+            ...state.script.instructions[instruction_id],
+          });
+          return id;
+        });
+        setState("script", "nodes", new_node_id, new_node);
       });
 
+
+      Object.values(node_map).forEach((new_node_id) => {
+        Object.entries(state.script.nodes[new_node_id].in_outs).forEach(
+          ([role_id, in_out]) => {
+            if (in_out.out_node_id) {
+              if (state.editor.selection.indexOf(in_out.out_node_id) === -1) {
+                setState(
+                  "script",
+                  "nodes",
+                  new_node_id,
+                  "in_outs",
+                  role_id,
+                  "out_node_id",
+                  undefined
+                );
+              } else {
+                setState(
+                  "script",
+                  "nodes",
+                  new_node_id,
+                  "in_outs",
+                  role_id,
+                  "out_node_id",
+                  node_map[in_out.out_node_id]
+                );
+              }
+            }
+            if (in_out.in_node_id) {
+              if (state.editor.selection.indexOf(in_out.in_node_id) === -1) {
+                setState(
+                  "script",
+                  "nodes",
+                  new_node_id,
+                  "in_outs",
+                  role_id,
+                  "in_node_id",
+                  undefined
+                );
+              } else {
+                setState(
+                  "script",
+                  "nodes",
+                  new_node_id,
+                  "in_outs",
+                  role_id,
+                  "in_node_id",
+                  node_map[in_out.in_node_id]
+                );
+              }
+            }
+            return [role_id, in_out];
+          }
+        );
+      });
+
+
+      actions.removeFromSelection(Object.keys(node_map));
+      actions.addToSelection(Object.values(node_map));
     });
-    return { role_ids: all_affected_role_ids };
+    controlRoles();
   };
 
   this.addRoleToNode = ({ node_id, role_id }) => {
@@ -260,7 +390,8 @@ export default function ScriptActions({
         });
       }
       // remove all instructions from node with role_id
-      setState("script",
+      setState(
+        "script",
         "nodes",
         node_id,
         "instructions",
@@ -271,7 +402,7 @@ export default function ScriptActions({
       );
 
       // remove role_id from roles
-      setState("script", "nodes", node_id, "roles", role_id, undefined);
+      setState("script", "nodes", node_id, "in_outs", role_id, undefined);
     } else {
       // remove node completely
       removeNode(node_id);
@@ -281,26 +412,88 @@ export default function ScriptActions({
     instruction_ids.forEach((instruction_id) => {
       setState("script", "instructions", instruction_id, undefined);
     });
+
+    setTimeout(() => {
+      this.controlRole(role_id)
+    }, 1000)
+
   };
 
-  this.convertRole = ({ node_id, source_role_id, target_role_id }) => {
-    state.script.nodes[node_id].instructions.forEach((instruction_id) => {
-      if (state.script.instructions[instruction_id].role_id !== source_role_id)
-        return;
-      setState("script", "instructions", instruction_id, "role_id", target_role_id);
-    });
+  this.convertRole = ({ node_ids, source_role_id, target_role_id }) => {
+    const reconnections = [];
 
-    this.removeRoleFromNode({ node_id, role_id: source_role_id });
+    node_ids.forEach(node_id => {
+      const node = state.script.nodes[node_id];
+      if (!node.in_outs[source_role_id]) return
+      if (!node.in_outs[target_role_id])
+        this.addRoleToNode({
+          node_id: node_id,
+          role_id: target_role_id,
+        })
+
+      node.instructions
+        .filter((instruction_id) =>
+          state.script.instructions[instruction_id].role_id === source_role_id
+        ).forEach((instruction_id) => {
+          setState(
+            "script",
+            "instructions",
+            instruction_id,
+            "role_id",
+            target_role_id
+          );
+        });
+
+      const source_in_out = node.in_outs[source_role_id];
+      if (source_in_out.in_node_id) {
+        // check if 
+        if (
+          state.script.nodes[source_in_out.in_node_id].in_outs[target_role_id]
+        ) {
+          reconnections.push({
+            node_id,
+            connecting_node_id: source_in_out.in_node_id,
+            role_id: target_role_id,
+            direction: 'in'
+          })
+        }
+      }
+      if (source_in_out.out_node_id) {
+        if (
+          node_ids.indexOf(source_in_out.out_node_id) !== -1 ||
+          state.script.nodes[source_in_out.out_node_id].in_outs[target_role_id]
+        ) {
+          reconnections.push({
+            node_id,
+            connecting_node_id: source_in_out.out_node_id,
+            role_id: target_role_id,
+            direction: 'out'
+          })
+        }
+      }
+    })
+
+    node_ids.forEach(node_id => {
+      const node = state.script.nodes[node_id];
+      if (!node.in_outs[source_role_id]) return
+      this.removeRoleFromNode({ node_id, role_id: source_role_id })
+    })
+
+
+    reconnections.forEach(reconnection => {
+      this.addConnection(reconnection)
+    })
+
+    this.controlRole(source_role_id);
+    this.controlRole(target_role_id);
+
   };
 
   this.addInstructionId = ({ node_id, instruction_id, index = false }) => {
-
-
-
-
     let instruction_ids = [...state.script.nodes[node_id].instructions];
     if (index) {
-      setState("script",
+      setState(
+        "script",
         "nodes",
         node_id,
         "instructions",
@@ -329,10 +522,10 @@ export default function ScriptActions({
   this.translateSelectedNodes = ({ offset }) => {
     state.editor.selection.forEach((node_id) => {
       setState("script", "nodes", node_id, "position", (position) => {
-        return ({
+        return {
           x: position.x + offset.x / state.editor.navigation.zoom,
           y: position.y + offset.y / state.editor.navigation.zoom,
-        })
+        };
       });
     });
   };
@@ -349,7 +542,9 @@ export default function ScriptActions({
 
     let node_id_initially_connected_to_connecting_node =
       state.script.nodes[connecting_node_id].in_outs[role_id] &&
-      state.script.nodes[connecting_node_id].in_outs[role_id][prevOrNext(opposite_direction)];
+      state.script.nodes[connecting_node_id].in_outs[role_id][
+      prevOrNext(opposite_direction)
+      ];
 
     if (node_id_initially_connected_to_connecting_node) {
       // dereference connecting_node at node initially connected to connecting_node
@@ -399,9 +594,8 @@ export default function ScriptActions({
   };
 
   this.hasRoleId = ({ node_id, role_id }) => {
-
     return role_id in state.script.nodes[node_id].in_outs;
-  }
+  };
 
   ////
 
@@ -495,39 +689,42 @@ export default function ScriptActions({
   this.setDescriptionScript = (description) =>
     setState("script", "description", description);
 
-  this.getEndNodeId = async ({ node_id, role_id }) => getEndNode({ node_id, role_id })
-  this.traverseRole = ({ role_id, node_id }) => new Promise((resolve, reject) => {
-    if (!node_id) {
-      console.error("ERROR: node_id is incorrect");
-      return;
-    }
-    let traversed_node_ids = [];
-    function iterateRole(node_id) {
-      if (traversed_node_ids.indexOf(node_id) != -1) {
-        resolve({
-          success: false,
-          traversed_node_ids,
-          error: {
-            type: 'infinite_loop',
-            text: `found an infinite loop for role ${role_id}.`,
-            node_ids: traversed_node_ids
-          }
-        });
+  this.getEndNodeId = async ({ node_id, role_id }) =>
+    getEndNode({ node_id, role_id });
+  this.traverseRole = ({ role_id, node_id }) =>
+    new Promise((resolve, reject) => {
+      if (!node_id) {
+        console.error("ERROR: node_id is incorrect");
         return;
       }
-      traversed_node_ids.push(node_id);
-      let out_node_id = state.script.nodes[node_id].in_outs[role_id].out_node_id;
-      if (!out_node_id) {
-        resolve({
-          success: true,
-          traversed_node_ids
-        });
-      } else {
-        iterateRole(out_node_id)
+      let traversed_node_ids = [];
+      function iterateRole(node_id) {
+        if (traversed_node_ids.indexOf(node_id) != -1) {
+          resolve({
+            success: false,
+            traversed_node_ids,
+            error: {
+              type: "infinite_loop",
+              text: `found an infinite loop for role ${role_id}.`,
+              node_ids: traversed_node_ids,
+            },
+          });
+          return;
+        }
+        traversed_node_ids.push(node_id);
+        let out_node_id =
+          state.script.nodes[node_id].in_outs[role_id].out_node_id;
+        if (!out_node_id) {
+          resolve({
+            success: true,
+            traversed_node_ids,
+          });
+        } else {
+          iterateRole(out_node_id);
+        }
       }
-    }
-    iterateRole(node_id);
-  })
+      iterateRole(node_id);
+    });
 
   this.controlRole = async (role_id) => {
     // let result = await controlRole(role_id);
@@ -536,31 +733,31 @@ export default function ScriptActions({
     let instruction_ids = [];
     let errors = [];
     // get nodes per role
-    let nodes = Object.entries(state.script.nodes).filter(
-      ([node_id, node]) => {
-        return Object.keys(node.in_outs).indexOf(role_id) !== -1
-      });
+    let nodes = Object.entries(state.script.nodes).filter(([node_id, node]) => {
+      return Object.keys(node.in_outs).indexOf(role_id) !== -1;
+    });
     let node_ids = nodes.map(([node_id, node]) => node_id);
 
-
     // test #1 check for multiple open start/end-nodes for role
-    let start_node_ids = nodes.filter(([node_id, node]) =>
-      !node.in_outs[role_id].in_node_id
-    ).map(([node_id, node]) => node_id);
+    let start_node_ids = nodes
+      .filter(([node_id, node]) => !node.in_outs[role_id].in_node_id)
+      .map(([node_id, node]) => node_id);
 
-    let end_node_ids = nodes.filter(([node_id, node]) => {
-      return !("out_node_id" in node.in_outs[role_id])
-    }).map(([node_id, node]) => node_id);
+    let end_node_ids = nodes
+      .filter(([node_id, node]) => {
+        return !("out_node_id" in node.in_outs[role_id]);
+      })
+      .map(([node_id, node]) => node_id);
 
     let start_end_node_ids = [...start_node_ids, ...end_node_ids];
     [start_end_node_ids] = dedupArray(start_end_node_ids);
 
     if (start_node_ids.length > 1 || end_node_ids.length > 1) {
       errors.push({
-        type: 'multiple_open_start_ports',
-        text: `more then 2 possible starts for role ${role_id}`,
-        node_ids: start_end_node_ids
-      })
+        type: "multiple_open_start_ports",
+        text: `more then 2 possible starts for role ${state.script.roles[role_id].name}`,
+        node_ids: start_end_node_ids,
+      });
     }
 
     // test #2 look for infinite-loops by recursively iterating
@@ -568,88 +765,105 @@ export default function ScriptActions({
 
     let promises = [];
 
-    let results = await Promise.all(start_node_ids.map((node_id) => this.traverseRole({ role_id, node_id })));
+    let results = await Promise.all(
+      start_node_ids.map((node_id) => this.traverseRole({ role_id, node_id }))
+    );
 
-    results.forEach(result => { if (!result.success) errors.push(result.error) })
+    results.forEach((result) => {
+      if (!result.success) errors.push(result.error);
+    });
 
-    let total_traversed_node_ids = [].concat.apply([], results.map(result => result.traversed_node_ids));
+    let total_traversed_node_ids = [].concat.apply(
+      [],
+      results.map((result) => result.traversed_node_ids)
+    );
 
     if (total_traversed_node_ids.length != node_ids.length) {
       // this can indicate
       //      a. that there are infinite_loops which are not accessible from start/end-nodes
       //      b. that there are node_ids which are connected to multiple start/end-nodes
 
-      let [deduped_node_ids, duplicate_node_ids] = dedupArray(total_traversed_node_ids);
+      let [deduped_node_ids, duplicate_node_ids] = dedupArray(
+        total_traversed_node_ids
+      );
 
-      if (deduped_node_ids.length !== total_traversed_node_ids.length) {
-        console.error("node_ids were accessed via multiple start/end-nodes, most likely indicating a bug in the editor");
+      if (deduped_node_ids.length > total_traversed_node_ids.length) {
+        console.error(
+          "node_ids were accessed via multiple start/end-nodes, most likely indicating a bug in the editor"
+        );
         errors.push({
-          type: 'multiple_traversed_node_ids',
-          text: `nodes were accessed multiple times for role ${role_id}, most likely indicating a bug in the editor`,
-          node_ids: duplicate_node_ids
-        })
+          type: "multiple_traversed_node_ids",
+          text: `nodes were accessed multiple times for role ${state.script.roles[role_id].name
+            }: ${duplicate_node_ids.join()} most likely indicating a bug in the editor`,
+          node_ids: duplicate_node_ids,
+        });
       }
 
       total_traversed_node_ids = deduped_node_ids;
 
-      let unaccessible_node_ids = node_ids.filter(node_id =>
-        total_traversed_node_ids.indexOf(node_id) === -1
-      )
+      let unaccessible_node_ids = node_ids.filter(
+        (node_id) => total_traversed_node_ids.indexOf(node_id) === -1
+      );
 
       if (unaccessible_node_ids.length > 0) {
-        console.error("unaccessible_node_ids is not [] :", unaccessible_node_ids);
-        const traverseAllUnaccessibleNodes = () => new Promise((resolve) => {
-          let results = [];
-          let traverseRoleFromUnaccessibleNodeId = async (node_id) => {
-            let result = await this.traverseRole({ role_id, node_id })
-            results.push(result);
-            /* if (!result.succes) {
+        console.error(
+          "unaccessible_node_ids is not [] :",
+          unaccessible_node_ids
+        );
+        const traverseAllUnaccessibleNodes = () =>
+          new Promise((resolve) => {
+            let results = [];
+            let traverseRoleFromUnaccessibleNodeId = async (node_id) => {
+              let result = await this.traverseRole({ role_id, node_id });
+              results.push(result);
+              /* if (!result.succes) {
                 errors.push(result.error);
             } */
-            unaccessible_node_ids = unaccessible_node_ids.filter(node_id =>
-              result.traversed_node_ids.indexOf(node_id) === -1
-            );
-            if (unaccessible_node_ids.length === 0) {
-              resolve(results);
-            } else {
-              traverseRoleFromUnaccessibleNodeId(unaccessible_node_ids[0])
-            }
-          }
-          traverseRoleFromUnaccessibleNodeId(unaccessible_node_ids[0])
-        })
+              unaccessible_node_ids = unaccessible_node_ids.filter(
+                (node_id) => result.traversed_node_ids.indexOf(node_id) === -1
+              );
+              if (unaccessible_node_ids.length === 0) {
+                resolve(results);
+              } else {
+                traverseRoleFromUnaccessibleNodeId(unaccessible_node_ids[0]);
+              }
+            };
+            traverseRoleFromUnaccessibleNodeId(unaccessible_node_ids[0]);
+          });
 
         let results = await traverseAllUnaccessibleNodes();
-        results.forEach(result => {
+        results.forEach((result) => {
           if (!result.success) {
-            errors.push(result.error)
+            errors.push(result.error);
+          } else {
+            console.error(
+              "ERROR: unaccessible nodes should not be able to traverse successfully",
+              role_id,
+              result
+            );
           }
-          else {
-            console.error("ERROR: unaccessible nodes should not be able to traverse successfully", role_id, result);
-          }
-        })
+        });
       }
     }
 
-    console.info("control of role took: ", performance.now() - start, "ms");
-    console.info("total errors of role", role_id, "after control ", errors);
+    // console.info("control of role took: ", performance.now() - start, "ms");
+    // console.info("total errors of role", role_id, "after control ", errors);
 
     actions.setErrorsRoleId({
       role_id,
       errors,
-    })
+    });
 
-    return errors.length == 0 ?
-      {
+    return errors.length == 0
+      ? {
         success: true,
-        node_ids: total_traversed_node_ids
-      } :
-      {
-        success: false,
-        errors
+        node_ids: total_traversed_node_ids,
       }
-
+      : {
+        success: false,
+        errors,
+      };
   };
-
 
   const dedupArray = (array) => {
     let seen = {};
@@ -659,12 +873,12 @@ export default function ScriptActions({
         duplicates[item] = true;
         return false;
       }
-      seen[item] = true
+      seen[item] = true;
       return true;
     });
 
-    return [array, Object.keys(duplicates)]
-  }
+    return [array, Object.keys(duplicates)];
+  };
 
   // METHODS
 
@@ -672,139 +886,321 @@ export default function ScriptActions({
       
     } */
   const controlRoles = async () => {
-    let roles = {}
+    let roles = {};
     for (let role_id of Object.keys(state.script["roles"])) {
       roles[role_id] = await this.controlRole(role_id);
     }
     return roles;
-  }
+  };
 
   const getEndNode = async ({ node_id, role_id }) => {
     let { traversed_node_ids } = await this.traverseRole({ node_id, role_id });
-    return traversed_node_ids[traversed_node_ids.length - 1]
-  }
+    return traversed_node_ids[traversed_node_ids.length - 1];
+  };
 
   const getNextRoleIdsOfLast = (node) =>
-    Object.values(node.in_outs).filter(role => role.out_node_id).map(role => {
-      const connected_node = state.script.nodes[role.out_node_id];
-      const next_instruction_id = connected_node.instructions[0];
-      return state.script.instructions[next_instruction_id].role_id;
-    }).filter((value, index, self) => self.indexOf(value) === index)
+    Object.values(node.in_outs)
+      .filter((role) => role.out_node_id)
+      .map((role) => {
+        const connected_node = state.script.nodes[role.out_node_id];
+        const next_instruction_id = connected_node.instructions[0];
+        if (!next_instruction_id) {
+          return undefined
+        }
+        return state.script.instructions[next_instruction_id].role_id;
+      })
+      .filter((value, index, self) => self.indexOf(value) === index);
 
   const getPrevInstructionIdsOfFirst = (node) =>
-    Object.values(node.in_outs).filter(role => role.in_node_id).map(role => {
-      const connected_node = state.script.nodes[role.in_node_id];
-      return connected_node.instructions[connected_node.instructions.length - 1];
-    }).filter((value, index, self) => self.indexOf(value) === index)
+    Object.values(node.in_outs)
+      .filter((role) => role.in_node_id)
+      .map((role) => {
+        const connected_node = state.script.nodes[role.in_node_id];
+        return connected_node.instructions[
+          connected_node.instructions.length - 1
+        ];
+      })
+      .filter((value, index, self) => self.indexOf(value) === index);
 
-  const getNextRoleIds = ({ node, index }) =>
-    [state.script.instructions[node.instructions[index + 1]].role_id]
+  const getNextRoleIds = ({ node, index }) => [
+    state.script.instructions[node.instructions[index + 1]].role_id,
+  ];
 
-  const getPrevInstructionIds = ({ node, index }) =>
-    [node.instructions[index - 1]]
+  const getPrevInstructionIds = ({ node, index }) => [
+    node.instructions[index - 1],
+  ];
+
+  const parseText2 = (text) => {
+    let parsed_text = [];
+
+
+    let char_map = [
+      { char: "(", type: 'note', action: 'open', next_index: undefined },
+      { char: ")", type: 'note', action: 'close', next_index: undefined },
+      { char: "[", type: 'choice', action: 'open', next_index: undefined },
+      { char: "]", type: 'choice', action: 'open', next_index: undefined }
+    ]
+
+    /*     let map = {
+          "(": { type: 'note', action: 'open', next_index: undefined },
+          ")": { type: 'note', action: 'close', next_index: undefined },
+          "[": { type: 'choice', action: 'open', next_index: undefined },
+          "]": { type: 'choice', action: 'close', next_index: undefined },
+        } */
+
+    if (parsed_text.length !== 0) {
+      text = parsed_text.slice(-1)
+    }
+    char_map = map.map((data) => ({
+      ...data,
+      next_index: text.indexOf(char)
+    }))
+
+  }
+
+  const parseText = (text) => {
+    try {
+      let parsed_text = [];
+      text.split("").forEach(char => {
+        let previous_node = parsed_text[parsed_text.length - 1];
+        if (parsed_text.length === 0) {
+          let type = 'normal'
+          if (char === "[") {
+            type = 'choice'
+          } else if (char === "(") {
+            type = 'note'
+          } else {
+            type = 'normal'
+          }
+          if (type === 'normal') {
+            parsed_text.push({ type, text: type === 'normal' ? char : '' })
+          } else {
+            parsed_text.push({ type, text: type === 'normal' ? char : '', open: true })
+          }
+        } else {
+          let type = 'normal'
+          if (char === "[") {
+            if (!previous_node.open)
+              throw 'no nesting allowed'
+            parsed_text.push({ type: 'choice', text: '', open: true })
+            type = 'choice';
+          } else if (char === "(") {
+            if (!previous_node.open)
+              throw 'no nesting allowed'
+            parsed_text.push({ type: 'note', text: '', open: true })
+          } else if (char === ")") {
+            if (previous_node.type !== 'note')
+              throw `the textnode before ) is not a note but a ${previous_node.type}`
+            if (!previous_node.open)
+              throw 'the textnode before ) has already been closed by a )'
+            previous_node.open = false
+          } else if (char === "]") {
+            if (previous_node.type !== 'choice')
+              throw `the textnode before ] is not a choice but a ${previous_node.type}`
+            if (!previous_node.open)
+              throw 'no nesting allowed'
+            previous_node.open = false
+          } else {
+            if (previous_node.open)
+              previous_node.text += char
+            else
+              parsed_text.push({ type: 'normal', text: char })
+          }
+        }
+
+
+      })
+
+      // let formatted_text = [{ type: "normal", content: text }];
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   const formatText = (text) => {
-    console.log('formatText');
-    let formatted_text = [{ type: 'normal', content: text }];
+    let formatted_text = [{ type: "normal", content: text }];
     // regex
     const regex_for_brackets = /[\["](.*?)[\]"][.!?\\-]?/g;
     let matches = String(text).match(regex_for_brackets);
-    if (!matches) return formatted_text
+    if (!matches) return formatted_text;
 
     for (let i = matches.length - 1; i >= 0; i--) {
       let split = formatted_text.shift().content.split(`${matches[i]}`);
 
-      let multi_choice = matches[i].replace('[', '').replace(']', '');
-      let choices = multi_choice.split('/');
+      let multi_choice = matches[i].replace("[", "").replace("]", "");
+      let choices = multi_choice.split("/");
 
       formatted_text = [
-        { type: 'normal', content: split[0] },
-        { type: 'choice', content: choices },
-        { type: 'normal', content: split[1] },
+        { type: "normal", content: split[0] },
+        { type: "choice", content: choices },
+        { type: "normal", content: split[1] },
         ...formatted_text,
       ];
     }
     return formatted_text;
-  }
+  };
 
   const processInstructions = () => {
     try {
-      return Object.fromEntries(Object.entries(state.script.nodes).map(
-        ([node_id, node]) =>
-          node.instructions.map((instruction_id, index) => {
-            const instruction = { ...state.script.instructions[instruction_id] };
-            if (!instruction)
-              throw `could not find instruction_id ${instruction_id} in state.script.instructions`
-            if (instruction.type !== 'video')
-              instruction.text = formatText(instruction.text);
-            return [
-              instruction_id,
-              {
-                ...instruction,
-                prev_instruction_ids: index === 0 ?
-                  getPrevInstructionIdsOfFirst(node) :
-                  getPrevInstructionIds({ node, index }),
-                next_role_ids: index === node.instructions.length - 1 ?
-                  getNextRoleIdsOfLast(node) :
-                  getNextRoleIds({ node, index }),
+      return Object.fromEntries(
+        Object.entries(state.script.nodes)
+          .map(([node_id, node]) =>
+            node.instructions.filter((instruction_id) => {
+              if (state.script.instructions[instruction_id]) {
+                return true
+              } else {
+                console.error('instruction_id', instruction_id, 'is not present in state.script.instructions', Object.keys(state.script.instructions))
+                return false
               }
-            ]
-          })).reduce((a, b) => {
-            console.log("a,b", a, b, a.concat(b));
-            return a.concat(b)
-          }))
+            }
+            ).map((instruction_id, index) => {
+              if (!state.script.instructions[instruction_id]) {
+                throw ["instruction is undefined", instruction_id, state.script.instructions]
+              }
+              const instruction = {
+                ...state.script.instructions[instruction_id],
+              };
+              if (!instruction)
+                throw `could not find instruction_id ${instruction_id} in state.script.instructions`;
+              if (instruction.type !== "video")
+                instruction.text = formatText(instruction.text);
+
+              instruction.timespan = parseInt(instruction.timespan);
+
+              if (instruction.timespan === 0) {
+                instruction.timespan = undefined;
+              }
+              return [
+                instruction_id,
+                {
+                  ...instruction,
+                  prev_instruction_ids:
+                    index === 0
+                      ? getPrevInstructionIdsOfFirst(node)
+                      : getPrevInstructionIds({ node, index }),
+                  next_role_ids:
+                    index === node.instructions.length - 1
+                      ? getNextRoleIdsOfLast(node)
+                      : getNextRoleIds({ node, index }),
+                },
+              ];
+            })
+          )
+          .reduce((a, b) => a.concat(b), [])
+      );
     } catch (err) {
-      console.error(`processInstructions : ${err}`)
+      console.error(`processInstructions : ${err}`);
       return false;
     }
+  };
 
-  }
-
+  const arraysMatch = (arr1, arr2) => {
+    if (arr1.length !== arr2.length) return false;
+    for (var i = 0; i < arr1.length; i++) {
+      if (arr1[i] !== arr2[i]) return false;
+    }
+    return true;
+  };
 
 
   this.processScript = async () => {
     try {
       let processed_roles = await controlRoles();
-      let errored_roles = Object.entries(processed_roles).filter(([role_id, processed_role]) => !processed_role.success);
+
+      // CHECK: MAKE SURE ALL ROLES ARE PRESENT
+      console.log(Object.keys(state.script.roles), Object.keys(processed_roles))
+      if (!arraysMatch(Object.keys(state.script.roles), Object.keys(processed_roles)))
+        throw [
+          'error in controlRoles(): processed_roles does not match with state.script.roles',
+          Object.keys(state.script.roles),
+          Object.keys(processed_roles)
+        ]
+
+      let errored_roles = Object.entries(processed_roles).filter(
+        ([role_id, processed_role]) => !processed_role.success
+      )
+
       if (errored_roles.length > 0)
-        throw `controlRoles did not succeed with role_ids:  ${errored_roles.map(([role_id]) => role_id).join()}`;
+        throw [`controlRoles had errors:`, errored_roles];
 
       let instructions = processInstructions();
-      if (!instructions)
-        throw `processInstructions failed`
 
-      return Object.fromEntries(Object.entries(state.script["roles"])
-        .map(([role_id, role]) => ([
+      if (!instructions) throw `processInstructions failed`;
+
+      let instructions_per_role = Object.fromEntries(
+        Object.entries(state.script["roles"]).map(([role_id, role]) => [
           role_id,
           {
             name: role.name,
-            instructions: processed_roles[role_id].node_ids.map(node_id =>
-              state.script.nodes[node_id].instructions.filter(instruction_id =>
-                instructions[instruction_id].role_id === role_id).map(instruction_id => {
-                  const instruction = { ...instructions[instruction_id], instruction_id };
-                  delete instruction.role_id;
-                  return instruction;
-                })
-            ).reduce((a, b) => a.concat(b))
+            instructions: processed_roles[role_id].node_ids
+              .map((node_id) =>
+                state.script.nodes[node_id].instructions
+                  .filter(
+                    (instruction_id) =>
+                      instructions[instruction_id].role_id === role_id
+                  )
+                  .map((instruction_id) => {
+                    const instruction = {
+                      ...instructions[instruction_id],
+                      instruction_id,
+                    };
+                    delete instruction.role_id;
+                    return instruction;
+                  })
+              )
+              .reduce((a, b) => a.concat(b), []),
+          },
+        ])
+      );
+
+      console.log(Object.keys(instructions_per_role))
+
+      // check if instructions_per_role shows any artefacts:
+      // are all the instructions really of the same role???
+      // there was possibly a bug in which this 
+
+      Object.entries(instructions_per_role).forEach(([role_id, role]) => {
+        role.instructions.forEach(instruction => {
+          if (state.script.instructions[instruction.instruction_id].role_id !== role_id) {
+            throw [
+              `error while filtering instructions_per_role with role_id ${role_id} and instruction_id ${instruction.instruction_id}`,
+              instructions_per_role
+            ]
           }
-        ]))
-      )
+        })
+      })
+
+      return instructions_per_role
     } catch (err) {
       console.error(err);
       return false;
     }
+  };
 
+  this.testProcessScript = () => {
+    let i = 0;
+    const MAX = 1000
+    const iterate = async () => {
+      let res = await this.processScript();
+      if (!res) return
+      i++;
+      console.log('test ', i);
+      if (i < MAX)
+        setTimeout(iterate, 50)
+    }
+    iterate();
   }
 
-  this.processVideo = (file, instruction_id) => new Promise(async (resolve) => {
-    const uploader = new Uploader();
-    setState("editor", "uploaders", (uploaders) => [...uploaders, uploader]);
-    let result = await uploader.process(`${urls.fetch}/api/uploadVideo/${state.script.script_id}/mp4`,
-      { file, instruction_id });
-    resolve(result);
-  })
-
-
+  this.processVideo = (file, instruction_id) =>
+    new Promise(async (resolve) => {
+      const uploader = new Uploader();
+      setState("editor", "uploaders", (uploaders) => [...uploaders, uploader]);
+      let result = await uploader.process(
+        `${urls.fetch}/api/uploadVideo/${state.script.script_id}/mp4`,
+        { file, instruction_id }
+      );
+      resolve(result);
+    });
 
   this.groupSelectedNodes = () => {
     const selection = [...state.editor.selection];
@@ -818,21 +1214,20 @@ export default function ScriptActions({
     node.parent_id = group_id;
     node.position = {
       x: state.editor.navigation.cursor.x - 450,
-      y: state.editor.navigation.cursor.y
+      y: state.editor.navigation.cursor.y,
     };
 
-    selection.forEach(node_id => {
+    selection.forEach((node_id) => {
       Object.keys(state.script.nodes[node_id].in_outs).forEach((role_id) => {
         group.in_outs[role_id] = {
           in_node_id: null,
-          out_node_id: null
-        }
+          out_node_id: null,
+        };
         node.in_outs[role_id] = {
           in_node_id: null,
-          out_node_id: null
-        }
-      }
-      )
+          out_node_id: null,
+        };
+      });
     });
 
     // Object.keys(group.in_outs).forEach(role_id => )
@@ -841,8 +1236,7 @@ export default function ScriptActions({
     setState("script", "nodes", uniqid(), node);
 
     selection.forEach((node_id) => {
-      setState("script", "nodes", node_id, "parent_id", group_id)
-    })
-  }
-};
-
+      setState("script", "nodes", node_id, "parent_id", group_id);
+    });
+  };
+}

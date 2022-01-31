@@ -1,4 +1,4 @@
-import { onMount, For, Show, createEffect } from "solid-js";
+import { onMount, For, Show, createEffect, batch } from "solid-js";
 import { useParams } from "solid-app-router";
 
 import getData from "../helpers/getData";
@@ -92,23 +92,40 @@ function Editor(props) {
 
   const saveScript = async () => {
     try {
-      let production = await actions.processScript();
-
-      if (!production) {
+      let processed_roles = await actions.processScript();
+      // console.log(state.script.nodes);
+      if (!processed_roles) {
         let result = await actions.openPrompt({
           type: "confirm",
           header: "the script is not playable, are you sure you want to save?",
         });
         if (!result) return;
       }
+
+      // remove node.visible
+
+      console.log(processed_roles);
+
+      let processed_nodes = Object.fromEntries(
+        Object.entries(state.script.nodes).map(([node_id, node]) => {
+          node = { ...node };
+          delete node.visible;
+          return [node_id, node];
+        })
+      );
+
       await postData(`${urls.fetch}/api/script/save/${script_id}`, {
         development: {
-          nodes: state.script.nodes,
+          design_id: state.script.design_id,
+          nodes: processed_nodes,
           instructions: state.script.instructions,
           roles: state.script.roles,
           groups: state.script.groups,
         },
-        production,
+        production: {
+          design_id: state.script.design_id,
+          roles: processed_roles,
+        },
       });
       // }
     } catch (err) {
@@ -119,11 +136,17 @@ function Editor(props) {
   const createGame = async () => {
     try {
       let result = await actions.processScript();
-      console.log(result);
       if (!result) throw "processScript failed";
+      console.log("CREATE GAME", {
+        roles: result,
+        design_id: state.script.design_id,
+      });
       const { error } = await postData(
         `${urls.fetch}/api/script/test/${script_id}`,
-        result
+        {
+          roles: result,
+          design_id: state.script.design_id,
+        }
       );
       if (error) throw error;
     } catch (err) {
@@ -184,9 +207,10 @@ function Editor(props) {
 
   const reformatNodes = (_nodes) => {
     let nodes = {};
+    if (!Array.isArray(_nodes)) return _nodes;
     _nodes.forEach((node) => {
-      node = renameKeyOfObject(node, "connections", "roles");
-      node.in_outs = node.in_outs.map((role) => {
+      // node = renameKeyOfObject(node, "connections", "roles");
+      /* node.in_outs = node.in_outs.map((role) => {
         if (role.next_block_id) {
           role.out_node_id = role.next_block_id;
           delete role.next_block_id;
@@ -196,7 +220,7 @@ function Editor(props) {
           delete role.prev_block_id;
         }
         return role;
-      });
+      }); */
 
       if (Array.isArray(node.in_outs)) {
         node.in_outs = arrayOfObjectsToObject(node.in_outs, "role_id");
@@ -216,6 +240,7 @@ function Editor(props) {
     ); */
 
   const fetchScript = () => {
+    let timestamp = new Date().getTime();
     getData(`${urls.fetch}/api/script/get/${script_id}/development`)
       .then((res) => res.json())
       .then((res) => {
@@ -223,15 +248,30 @@ function Editor(props) {
           return Promise.reject("error fetching data ", res);
         }
 
-        /* actions.setRoles(reformatRoles(res.roles));
-      actions.setInstructions(res.instructions);
-      actions.setNodes(reformatNodes(res.nodes)); */
+        batch(() => {
+          console.log("data fetched", res, new Date().getTime() - timestamp);
+          timestamp = new Date().getTime();
 
-        actions.setRoles(res.roles ? res.roles : {});
-        actions.setInstructions(res.instructions ? res.instructions : {});
-        actions.setGroups(res.groups ? res.groups : {});
-        actions.setNodes(res.nodes);
-        // actions.setNodes(Object.fromEntries(Object.entries(res.nodes).map(([node_id, node])=> [node_id, {...node, type: "instruction"}])));
+          actions.setRoles(res.roles ? res.roles : {});
+          console.log("setRoles", new Date().getTime() - timestamp);
+          timestamp = new Date().getTime();
+
+          actions.setInstructions(res.instructions ? res.instructions : {});
+          console.log("setInstructions", new Date().getTime() - timestamp);
+          timestamp = new Date().getTime();
+
+          actions.setGroups(res.groups ? res.groups : {});
+          console.log("setGroups", new Date().getTime() - timestamp);
+          timestamp = new Date().getTime();
+
+          // actions.iterateNodes(Object.entries(res.nodes));
+          console.log("nodes", res.nodes);
+          actions.setNodes(res.nodes);
+          console.log("SETDESIGNID", res.design_id);
+          actions.setDesignId(res.design_id ? res.design_id : "oldie_3");
+          console.log("setNodes", new Date().getTime() - timestamp);
+        });
+        console.log("batch state", new Date().getTime() - timestamp);
       })
       .catch((err) => {
         console.error(err);
@@ -278,7 +318,7 @@ function Editor(props) {
   `;
 
   const Viewport = styled("div")`
-    &.isConnecting .${DragBoxClassName} * {
+    &.isConnecting .${DragBoxClassName} > * {
       pointer-events: none !important;
     }
   `;
@@ -292,7 +332,11 @@ function Editor(props) {
           type={state.editor.gui.prompt.type}
           data={state.editor.gui.prompt.data}
           header={state.editor.gui.prompt.header}
-          position={state.editor.navigation.cursor}
+          position={
+            state.editor.gui.prompt.position
+              ? state.editor.gui.prompt.position
+              : state.editor.navigation.cursor
+          }
           resolve={state.editor.gui.prompt.resolve}
         ></Prompt>
       </Show>
@@ -362,10 +406,12 @@ function Editor(props) {
             </For>
           </div> */}
 
-          <For each={Object.entries(state.script.nodes)}>
-            {([node_id, node], i) => {
+          <For each={Object.keys(state.script.nodes)}>
+            {(node_id, i) => {
+              const node = state.script.nodes[node_id];
               return (
                 <Show
+                  key={node_id}
                   when={node.parent_id === parent_ids[parent_ids.length - 1]}
                 >
                   <Node
@@ -373,6 +419,8 @@ function Editor(props) {
                     node_id={node_id}
                     instructions={node.instructions}
                     in_outs={node.in_outs}
+                    dimensions={node.dimensions}
+                    visible={node.visible}
                     position={{
                       x: parseInt(node.position.x / GRID_SIZE) * GRID_SIZE,
                       y: parseInt(node.position.y / GRID_SIZE) * GRID_SIZE,
@@ -441,7 +489,9 @@ function Editor(props) {
                           direction: "out",
                         })}
                         in_node_position={
-                          state.script.nodes[role.out_node_id].position
+                          state.script.nodes[role.out_node_id]
+                            ? state.script.nodes[role.out_node_id].position
+                            : { x: 0, y: 0 }
                         }
                         in_role_offset={actions.getRoleOffset({
                           node_id: role.out_node_id,

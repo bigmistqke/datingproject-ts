@@ -40,6 +40,7 @@ const MainMenu = function (props) {
         <button className="bubble" onClick={() => props.saveScript()}>
           save script
         </button>
+
         <button
           classList={{
             bubble: true,
@@ -68,6 +69,10 @@ const MainMenu = function (props) {
           {state.editor.gui.sub_menu === "role_menu"
             ? "close roles"
             : "open roles"}
+        </button>
+
+        <button className="bubble" onClick={() => actions.testProcessScript()}>
+          process-test
         </button>
       </MenuBody>
       {props.children}
@@ -270,7 +275,7 @@ export default function Menu(props) {
           state.editor.bools.isMenuOpen
         }
       ></RoleMenu>
-      
+
       <GamesMenu
         createGame={props.createGame}
         open={

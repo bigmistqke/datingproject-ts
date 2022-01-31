@@ -1,4 +1,4 @@
-import { createMemo, createEffect } from "solid-js";
+import { createMemo, createEffect, onMount, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 import { styled } from "solid-styled-components";
 
@@ -11,7 +11,7 @@ const DragBoxContainer = styled("div")`
   cursor: grab;
   position: absolute;
   box-sizing: border-box;
-  box-shadow: var(--dark-shadow);
+  /* box-shadow: var(--dark-shadow); */
   border-radius: 25px;
   background: var(--light-grey);
   width: 900px;
@@ -21,6 +21,7 @@ const DragBoxContainer = styled("div")`
   }
   &.selected .handle,
   &.handle:hover {
+    background: var(--selected-color);
     border-radius: 28px;
     border: 4px solid var(--selected-color);
     margin: -4px;
@@ -46,10 +47,10 @@ function DragBox(props) {
     [props.classList]
   );
 
-  const isSelected = createMemo(
+  /*   const isSelected = createMemo(
     () => state.editor.selection.indexOf(props.id) !== -1,
     [state.editor.selection]
-  );
+  ); */
 
   const initTranslation = async function (e) {
     if (e.button !== 0 || !e.target.classList.contains("handle")) {
@@ -91,31 +92,9 @@ function DragBox(props) {
 
   const check = (bool) => !(!bool && bool !== 0);
 
-  const isVisible = createMemo(() => {
-    if (!check(actions.getOriginGrid()[0].x) || !check(grid_position[0].x))
-      return true;
-    return (
-      (actions.getOriginGrid()[0].x <= grid_position[0].x &&
-        actions.getOriginGrid()[0].y <= grid_position[0].y &&
-        actions.getOriginGrid()[1].x >= grid_position[0].x &&
-        actions.getOriginGrid()[1].y >= grid_position[0].y) ||
-      (actions.getOriginGrid()[0].x <= grid_position[1].x &&
-        actions.getOriginGrid()[0].y <= grid_position[0].y &&
-        actions.getOriginGrid()[1].x >= grid_position[1].x &&
-        actions.getOriginGrid()[1].y >= grid_position[0].y) ||
-      (actions.getOriginGrid()[0].x <= grid_position[0].x &&
-        actions.getOriginGrid()[0].y <= grid_position[1].y &&
-        actions.getOriginGrid()[1].x >= grid_position[0].x &&
-        actions.getOriginGrid()[1].y >= grid_position[1].y) ||
-      (actions.getOriginGrid()[0].x <= grid_position[1].x &&
-        actions.getOriginGrid()[0].y <= grid_position[1].y &&
-        actions.getOriginGrid()[1].x >= grid_position[1].x &&
-        actions.getOriginGrid()[1].y >= grid_position[1].y)
-    );
-  });
-
-  createEffect(() => {
+  /* createEffect(() => {
     let selection_box = actions.getSelectionBox();
+
     if (!drag_box || !selection_box) return;
 
     const collision = overlaps(
@@ -141,9 +120,35 @@ function DragBox(props) {
       actions.removeFromSelection(props.id);
     }
     if (!isSelected() && collision) {
+      console.log("add to seleciton!!!");
       actions.addToSelection(props.id);
     }
+  }); */
+
+  /* const isVisible = createMemo(() => {
+    if (!check(actions.getOriginGrid()[0].x) || !check(grid_position[0].x))
+      return true;
+    return (
+      (actions.getOriginGrid()[0].x <= grid_position[0].x &&
+        actions.getOriginGrid()[0].y <= grid_position[0].y &&
+        actions.getOriginGrid()[1].x >= grid_position[0].x &&
+        actions.getOriginGrid()[1].y >= grid_position[0].y) ||
+      (actions.getOriginGrid()[0].x <= grid_position[1].x &&
+        actions.getOriginGrid()[0].y <= grid_position[0].y &&
+        actions.getOriginGrid()[1].x >= grid_position[1].x &&
+        actions.getOriginGrid()[1].y >= grid_position[0].y) ||
+      (actions.getOriginGrid()[0].x <= grid_position[0].x &&
+        actions.getOriginGrid()[0].y <= grid_position[1].y &&
+        actions.getOriginGrid()[1].x >= grid_position[0].x &&
+        actions.getOriginGrid()[1].y >= grid_position[1].y) ||
+      (actions.getOriginGrid()[0].x <= grid_position[1].x &&
+        actions.getOriginGrid()[0].y <= grid_position[1].y &&
+        actions.getOriginGrid()[1].x >= grid_position[1].x &&
+        actions.getOriginGrid()[1].y >= grid_position[1].y)
+    );
   });
+
+  
 
   createEffect(() => {
     if (!drag_box || !props.instructions) return false;
@@ -173,11 +178,12 @@ function DragBox(props) {
           state.editor.navigation.grid_size
       )
     );
-  });
+  }); */
 
   const DragBoxChildren = styled("div")`
     margin: 11px;
     position: relative;
+    height: calc(100% - 22px);
     z-index: 1;
     border-radius: 16px;
     overflow: hidden;
@@ -193,14 +199,15 @@ function DragBox(props) {
     /* border-radius: 25px; */
     transition: background 0.125s;
     box-sizing: content-box;
+    /* pointer-events: none; */
   `;
 
   return (
     <DragBoxContainer
-      ref={drag_box}
+      ref={props.ref}
       id={`drag_${props.id}`}
       classList={{
-        selected: isSelected(),
+        selected: props.isSelected,
         ...getClassList(),
       }}
       onPointerDown={initTranslation}
@@ -210,18 +217,10 @@ function DragBox(props) {
         // transform: `translate(${props.position.x}px, ${props.position.y}px)`,
         left: props.position ? props.position.x + "px" : "",
         top: props.position ? props.position.y + "px" : "",
-        // display: isVisible() ? "" : "none",
       }}
-      visible={isVisible()}
     >
       <DragBoxHandle className="handle"></DragBoxHandle>
-      <DragBoxChildren
-        style={{
-          visible: isVisible() ? "" : "hidden",
-        }}
-      >
-        {props.children}
-      </DragBoxChildren>
+      <DragBoxChildren>{props.children}</DragBoxChildren>
     </DragBoxContainer>
   );
 }
