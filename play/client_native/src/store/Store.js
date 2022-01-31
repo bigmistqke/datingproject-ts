@@ -8,9 +8,14 @@ import SocketActions from './SocketActions';
 import { createState, useState } from '@hookstate/core';
 
 const application_state = createState({
+  sound: undefined,
+  autoswipe: false,
+  connection: undefined,
   previous_game_id: undefined,
+  received_instruction_ids: [],
   game_start: null,
   timers: {},
+  clock_delta: undefined,
   ids: {
     game: null,
     player: null,
@@ -19,6 +24,7 @@ const application_state = createState({
   },
   instruction_index: 0,
   instructions: null,
+  _instructions: null,
   design: null,
   bools: {
     isInitialized: false,

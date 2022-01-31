@@ -7,13 +7,25 @@ export default function DesignActions({ ref, state, actions }) {
 
   this.getBorderRadius = () => parseInt(ref.design.border_radius);
 
-  this.updateCardSize = () =>
-    state.viewport.card_size.set({
-      height: ref.viewport.window_size.height * 0.9,
-      width:
-        (ref.viewport.window_size.height * 0.9 * ref.design.card_dimensions.width) /
-        ref.design.card_dimensions.height,
-    })
+  this.updateCardSize = () => {
+    if (ref.viewport.window_size.height / ref.viewport.window_size.width >
+      ref.design.card_dimensions.height / ref.design.card_dimensions.width) {
+
+      state.viewport.card_size.set({
+        height: (ref.viewport.window_size.width * 0.9 * ref.design.card_dimensions.height) /
+          ref.design.card_dimensions.width,
+        width: ref.viewport.window_size.width * 0.9,
+      })
+    } else {
+      state.viewport.card_size.set({
+        height: ref.viewport.window_size.height * 0.9,
+        width:
+          (ref.viewport.window_size.height * 0.9 * ref.design.card_dimensions.width) /
+          ref.design.card_dimensions.height,
+      })
+    }
+
+  }
 
   this.isElementVisible = ({ element, modes }) => {
     try {
@@ -33,7 +45,7 @@ export default function DesignActions({ ref, state, actions }) {
       }
       return true;
     } catch (err) {
-      console.error(err, element);
+
       return false;
     }
 
@@ -60,6 +72,9 @@ export default function DesignActions({ ref, state, actions }) {
       // "letterSpacing": convert(styles.spacing, true),
       // "lineHeight": `${convert(styles.lineHeight)}pt`,
       color: styles.color,
+      textShadowColor: styles.shadowColor,
+      /*  textShadowOffset: { width: +styles.shadowLeft, height: +styles.shadowTop },
+       textShadowRadius: styles.shadowBlur */
       // "textShadow":
       //   styles.shadowLeft || styles.shadowLeft || styles.shadowBlur
       //     ? `${styles.shadowLeft ? convert(styles.shadowLeft) : 0}px ${styles.shadowTop ? convert(styles.shadowTop) : 0
@@ -92,7 +107,6 @@ export default function DesignActions({ ref, state, actions }) {
       color: styles.color,
       backgroundColor: styles.background,
       "justifyContent": convertAlignmentToJustify(styles.alignment),
-      // flex: 0,
       "paddingLeft": convert(styles.paddingHorizontal),
       "paddingRight": convert(styles.paddingHorizontal),
       "paddingTop": convert(styles.paddingVertical),
@@ -101,7 +115,7 @@ export default function DesignActions({ ref, state, actions }) {
       "marginRight": convert(styles.marginHorizontal),
       "marginTop": convert(styles.marginVertical),
       "marginBottom": convert(styles.marginVertical),
-      // "borderRadius": convert(styles.borderRadius),
+      "borderRadius": convert(styles.borderRadius),
     };
   };
 }

@@ -4,73 +4,88 @@ import urls from "../urls";
 import RNFS from "react-native-fs";
 import { createMemo } from "react";
 import isColor from "../helpers/isColor";
-
+import { log, error } from "../helpers/log";
+import { array_remove_element } from "../helpers/Pure";
 
 
 export default function PlayActions({ state, ref, actions }) {
-  let received_instruction_ids = []
+  // let received_instruction_ids = []
   // init
+
+
 
   this.restartGame = async () => {
     try {
-      let result = await this.joinRoom(ref.ids.room);
-      if (!result.success)
-        throw ["could not join room ", result]
-
-      const { instructions } = result;
-      received_instruction_ids = [];
-      actions.setInstructions(instructions);
+      actions.setInstructions(JSON.parse(ref._instructions));
+      state.instruction_index.set(0);
+      state.timers.set({});
+      state.received_instruction_ids.set([]);
+      // state.rerender.set(performance.now());
       return true;
     } catch (err) {
-      console.error(err);
+      error(err);
       return false;
     }
   }
 
+
+  this.startTimer = (instruction_id, timespan) => {
+    const tick = () => {
+      if (!state.timers[instruction_id]) {
+        clearInterval(interval);
+        return;
+      }
+
+      timespan--;
+      state.timers[instruction_id].set(timespan);
+      if (timespan === 0)
+        clearInterval(interval);
+    }
+    var interval = setInterval(tick, 1000);
+    return 'whatever'
+    // return () => clearInterval(interval)
+  }
+
   this.updateTimer = (instruction_id, timer) => state.timers[instruction_id].set(timer)
 
-  /*   this.removeInstruction = (instruction) => {
-      state.instructions.set(instructions => instructions.filter(i => {
-        return i.instruction_id !== instruction.instruction_id
-      }))
-    } */
+  this.removeInstruction = (instruction) => {
+    state.instructions.set(instructions => instructions.filter(i => {
+      return i.instruction_id !== instruction.instruction_id
+    }))
+  }
 
-  this.removeFromPrevInstructionIds = (instruction_id) => {
-    const start_time = performance.now();
-    if (received_instruction_ids.indexOf(instruction_id) !== -1) return
-    received_instruction_ids = [...received_instruction_ids, instruction_id];
+  this.removeFromPrevInstructionIds = (instruction_id, delta) => {
 
-    const first = performance.now();
-
+    if (ref.received_instruction_ids.indexOf(instruction_id) !== -1) return
+    state.received_instruction_ids.set([...ref.received_instruction_ids, instruction_id])
+    // state.received_instruction_ids.set(array => array.push(instruction_id))
+    // received_instruction_ids = [...received_instruction_ids, instruction_id];
     const instruction_index = ref.instructions.findIndex(i =>
       i.prev_instruction_ids &&
       i.prev_instruction_ids.indexOf(instruction_id) !== -1
     )
-    const second = performance.now();
-
 
     state.instructions[instruction_index].prev_instruction_ids
-      .set(prev_instruction_ids =>
+      .set(prev_instruction_ids => (
         prev_instruction_ids.filter(prev_instruction_id =>
           prev_instruction_id !== instruction_id
         )
-      )
-    if (ref.instructions[instruction_index].prev_instruction_ids.length === 0) {
-      console.log("NO MORE PREV_INSTRUCTION_IDS!!!");
+      ))
+
+    if (
+      ref.instructions[instruction_index].prev_instruction_ids.length === 0
+      && instruction_index === ref.instruction_index
+    ) {
+      state.instructions[instruction_index].delta.set(delta)
     }
   }
 
-  this.swipeAway = (index) => {
-    console.log("SWIPE AWAY");
+  this.swipeAway = (index) => state.instructions[index].swiped.set(true)
 
-    console.log(ref.instructions[index]);
-
-    state.instructions[index].swiped.set(true)
-    // i.swiped.set(true)
-  };
 
   this.swipe = (instruction) => {
     try {
+
       /* setTimeout(() => {
             
           }, 25)
@@ -80,48 +95,46 @@ export default function PlayActions({ state, ref, actions }) {
           if (ref.instructions.length === 1) {
             actions.sendFinished();
           } */
+
       if (!instruction) {
         throw "INSTRUCTION IS UNDEFINED"
       }
       const next_role_ids = instruction.next_role_ids ? [...instruction.next_role_ids] : false;
       const instruction_id = instruction.instruction_id;
       // this.removeInstruction(instruction);
-      setTimeout(() => {
-        state.instruction_index.set(i => {
-          return i + 1;
-        })
-      }, 250)
-
-      console.log("INSTRUCTION_INDEX IS ", ref.instruction_index);
-
+      // 
       if (next_role_ids) {
-
         next_role_ids.forEach(next_role_id => {
-
           if (next_role_id === ref.ids.role) {
             this.removeFromPrevInstructionIds(instruction_id);
           }
           actions.sendSwipe({ next_role_id, instruction_id: instruction.instruction_id });
         })
       }
+      // 
+
+      setTimeout(() => {
+        state.instruction_index.set(i => i + 1);
+        actions.sendInstructionIndex();
+      }, 0)
 
       // this.removeInstruction(instruction)
 
       // this.removeInstruction(instruction)
       /*     setTimeout(() => {
             this.removeInstruction(instruction);
-            console.log("state is ");
-            console.log(JSON.stringify(ref));
+             
+             
           }, 250) */
 
 
       // only necessary for 'unsafe' debugging play-mode
       /* if (ref.instructions.length > 1 && ref.instructions[1].type === 'video') {
-        console.error("video stop not implemented yet");
+        error("video stop not implemented yet");
       } */
 
     } catch (err) {
-      console.error("ERROR WHILE SWIPING ", err);
+      error("ERROR WHILE SWIPING ", err);
     }
   }
 }

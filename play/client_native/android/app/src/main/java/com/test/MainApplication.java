@@ -4,15 +4,19 @@ import android.app.Application;
 import android.content.Context;
 import com.facebook.react.PackageList;
 import com.facebook.react.ReactApplication;
+import com.corbt.keepawake.KCKeepAwakePackage;
+import com.swmansion.gesturehandler.react.RNGestureHandlerPackage;
 import com.horcrux.svg.SvgPackage;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactNativeHost;
 import com.facebook.react.ReactPackage;
-import com.ammarahmed.mmkv.RNMMKVJSIModulePackage;
-import com.facebook.react.bridge.JSIModulePackage;
 import com.facebook.soloader.SoLoader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+
+import com.test.CustomMMKVJSIModulePackage;
+import com.facebook.react.bridge.JSIModulePackage;
+
 
 // import com.tuanpm.RCTMqtt.*;
 
@@ -25,10 +29,9 @@ public class MainApplication extends Application implements ReactApplication {
           return BuildConfig.DEBUG;
         }
 
-
         @Override
-        protected JSIModulePackage getJSIModulePackage() {
-            return new RNMMKVJSIModulePackage();
+         protected JSIModulePackage getJSIModulePackage() {
+          return new CustomMMKVJSIModulePackage();
         }
 
         @Override

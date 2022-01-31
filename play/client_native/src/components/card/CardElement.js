@@ -1,5 +1,3 @@
-// import Draggable from '../viewport/Draggable';
-// import {Show, useEffect, onMount, createSignal} from 'solid-js';
 import styled from 'styled-components/native';
 import React, { useEffect, useMemo } from 'react';
 import { View, Text, Image } from 'react-native';
@@ -8,10 +6,6 @@ import { Show } from '../solid-like-components';
 import SVGElement from './SVGElement';
 import InstructionElement from './InstructionElement';
 import CountdownElement from './CountdownElement';
-
-// import ResizeHandles from '../viewport/ResizeHandles';
-import RNFS from "react-native-fs";
-
 
 import { useStore } from '../../store/Store';
 

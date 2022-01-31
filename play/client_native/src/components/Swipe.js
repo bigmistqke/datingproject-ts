@@ -1,168 +1,150 @@
-import React, { useEffect, useState, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
-import { Dimensions, StatusBar, Animated, PanResponder, View } from 'react-native';
-import styled from 'styled-components/native';
-import Tweener from "../helpers/tweener.js";
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Dimensions, View } from 'react-native';
+
 import check from '../helpers/check.js';
 
 import { useStore } from '../store/Store.js';
+import Animated, { runOnJS, useAnimatedGestureHandler, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import { PanGestureHandler } from 'react-native-gesture-handler';
+import Video from 'react-native-video';
+
+
+
+
 
 const Swipe = (props) => {
-  const [state] = useStore();
+  const [state, actions] = useStore();
 
   const [tweened_margin, setTweenedMargin] = useState(props.margin);
+  const [can_swipe, setCanSwipe] = useState(false);
 
-  const MARGIN_SIZE = 12;
+  const MARGIN_SIZE = 30;
 
-  const tweener = useRef(new Tweener()).current;
-  const DRAG_TRESHOLD = useRef(200).current;
-  const pan_ref = useRef(new Animated.ValueXY()).current;
-  const translate_ref = useRef(new Animated.ValueXY()).current;
-  const margin_ref = useRef(new Animated.Value(props.margin * MARGIN_SIZE)).current;
+  const DRAG_TRESHOLD = useRef(100).current;
 
-  let translate_start_ref = useRef().current;
-  const rotateZ = useRef(new Animated.Value(0)).current;
-  const rotateZ_ref = rotateZ.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '1deg']
-  })
 
-  const translationToRotation = (x) => rotateZ.setValue(x / Dimensions.get('screen').width * 25);
+  const translationX = useSharedValue(0);
+  const translationY = useSharedValue(0);
+  const rotationZ = useSharedValue(0);
+  const margin = useSharedValue(props.margin * MARGIN_SIZE);
+  const screen = Dimensions.get("screen");
 
-  const panResponder = useRef(PanResponder.create({
-    onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: (e) => {
-      translate_start_ref = {
-        x: translate_ref.x._value,
-        y: translate_ref.y._value
-      }
-      pan_ref.setOffset({
-        x: pan_ref.x._value,
-        y: pan_ref.y._value
-      });
+  const swipe = () => actions.swipe(props.instruction);
+
+  useEffect(() => {
+    translationX.value = 0;
+    translationY.value = 0;
+    rotationZ.value = 0;
+  }, [props.margin])
+
+  const swipeAway = (delta = 25) => {
+    if (translationY.value === 0 && translationX.value === 0) {
+
+    }
+    const angle = translationY.value === 0 && translationX.value === 0 ?
+      Math.atan2(Math.random() * 2 * Math.PI, Math.random() * 2 * Math.PI) :
+      Math.atan2(translationY.value, translationX.value);
+    translationX.value = withTiming(Dimensions.get('screen').width * 3 * Math.cos(angle), { duration: 200 });
+    translationY.value = withTiming(Dimensions.get('screen').height * 3 * Math.sin(angle), { duration: 200 });
+
+    rotationZ.value = withTiming(0, { duration: 200 });
+  }
+
+  const PanGestureEvent = useAnimatedGestureHandler({
+    onStart: (e, ctx) => {
+      ctx.translationX = e.translationX;
+      ctx.translationY = e.translationY;
     },
-    onPanResponderMove: Animated.event([
-      null, { dx: pan_ref.x, dy: pan_ref.y }
-    ], {
-      useNativeDriver: false,
-      listener: (event, gestureState) => {
-        translate_ref.setValue({
-          x: translate_start_ref.x + pan_ref.x._value,
-          y: translate_start_ref.y + pan_ref.y._value
-        });
-        translationToRotation(translate_ref.x._value);
-      }
-    }),
-    onPanResponderRelease: () => {
-      pan_ref.flattenOffset();
+    onActive: (e, ctx) => {
+      if (props.margin !== 0) return;
+      translationX.value = e.translationX + ctx.translationX;
+      translationY.value = e.translationY + ctx.translationY;
+      rotationZ.value = translationX.value / screen.width * 25;
+    },
+    onEnd: (e) => {
+
       if (
-        Math.sqrt(
-          Math.pow(translate_ref.x._value, 2) + Math.pow(translate_ref.y._value, 2)
-        ) < DRAG_TRESHOLD ||
-        props.instruction.timespan
+        !can_swipe ||
+        props.instruction.type === 'video' ||
+        +props.instruction.timespan ||
+        Math.sqrt(Math.pow(translationX.value, 2) + Math.pow(translationY.value, 2)) < DRAG_TRESHOLD
       ) {
-        snapBack();
+        translationX.value = withSpring(0, { mass: 0.5 });
+        translationY.value = withSpring(0, { mass: 0.5 });
+        rotationZ.value = withSpring(0, { mass: 0.5 });
       } else {
-        swipeAway();
-        setTimeout(props.onSwipe, 0)
+        const angle = Math.atan2(translationY.value, translationX.value);
+        translationX.value = withTiming(screen.width * 3 * Math.cos(angle), { duration: 125 });
+        translationY.value = withTiming(screen.height * 3 * Math.sin(angle), { duration: 125 });
+        runOnJS(swipe)();
       }
     }
-  })).current;
-
-  const swipeAway = /* useCallback( */(delta = 25) => {
-    translate_start_ref = {
-      x: translate_ref.x._value,
-      y: translate_ref.y._value
-    }
-    const angle = Math.atan2(translate_start_ref.y, translate_start_ref.x)
-    const new_dist = {
-      x: Dimensions.get('screen').width * 3 * Math.cos(angle),
-      y: Dimensions.get('screen').height * 2 * Math.sin(angle)
-    }
-    tweener.tweenTo(0, 1, delta,
-      (alpha) => {
-        translate_ref.setValue({
-          x: translate_start_ref.x * (1 - alpha) + (new_dist.x) * alpha,
-          y: translate_start_ref.y * (1 - alpha) + (new_dist.y) * alpha,
-        })
-        translationToRotation(translate_ref.x._value);
-      }
-    )
-  }/* , []) */
-
-  const snapBack = useCallback(() => {
-    translate_start_ref = {
-      x: translate_ref.x._value,
-      y: translate_ref.y._value
-    }
-    tweener.tweenTo(1, 0, 250,
-      (alpha) => {
-        // console.log("SNAPBACK!!!");
-        translate_ref.setValue({
-          x: translate_start_ref.x * alpha,
-          y: translate_start_ref.y * alpha
-        });
-        translationToRotation(translate_ref.x._value);
-      }
-    );
-  }, [])
-
-
+  })
 
   useEffect(() => {
     if (!props.instruction.swiped) return;
-    console.log("SWIPE AWAY!!");
     swipeAway(500);
   }, [props.instruction.swiped])
 
 
   useEffect(() => {
-
-    if (tweened_margin !== props.margin) {
-      setTimeout(() => {
-        const margin_start = props.margin * MARGIN_SIZE;
-        setTweenedMargin(props.margin);
-        tweener.tweenTo(1, 0, 125,
-          (alpha) => {
-            margin_ref.setValue(margin_start + MARGIN_SIZE * alpha);
-          }
-        );
-      }, props.margin * 100)
-
-    }
+    if (tweened_margin === props.margin) return;
+    setTweenedMargin(props.margin);
+    setTimeout(() => {
+      margin.value = withSpring(
+        props.margin * MARGIN_SIZE,
+        {
+          mass: 1,
+          damping: 15,
+        }
+      );
+    }, props.margin * 200)
   }, [props.margin])
 
   useEffect(() => {
     if (!check(state.timers[props.instruction.instruction_id])) return;
-    if (state.timers[props.instruction.instruction_id] === 0) {
-      swipeAway(500);
-      setTimeout(props.onSwipe, 125)
-    }
+    if (state.timers[props.instruction.instruction_id] !== 0) return
+    swipeAway(500);
+    swipe();
+    if (props.instruction.sound) state.sound.play();
   }, [state.timers[props.instruction.instruction_id]])
+
+
+  useEffect(() => {
+    if (props.instruction.prev_instruction_ids.length === 0) {
+      setCanSwipe(true)
+    } else {
+      setCanSwipe(false);
+    }
+  }, [props.instruction.prev_instruction_ids])
+
+  const aStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translationX.value },
+      { translateY: translationY.value },
+      { rotateZ: rotationZ.value + "deg" }
+    ],
+    left: margin.value,
+    top: margin.value,
+  }))
 
   return (
     <View>
-      <Animated.View
-        style={{
-          left: margin_ref,
-          top: margin_ref,
-          position: 'absolute',
-          elevation: 10,
-          height: state.viewport.card_size.height,
-          width: state.viewport.card_size.width,
-          elevation: 5,
-          transform: [
-            { translateX: translate_ref.x },
-            { translateY: translate_ref.y },
-            { rotateZ: rotateZ_ref },
-          ],
-          ...props.style
-        }}
-        {...panResponder.panHandlers}
-        pointerEvents={props.pointerEvents}
-      >
-        {props.children}
-
-      </Animated.View>
+      <PanGestureHandler onGestureEvent={PanGestureEvent}>
+        <Animated.View
+          style={[aStyle, {
+            position: 'absolute',
+            height: state.viewport.card_size.height,
+            width: state.viewport.card_size.width,
+            zIndex: 100 - props.margin,
+            ...props.style
+          }]}
+          pointerEvents={'box-only'}
+        >
+          {props.children}
+        </Animated.View>
+      </PanGestureHandler>
+      {/* <Video source={{ uri: }}></Video> */}
     </View >
   );
 }

@@ -8,12 +8,15 @@ import styled from 'styled-components/native';
 import Swipe from "../components/Swipe";
 import { For, Show } from '../components/solid-like-components';
 import { useStore } from "../store/Store";
+import { measure, useAnimatedRef } from 'react-native-reanimated';
+import { FlatList } from 'react-native-gesture-handler';
 
 
 function Game({ design, instructions }) {
   const [state, actions] = useStore();
 
   let r_overlay = useRef();
+  const aref = useAnimatedRef();
 
   const waitYourTurn = useCallback((reason) => {
     if (!reason) {
@@ -59,44 +62,82 @@ function Game({ design, instructions }) {
 
 
   const visible_instructions = useMemo(() => {
-
-    if (!state.instructions) {
-
-      return [];
-    }
-    return state.instructions.slice(0,
-      state.instructions.length < 10 ?
-        state.instructions.length :
-        10
-    ).reverse()
+    if (!state.instructions) return []
+    return state.instructions.slice(state.instruction_index,
+      state.instruction_index + 5
+    )
   },
     [state.instructions]
   )
 
+  useEffect(() => {
 
 
+  }, [])
 
   const Game = () => <>
-    {/* <Overlay ref={r_overlay} onClick={hideOverlay} className='overlay hidden'>
-      <Text>Wait Your Turn</Text>
-    </Overlay> */}
     <View
       className="Cards"
       style={{
-        backgroundColor: "red",
         height: "100%"
       }}
     >
-      {
+      {visible_instructions.map((instruction, index) =>
+        <Swipe
+          key={instruction.instruction_id}
+          margin={index}
+          /* style={{
+            elevation: 5 - index
+          }} */
+          pointerEvents={index === 0 ? "auto" : "none"}
+          instruction={instruction}
+        >
+          <Card
+            index={index}
+            key={instruction.instruction_id}
+            instruction_id={instruction.instruction_id}
+            instruction={instruction}
+            flip={instruction.prev_instruction_ids.length === 0}
+            prev_instruction_ids={instruction.prev}
+            instruction={instruction}
+          />
+        </Swipe>
+      )}
+      {/*  {
+        visible_instructions.map((instruction, index) =>
+          <Show
+            when={true}
+            // when={index >= state.instruction_index && index <= state.instruction_index + 8}
+            key={instruction.instruction_id}
+          >
+            <Swipe
+              can_swipe={true}
+              margin={index}
+              style={{
+                elevation: 5 - index
+              }}
+              pointerEvents={index === 0 ? "auto" : "none"}
+              instruction={instruction}
+            >
+              <Card
+                key={instruction.instruction_id}
+                instruction_id={instruction.instruction_id}
+                instruction={instruction}
+                flip={instruction.prev_instruction_ids.length === 0}
+                instruction={instruction}
+                index={index}
+              />
+            </Swipe>
+          </Show>
+        )
+      } */}
+      {/*  {
         state.instructions.map((instruction, index) =>
           <Show
             when={index >= state.instruction_index && index <= state.instruction_index + 8}
             key={instruction.instruction_id}
           >
             <Swipe
-              onSwipe={() => {
-                actions.swipe(instruction);
-              }}
               can_swipe={true}
               margin={index - state.instruction_index}
               style={{
@@ -108,32 +149,15 @@ function Game({ design, instructions }) {
               <Card
                 key={instruction.instruction_id}
                 instruction_id={instruction.instruction_id}
+                instruction={instruction}
                 flip={instruction.prev_instruction_ids.length === 0}
                 instruction={instruction}
                 index={index - state.instruction_index}
               />
             </Swipe>
           </Show>
-
         )
-      }
-      {/*  <For each={state.instructions}>{(instruction, i) =>
-        // <Show when={i < 5} key={instruction.instruction_id}>
-        <Card
-          key={instruction.instruction_id}
-          instruction_id={instruction.instruction_id}
-          canSwipe={i === (instructions.length - 1)}
-          flip={instruction.prev_instruction_ids.length === 0}
-          margin={i}
-          index={i}
-          onSwipe={(_instruction) => {
-            actions.swipe(_instruction);
-          }}
-          instruction={instruction}
-        />
-        // </Show>
-
-      }</For> */}
+      } */}
       <Show when={state.instructions.length < 2}>
         <End className='centered uiText'>The End</End>
       </Show>

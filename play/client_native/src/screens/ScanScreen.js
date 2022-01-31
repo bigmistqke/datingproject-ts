@@ -17,6 +17,8 @@ function ScanScreen({ onRead }) {
     position: relative;
     z-index:99;
     background:white;
+    margin: 10px;
+    /* border-radius: 50px; */
   `
   const View = styled.View`
     position:relative;
@@ -29,30 +31,59 @@ function ScanScreen({ onRead }) {
     }, [input_ref])
    */
   return (<View style={{
-    backgroundColor: "white",
-    height: "100%"
+    height: "100%",
+    display: 'flex',
   }}>
+
     <Show when={state.previous_game_id && !state.instructions}>
-      <Pressable
-        onPress={() => actions.initGame(state.previous_game_id)}
-        title="yes"
+      <View
         style={{
-          height: 35,
-          borderBottomColor: "white"
-          /* height: 35,
-          width: 100,
-          elevation: 100 */
-        }}
-      >
-        <Text style={{
-          height: "100%",
-          textAlign: "center",
-          textAlignVertical: "center",
-          color: "black",
+          flexDirection: 'row',
         }}>
-          {`open previous game ${state.previous_game_id}`}
-        </Text>
-      </Pressable>
+        <Pressable
+          onPress={() => actions.initGame(state.previous_game_id)}
+          title="yes"
+          style={{
+            height: 35,
+            borderBottomColor: "white",
+            backgroundColor: "white",
+            borderRadius: 50,
+            margin: 10,
+            flex: 1,
+          }}
+        >
+          <Text style={{
+            height: "100%",
+            textAlign: "center",
+            textAlignVertical: "center",
+            color: "black",
+          }}>
+            {`open ${state.previous_game_id}`}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => actions.initGame(state.previous_game_id, true)}
+          title="yes"
+          style={{
+            height: 35,
+            borderBottomColor: "white",
+            backgroundColor: "white",
+            borderRadius: 50,
+            margin: 10,
+            flex: 1,
+          }}
+        >
+          <Text style={{
+            height: "100%",
+            textAlign: "center",
+            textAlignVertical: "center",
+            color: "black",
+          }}>
+            {`force ${state.previous_game_id}`}
+          </Text>
+        </Pressable>
+      </View>
+
     </Show>
     <View
       style={{
@@ -84,6 +115,8 @@ function ScanScreen({ onRead }) {
         style={{
           paddingLeft: 20,
           color: "black",
+          borderRadius: 50,
+          overflow: "hidden"
         }}
       ></TextInput>
     </View>

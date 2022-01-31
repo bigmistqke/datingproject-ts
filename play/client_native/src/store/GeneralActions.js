@@ -9,63 +9,124 @@ import React from "react";
 import { Dimensions, StatusBar, Image } from 'react-native';
 import { log, error } from "../helpers/log"
 
+import NetInfo from "@react-native-community/netinfo";
+
+import Sound from "react-native-sound";
 
 // import { SvgCss } from "react-native-svg";
 
 export default function GeneralActions({ state, ref, actions }) {
+  Sound.setCategory('Playback');
 
   this.setInstructions = (instructions) => state.instructions.set(instructions);
   this.setIds = (ids) => state.ids.set(ids);
   this.setDesign = (design) => state.design.set(design);
 
-  this.initGame = async (game_id) => {
+  this.setWindowSize = ({ width, height }) =>
+    state.viewport.window_size.set({ width, height })
+
+  this.initNetInfo = () => {
+    NetInfo.addEventListener(connection => {
+
+
+      if (connection.type === 'none') {
+        // alert("device offline");
+      } else {
+        if (ref.connection === 'none') {
+          actions.reconnectSocket();
+        }
+      }
+
+      state.connection.set(connection.type);
+    });
+  }
+
+
+  this.initGame = async (game_id, ignore_cache = false) => {
     try {
-      log("game_id ", game_id);
+      // this.setInstructions([]);
+      state.timers.set({});
       await MMKV.setStringAsync("game_id", game_id);
+      state.received_instruction_ids.set([]);
 
       let result = await this.joinRoom(game_id);
       if (!result || !result.success) throw "joinRoom did not succeed ";
 
-      let { instructions, role_id, room_id, player_id, design, design_id } = result;
+      console.log('result joinRoom ', result);
+      console.log('ping',);
 
+      let {
+        instructions,
+        _instructions,
+        role_id,
+        room_id,
+        player_id,
+        design,
+        design_id,
+        instruction_index,
+        sound
+      } = result;
+
+      if (!instructions) {
+        throw "INSTRUCTIONS IS NULL"
+      }
       const STATUS_HEIGHT = StatusBar.currentHeight || 24;
-
-      state.viewport.window_size.set({
-        width: Dimensions.get('window').width,
-        height: Dimensions.get('window').height - STATUS_HEIGHT
-      })
-
       state.game_start.set(new Date().getTime());
-
       this.setDesign(design);
       actions.updateCardSize();
       this.setIds({
         player: player_id,
         role: role_id,
         room: room_id,
+        game: game_id
       });
+      if (!ref.bools.isInitialized) {
+        actions.initSocket();
+      }
 
-      actions.initSocket();
+      console.log('instructions are ', instructions);
 
       // IMPORTANT: both downloadVideos mutate instructions (sets url to local file-path)!
-      await downloadVideos(instructions);
+      await downloadSound(sound);
+      await downloadVideos(instructions, ignore_cache);
+      await downloadDesignElements({ design, design_id });
 
-      log("instructions are ", instructions);
 
-      let design_uploaded = await MMKV.getStringAsync(`${design_id}_modified`);
-      log("design_uploaded: ", design_uploaded, " | ", design.modified);
-
-      if (!design_uploaded || parseInt(design_uploaded) < parseInt(design.modified)) {
-        await downloadDesignElements({ design, design_id });
-        await MMKV.setStringAsync(`${design_id}_modified`, String(new Date().getTime()));
-      }
-      // await preloadDesignElements(design);
       state.viewport.loading_percentage.set(false);
-      this.setInstructions(instructions);
+
+
+      // this.setInstructions(instructions);
+
+      /*       if (ref.instructions) {
+              // idk why this hack is necessary, but otherwhise i couldn't get it to work 
+              // i m guessing something specific to statehook
+              // this.setInstructions(instructions)
+              instructions.forEach((instruction, index) =>
+                state.instructions[index].set(instruction)
+              )
+            } else {
+              this.setInstructions(instructions);
+            } */
+
+      // this.setInstructions(instructions);
+
+      state.instructions.set(instructions);
+
+      state._instructions.set(JSON.stringify(_instructions));
+
+      state.instruction_index.set(instruction_index);
+
+      state.bools.isInitialized.set(true);
+
+      console.log('instruction_index is ', instruction_index);
+
+
     } catch (err) {
-      console.error(err);
+      console.error("ERROR WHILE INITIGAME", err);
       return false
     }
+
+
 
   }
 
@@ -78,7 +139,9 @@ export default function GeneralActions({ state, ref, actions }) {
   this.getPreviousGameId = () => ref.previous_game_id;
 
 
+
   this.joinRoom = async (game_id) => {
+    console.log("JOIN ROOM!!", game_id);
     let result;
     try {
       result = await fetch(`${urls.fetch}/api/room/join/${game_id}`).catch(err => log(err));
@@ -106,9 +169,38 @@ export default function GeneralActions({ state, ref, actions }) {
     }
   }
 
+  const downloadSound = async (filename) => {
+    try {
+      const base_url = RNFS.DocumentDirectoryPath + '/sounds';
+      if (!(await RNFS.exists(base_url)))
+        await RNFS.mkdir(base_url);
+
+      await RNFS.downloadFile({
+        fromUrl: `${urls.fetch}/api/sounds/${filename}?${new Date().getTime()}`,
+        toFile: `${base_url}/${filename}`
+      }).promise;
+
+      state.sound.set(`${base_url}/${filename}`);
+      var ping = new Sound(filename, base_url, (error) => {
+        console.log('preloaded sound');
+        if (error) throw error;
+        ping.setVolume(0);
+        ping.play(success => {
+          if (!success) return;
+          state.sound.set(ping);
+          ping.setVolume(1);
+        })
+      });
+    } catch (error) {
+      console.error('error while downloading sound', error);
+      return { error };
+    }
+
+
+  }
+
   const downloadDesignElements = async ({ design, design_id }) => {
     try {
-      log("PRELOAD DESIGN ELEMENTS");
 
       const base_url = RNFS.DocumentDirectoryPath + '/designs';
 
@@ -125,18 +217,19 @@ export default function GeneralActions({ state, ref, actions }) {
         svg.url = {};
         promises.push(new Promise((resolve, reject) => {
           let filename = `${svg.id}_normal.png`;
+
           RNFS.downloadFile({
-            fromUrl: `${urls.fetch}/api/designs/${design_id}/${filename}`,
+            fromUrl: `${urls.fetch}/api/designs/${design_id}/${filename}?${new Date().getTime()}`,
             toFile: `${base_url}/${filename}`
           }).promise.then((result) => {
-            log("DOWNLOADED ", `${urls.fetch}/api/designs/${design_id}/${filename}`, result);
+            console.log('downloaded', filename);
             resolve();
           });
         }))
         promises.push(new Promise((resolve, reject) => {
           let filename = `${svg.id}_masked.png`;
           RNFS.downloadFile({
-            fromUrl: `${urls.fetch}/api/designs/${design_id}/${filename}`,
+            fromUrl: `${urls.fetch}/api/designs/${design_id}/${filename}?${new Date().getTime()}`,
             toFile: `${base_url}/${filename}`
           }).promise.then(resolve);
         }))
@@ -148,7 +241,7 @@ export default function GeneralActions({ state, ref, actions }) {
     }
   }
 
-  const downloadVideos = async (instructions) => {
+  const downloadVideos = async (instructions, ignore_cache) => {
     try {
       const base_url = RNFS.DocumentDirectoryPath + '/videos';
       let promises = [];
@@ -172,9 +265,7 @@ export default function GeneralActions({ state, ref, actions }) {
 
           if (await RNFS.exists(to_path)) {
             let { mtime } = await RNFS.stat(to_path);
-            log(new Date(mtime).getTime(), video.modified);
-            if (new Date(mtime).getTime() > video.modified) {
-              video.url = `${base_url}/${filename}`;
+            if (!ignore_cache && (!video.modified || new Date(mtime).getTime() > video.modified)) {
               resolve();
               return;
             }
@@ -188,10 +279,12 @@ export default function GeneralActions({ state, ref, actions }) {
               progresses[video.instruction_id] = parseInt(percentComplete);
               updateProgress();
             },
-          }).promise.then(async (r) => {
-            log("SET VIDEO URL TO ", `${base_url}/${filename}`)
-            video.url = `${base_url}/${filename}`;
-            resolve();
+          }).promise.then(async (response) => {
+            if (response.statusCode !== 200) { // Or something else, basically a check for failed responses
+              throw `error while downloading ${filename}`
+            } else {
+              resolve(true);
+            }
           });
         }))
       }
@@ -199,6 +292,7 @@ export default function GeneralActions({ state, ref, actions }) {
       return Promise.all(promises);
     } catch (err) {
       console.error(err);
+      // alert(err);
       return false;
     }
 

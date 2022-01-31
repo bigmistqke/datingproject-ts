@@ -3,6 +3,7 @@ import { Text } from "react-native";
 
 import { useStore } from '../../store/Store';
 import Tweener from '../../helpers/tweener';
+import check from '../../helpers/check';
 
 
 const CountdownElement = props => {
@@ -33,7 +34,11 @@ const CountdownElement = props => {
         textAlign: "center",
       }}>
 
-        {state.timers[props.instruction.instruction_id]}
+        {
+          check(state.timers[props.instruction.instruction_id]) ?
+            state.timers[props.instruction.instruction_id] :
+            props.instruction.timespan
+        }
       </Text>
     </>
   );
