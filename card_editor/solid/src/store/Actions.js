@@ -271,10 +271,16 @@ export default function ({ state, setState, default_types }) {
 
   this.getTimerPercentage = () => state.viewport.timer_percentage;
 
-  this.getTimer = () => parseInt(state.viewport.timer_percentage * 30 / 100);
+  this.getTimer = () => parseInt(30 - state.viewport.timer_percentage * 30 / 100);
 
-  this.toggleTypeManager = () =>
-    setState("viewport", "type_manager", (bool) => !bool);
+  this.openTypeManager = () =>
+    setState("viewport", "type_manager", true);
+
+  this.closeTypeManager = () =>
+    setState("viewport", "type_manager", false);
+
+  this.addNewType = () =>
+    setState("viewport", "type_manager", false);
 
   this.toggleModeViewport = (type) => {
     setState("viewport", "modes", type, (bool) => !bool);
@@ -323,12 +329,10 @@ export default function ({ state, setState, default_types }) {
     return state.viewport.type === type;
   };
 
-  this.getType = (type) => {
-    return state.design.types[type];
-  };
+  this.getType = (type) => state.design.types[type]
 
   this.getSelectedType = () => {
-    let selected_type = state.design.types[state.viewport.type];
+    let selected_type = this.getType(state.viewport.type);
     if (!selected_type) return undefined;
     return selected_type;
   };
@@ -363,7 +367,7 @@ export default function ({ state, setState, default_types }) {
       "types",
       state.viewport.type,
       "swatches",
-      state.design.types[state.viewport.type].swatches.length,
+      this.getType(state.viewport.type).swatches.length,
       {
         normal: "#000000",
         timed: "#ffffff",
@@ -661,6 +665,11 @@ export default function ({ state, setState, default_types }) {
   };
 
   this.setSVGStyle = ({ key, type, value, highlight }) => {
+    let element = this.getSelectedType().elements[state.viewport.selected_element_index];
+    if (!element.styles[key]) {
+      console.error(element, element.styles, key);
+      return;
+    }
     archiveStateChanges([
       setStateArchive(
         ...getLocalElementAsArgs({
@@ -827,6 +836,44 @@ export default function ({ state, setState, default_types }) {
     return { svg, styles };
   };
 
+  this.createNewType = (type_name) => ({
+    swatches: [
+      { normal: "#000000", timed: "#ffffff" },
+      { normal: "#CCCCCC", timed: "#CCCCCC" },
+      { normal: "#ffffff", timed: "#000000" },
+    ],
+    elements:
+      type_name !== "back"
+        ? [
+          {
+            id: "instruction",
+            type: "instruction",
+            global: true,
+            styles: {
+              color: 0,
+            },
+            highlight_styles: {
+              background: 1,
+              color: 2,
+            },
+            content:
+              lorem_ipsum["normal"][
+              Math.floor(Math.random() * lorem_ipsum["normal"].length)
+              ],
+          },
+          {
+            id: "countdown",
+            type: "countdown",
+            global: true,
+            styles: {
+              color: 0,
+            },
+            content: 30 * (state.viewport.timer_percentage / 100),
+          },
+        ]
+        : [],
+  })
+
   this.createNewCard = () => {
     const instruction = {
       ...getDefaultTextState(),
@@ -888,43 +935,7 @@ export default function ({ state, setState, default_types }) {
     let types = Object.fromEntries(
       default_types.map((type) => [
         type,
-        {
-          swatches: [
-            { normal: "#000000", timed: "#ffffff" },
-            { normal: "#CCCCCC", timed: "#CCCCCC" },
-            { normal: "#ffffff", timed: "#000000" },
-          ],
-          elements:
-            type !== "back"
-              ? [
-                {
-                  id: "instruction",
-                  type: "instruction",
-                  global: true,
-                  styles: {
-                    color: 0,
-                  },
-                  highlight_styles: {
-                    background: 1,
-                    color: 2,
-                  },
-                  content:
-                    lorem_ipsum["normal"][
-                    Math.floor(Math.random() * lorem_ipsum["normal"].length)
-                    ],
-                },
-                {
-                  id: "countdown",
-                  type: "countdown",
-                  global: true,
-                  styles: {
-                    color: 0,
-                  },
-                  content: 30 * (state.viewport.timer_percentage / 100),
-                },
-              ]
-              : [],
-        },
+        this.createNewType(type),
       ])
     );
     setState("design", "types", types);
