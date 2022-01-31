@@ -5,10 +5,17 @@ import uniqid from "uniqid"
 
 import urls from '../urls';
 
-const CardElement = ({ id, text, element, type, children }) => {
+const CardElement = ({ id, text, element, type, children, flip }) => {
   useEffect(() => {
     console.log(element);
   }, [element])
+
+  useEffect(() => {
+    console.log("FLIP IS ", flip);
+  }, [])
+  useEffect(() => {
+    console.log("ELEMENT", flip);
+  }, [flip])
 
   const Type = ({ element }) => {
 
@@ -32,14 +39,14 @@ const CardElement = ({ id, text, element, type, children }) => {
       className={`element`}
       id={id}
       style={{
+        backgroundColor: 'blue',
         width: element.dim.width + '%',
         height: element.dim.height + '%',
         top: element.origin.y + '%',
         left: element.origin.x + '%',
         pointerEvents: element.isDrawing || element.locked ? 'none' : 'all',
         zIndex: element.z,
-        // textAlign: element.options ? element.options.alignmentHorizontal : null,
-        textAlign: "center",
+        textAlign: element.options ? element.options.alignmentHorizontal : null,
         alignItems: element.options ? element.options.alignmentVertical : null,
         fontSize: element.options ? `${element.options.size}pt` : null,
         fontFamily: element.options ? element.options.family : null,
