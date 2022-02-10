@@ -18,3 +18,7 @@ export function For(props) {
     </>
   );
 }
+
+export function onMount(func) {
+  return useEffect(func, []);
+}

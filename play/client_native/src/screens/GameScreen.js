@@ -103,64 +103,7 @@ function Game({ design, instructions }) {
           />
         </Swipe>
       )}
-      {/*  {
-        visible_instructions.map((instruction, index) =>
-          <Show
-            when={true}
-            // when={index >= state.instruction_index && index <= state.instruction_index + 8}
-            key={instruction.instruction_id}
-          >
-            <Swipe
-              can_swipe={true}
-              margin={index}
-              style={{
-                elevation: 5 - index
-              }}
-              pointerEvents={index === 0 ? "auto" : "none"}
-              instruction={instruction}
-            >
-              <Card
-                key={instruction.instruction_id}
-                instruction_id={instruction.instruction_id}
-                instruction={instruction}
-                flip={instruction.prev_instruction_ids.length === 0}
-                instruction={instruction}
-                index={index}
-              />
-            </Swipe>
-          </Show>
-        )
-      } */}
-      {/*  {
-        state.instructions.map((instruction, index) =>
-          <Show
-            when={index >= state.instruction_index && index <= state.instruction_index + 8}
-            key={instruction.instruction_id}
-          >
-            <Swipe
-              can_swipe={true}
-              margin={index - state.instruction_index}
-              style={{
-                elevation: 5 - index - state.instruction_index
-              }}
-              pointerEvents={index - state.instruction_index === 0 ? "auto" : "none"}
-              instruction={instruction}
-            >
-              <Card
-                key={instruction.instruction_id}
-                instruction_id={instruction.instruction_id}
-                instruction={instruction}
-                flip={instruction.prev_instruction_ids.length === 0}
-                instruction={instruction}
-                index={index - state.instruction_index}
-              />
-            </Swipe>
-          </Show>
-        )
-      } */}
-      <Show when={state.instructions.length < 2}>
-        <End className='centered uiText'>The End</End>
-      </Show>
+      <End className='centered uiText'>The End</End>
     </View>
   </>
 

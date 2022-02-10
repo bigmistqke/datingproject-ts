@@ -7,7 +7,7 @@ module.exports = {
   ],
   env: {
     production: {
-      plugins: ["transform-remove-console"],     //removing consoles.log from app during release (production) versions
+      plugins: ["transform-remove-console"],
     },
   },
 };

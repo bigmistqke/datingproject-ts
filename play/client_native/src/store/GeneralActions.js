@@ -13,6 +13,7 @@ import NetInfo from "@react-native-community/netinfo";
 
 import Sound from "react-native-sound";
 
+import queue, { Worker } from "react-native-job-queue"
 // import { SvgCss } from "react-native-svg";
 
 export default function GeneralActions({ state, ref, actions }) {
@@ -53,7 +54,14 @@ export default function GeneralActions({ state, ref, actions }) {
       if (!result || !result.success) throw "joinRoom did not succeed ";
 
       console.log('result joinRoom ', result);
-      console.log('ping',);
+
+      queue.configure({
+        onQueueFinish: (executedJobs) => {
+          console.log("Queue stopped and executed", executedJobs)
+        }
+      });
+
+
 
       let {
         instructions,
@@ -241,17 +249,53 @@ export default function GeneralActions({ state, ref, actions }) {
     }
   }
 
+
+
   const downloadVideos = async (instructions, ignore_cache) => {
+    const base_url = RNFS.DocumentDirectoryPath + '/videos';
+    let promises = [];
+    let progresses = {};
+
+    const updateProgress = () => {
+      let total_progress = Object.values(progresses).reduce((a, b) => a + b, 0) / Object.values(progresses).length;
+      console.log('progress', total_progress);
+
+      state.viewport.loading_percentage.set(total_progress);
+    }
+
+    const downloadVideo = (video) =>
+      new Promise(async (resolve, reject) => {
+        console.log("DOWNLOAD VIDEO!!!!!", ignore_cache);
+        const filename = video.text.split("/")[(video.text.split("/").length - 1)];
+        const to_path = `${base_url}/${filename}`;
+
+        if (await RNFS.exists(to_path)) {
+          let { mtime } = await RNFS.stat(to_path);
+          if (!ignore_cache && (!video.modified || new Date(mtime).getTime() > video.modified)) {
+            resolve();
+            return;
+          }
+        }
+
+        RNFS.downloadFile({
+          fromUrl: `${urls.fetch}${video.text}`,
+          toFile: `${base_url}/${filename}`,
+          progress: (e) => {
+            const percentComplete = ((e.bytesWritten / e.contentLength) * 100 | 0) + '%';
+            progresses[video.instruction_id] = parseInt(percentComplete);
+            updateProgress();
+          },
+        }).promise.then(async (response) => {
+          if (response.statusCode !== 200) { // Or something else, basically a check for failed responses
+            throw `error while downloading ${filename}`
+          } else {
+            resolve(true);
+          }
+        });
+      })
+
+
     try {
-      const base_url = RNFS.DocumentDirectoryPath + '/videos';
-      let promises = [];
-      let progresses = {};
-
-      const updateProgress = () => {
-        let total_progress = Object.values(progresses).reduce((a, b) => a + b, 0) / Object.values(progresses).length;
-        state.viewport.loading_percentage.set(total_progress);
-      }
-
       if (!(await RNFS.exists(RNFS.DocumentDirectoryPath + '/videos'))) {
         RNFS.mkdir(base_url)
       }
@@ -259,34 +303,38 @@ export default function GeneralActions({ state, ref, actions }) {
       let videos = instructions.filter(instruction => instruction.type === "video")
 
       for (const video of videos) {
-        promises.push(new Promise(async (resolve, reject) => {
-          const filename = video.text.split("/")[(video.text.split("/").length - 1)];
-          const to_path = `${base_url}/${filename}`;
+        promises.push(downloadVideo(video))
+        /* queue.addWorker(new Worker(video.instruction_id, async (video) => downloadVideo(video)))
+        queue.addJob(video.instruction_id, video) */
 
-          if (await RNFS.exists(to_path)) {
-            let { mtime } = await RNFS.stat(to_path);
-            if (!ignore_cache && (!video.modified || new Date(mtime).getTime() > video.modified)) {
-              resolve();
-              return;
-            }
-          }
-
-          RNFS.downloadFile({
-            fromUrl: `${urls.fetch}${video.text}`,
-            toFile: `${base_url}/${filename}`,
-            progress: (e) => {
-              const percentComplete = ((e.bytesWritten / e.contentLength) * 100 | 0) + '%';
-              progresses[video.instruction_id] = parseInt(percentComplete);
-              updateProgress();
-            },
-          }).promise.then(async (response) => {
-            if (response.statusCode !== 200) { // Or something else, basically a check for failed responses
-              throw `error while downloading ${filename}`
-            } else {
-              resolve(true);
-            }
-          });
-        }))
+        /*  promises.push(new Promise(async (resolve, reject) => {
+           const filename = video.text.split("/")[(video.text.split("/").length - 1)];
+           const to_path = `${base_url}/${filename}`;
+ 
+           if (await RNFS.exists(to_path)) {
+             let { mtime } = await RNFS.stat(to_path);
+             if (!ignore_cache && (!video.modified || new Date(mtime).getTime() > video.modified)) {
+               resolve();
+               return;
+             }
+           }
+ 
+           RNFS.downloadFile({
+             fromUrl: `${urls.fetch}${video.text}`,
+             toFile: `${base_url}/${filename}`,
+             progress: (e) => {
+               const percentComplete = ((e.bytesWritten / e.contentLength) * 100 | 0) + '%';
+               progresses[video.instruction_id] = parseInt(percentComplete);
+               updateProgress();
+             },
+           }).promise.then(async (response) => {
+             if (response.statusCode !== 200) { // Or something else, basically a check for failed responses
+               throw `error while downloading ${filename}`
+             } else {
+               resolve(true);
+             }
+           });
+         })) */
       }
 
       return Promise.all(promises);

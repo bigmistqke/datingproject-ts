@@ -5,6 +5,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useStore } from "../../store/Store";
 import { log, error } from "../../helpers/log";
 
+import { Show } from "../solid-like-components"
+
 import RNFS from "react-native-fs";
 
 export default function VideoRenderer(props) {
@@ -29,18 +31,19 @@ export default function VideoRenderer(props) {
       return;
     }
     setTimeout(async () => {
-      await dom.current.seek(0);
+      // await dom.current.seek(0);
       setShouldPlay(true);
     }, 250)
   }, [props.flip])
 
   useEffect(() => {
-    if (!video_path) return;
+    if (!video_path || uri) return;
+    console.log('uri is set');
     // I hope this will help in preventing flip-animation to freeze 
     // setTimeout(() => {
     setUri(video_path);
-    // }, 1000)
-  }, [video_path])
+    // }, 750)
+  }, [video_path, uri])
 
   let video_path = useMemo(() => {
     const base_url = RNFS.DocumentDirectoryPath + '/videos';
@@ -48,16 +51,18 @@ export default function VideoRenderer(props) {
     return `${base_url}/${filename}`;
   }, [])
 
+  useEffect(() => {
+    console.log("VIDEO MOUNTEDD");
+  }, [])
+
   return (
+    // <Show when={uri}>
     <Video
-      // repeat={true}
       paused={!shouldPlay}
       onEnd={onVideoEnd}
       ref={dom}
-      onError={(err) => alert('video error: ', err)}
-
-      // repeat={true}
-
+      playInBackground={true}
+      // onError={(err) => alert('video error: ', err)}
       resizeMode="cover"
       style={{
         height: "100%",
@@ -66,9 +71,12 @@ export default function VideoRenderer(props) {
         flex: 1,
         borderRadius: 35,
       }}
+
       source={{ uri }}
-      onError={(err) => error("VIDEO ", err)}
-      onLoad={() => dom.current.seek(0)}
+    // onError={(err) => error("VIDEO ", err)}
+    // onLoad={() => dom.current.seek(0)}
     />
+    // </Show>
+
   )
 }

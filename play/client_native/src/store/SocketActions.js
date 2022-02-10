@@ -6,6 +6,8 @@ import { log, error } from "../helpers/log"
 
 const socket = new MQTTManager();
 
+import queue, { Worker } from "react-native-job-queue";
+
 
 export default function Socket({ state, actions, ref }) {
 
@@ -18,7 +20,10 @@ export default function Socket({ state, actions, ref }) {
 
   this.getNow = () => new Date().getTime() - ref.clock_delta
 
+
   this.initSocket = async () => {
+
+
     try {
       await socket.connect({ url: urls.socket, port: 443 });
 

@@ -1,20 +1,16 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo, memo } from 'react';
-// import { Dimensions, Animated, Text, StyleSheet } from 'react-native';
-import styled from 'styled-components/native';
-import Video from 'react-native-video';
-import Tweener from "../helpers/tweener.js";
 import { useStore } from '../store/Store.js';
 import { CardRenderer, BackRenderer } from './card/CardRenderer';
 import VideoRenderer from './card/VideoRenderer.js';
-// import { SvgXml } from 'react-native-svg';
 
-import { Show } from './solid-like-components.jsx';
+import { onMount, Show } from './solid-like-components.jsx';
 // import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { View, Animated, Vibration } from 'react-native';
 const Card = React.memo((props) => {
   const [state, actions] = useStore();
   const [flip, setFlip] = useState(false);
-  // const rotation = useSharedValue(180);
+  const [renderToHardware, setRenderToHardware] = useState(false);
+  const [initialize, setInitialize] = useState(false);
 
   const flip_value = useRef(new Animated.Value(1)).current;
 
@@ -49,6 +45,7 @@ const Card = React.memo((props) => {
       flip_value.setValue(1);
       return
     }
+
     // rotation.value = 0; //withTiming(0, { duration: 200 });
     Vibration.vibrate();
 
@@ -59,33 +56,46 @@ const Card = React.memo((props) => {
       damping: 0.1,
       mass: 0.0025,
       useNativeDriver: true // <-- Add this
-    }).start();
-
-    // does this make sure that it rotates??
-    // not really..
-    // setTimeout(() => rotation.value = 0, 250)
+    }).start(() => {
+      if (props.instruction.type === 'video') {
+        setRenderToHardware(false)
+      }
+    })
 
     if (
       state.autoswipe &&
-      // props.instruction.prev_instruction_ids.length === 0 &&
       props.instruction.type !== 'video' &&
       !props.instruction.timespan
     ) {
       setTimeout(() => {
         actions.swipeAway(state.instruction_index);
         actions.swipe(props.instruction)
-        // setTimeout(() => actions.swipe(props.instruction), 250)
       }, 750)
     }
   }, [flip])
 
+  onMount(() => {
+    //  offset initializing front-card
+    //  to prevent too much activity while
+    //  the card on top of the deck is being flipped
+    setTimeout(() => {
+      setInitialize(true)
+    }, 500)
+  })
 
-  /*   let can_swipe = useMemo(() => {
-      if (!flip) return false;
-      if (props.instruction.timespan && props.instruction.countdown !== 0) return false;
-      return true;
-    }, [props.instruction, flip]); */
+  useEffect(() => {
+    if (!instruction_state.current) return;
+    if (props.instruction.prev_instruction_ids.length === 0) {
+      setFlip(true);
+    } else {
+      setFlip(false);
+    }
+  }, [instruction_state.current, props.instruction.prev_instruction_ids])
 
+  const container_style = {
+    position: "absolute",
+    backfaceVisibility: "hidden"
+  }
 
   const card_style = {
     position: 'relative',
@@ -93,85 +103,54 @@ const Card = React.memo((props) => {
     height: state.viewport.card_size.height,
     left: ((state.viewport.window_size.width - state.viewport.card_size.width) / 2),
     top: ((state.viewport.window_size.height - state.viewport.card_size.height) / 2),
-    borderRadius: 35,
-    // zIndex: -1,
+    // borderRadius: 35,
     overflow: "hidden",
     backfaceVisibility: 'hidden',
   }
 
-  /* const aStyle = useAnimatedStyle(() => ({
-    transform: [
-      { rotateY: rotation.value + "deg" },
-    ]
-  })) */
-
-  /* const aStyleInverted = useAnimatedStyle(() => ({
-    transform: [
-      { rotateY: (rotation.value - 180) + "deg" },
-    ]
-  })) */
-
-  useEffect(() => {
-    if (props.instruction.type === 'video') {
-
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!instruction_state.current) return;
-    console.log(props.instruction.prev_instruction_ids);
-    if (props.instruction.prev_instruction_ids.length === 0) {
-      setFlip(true)
-    } else {
-      setFlip(false);
-    }
-  }, [instruction_state.current, props.instruction.prev_instruction_ids])
-
-  const container_style = { position: "absolute", backfaceVisibility: "hidden" }
-
 
   return (<>
+    <Show when={initialize}>
+      <Animated.View
+        style={[{
+          transform: [
+            { rotateY: rotation },
+            { rotateZ: rotation_ },
+            { perspective: 5000 }
+          ]
+        }, container_style]}
+      >
+        <View
+          style={card_style}>
+          <Show when={props.instruction.type !== 'video'}>
+            <CardRenderer
+              modes={{
+                timed: props.instruction.timespan && +props.instruction.timespan != 0 ? true : false,
+                choice: props.instruction.text && props.instruction.text.length > 1 ? true : false
+              }}
+              design_type={props.instruction.type}
+              instruction={props.instruction}
+              flip={flip}
+            />
+          </Show>
+          <Show when={props.instruction.type === 'video'}>
+            <VideoRenderer
+              url={props.instruction.text}
+              {...props}
+            />
+          </Show>
+        </View>
+      </Animated.View>
+    </Show>
 
-    <Animated.View style={[{
-      transform: [
-        { rotateY: rotation },
-        { rotateZ: rotation_ },
-
-        { perspective: 5000 }
-      ]
-    }, container_style]} >
-      <View style={card_style}>
-        {/* <Show when={props.index < 3}> */}
-        <Show when={props.instruction.type !== 'video'}>
-          <CardRenderer
-            modes={{
-              timed: props.instruction.timespan && +props.instruction.timespan != 0 ? true : false,
-              choice: props.instruction.text && props.instruction.text.length > 1 ? true : false
-            }}
-            design_type={props.instruction.type}
-            instruction={props.instruction}
-            flip={flip}
-          />
-        </Show>
-        <Show when={props.instruction.type === 'video'}>
-          <VideoRenderer
-            url={props.instruction.text}
-            {...props}
-          />
-        </Show>
-        {/* </Show> */}
-      </View>
-
-    </Animated.View>
-
-    <Animated.View style={[{
-      transform: [
-        { rotateY: reversed_rotation },
-        { rotateZ: reversed_rotation_ },
-
-        { perspective: 5000 }
-      ]
-    }, container_style]} >
+    <Animated.View
+      style={[{
+        transform: [
+          { rotateY: reversed_rotation },
+          { rotateZ: reversed_rotation_ },
+          { perspective: 5000 }
+        ]
+      }, container_style]} >
       <View style={card_style}>
         <CardRenderer design_type="back" car />
 

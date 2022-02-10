@@ -1,11 +1,5 @@
-import MMKVStorage from "react-native-mmkv-storage";
-const MMKV = new MMKVStorage.Loader().initialize();
-import urls from "../urls";
-import RNFS from "react-native-fs";
-import { createMemo } from "react";
-import isColor from "../helpers/isColor";
 import { log, error } from "../helpers/log";
-import { array_remove_element } from "../helpers/Pure";
+import BackgroundTimer from 'react-native-background-timer';
 
 
 export default function PlayActions({ state, ref, actions }) {
@@ -30,20 +24,19 @@ export default function PlayActions({ state, ref, actions }) {
 
 
   this.startTimer = (instruction_id, timespan) => {
-    const tick = () => {
-      if (!state.timers[instruction_id]) {
-        clearInterval(interval);
-        return;
-      }
+    let start = new Date().getTime();
+    let initial_time_out = setInterval(() => {
+      state.timers[instruction_id].set(parseInt(timespan - (new Date().getTime() - start) / 1000));
+    })
 
-      timespan--;
-      state.timers[instruction_id].set(timespan);
-      if (timespan === 0)
-        clearInterval(interval);
-    }
-    var interval = setInterval(tick, 1000);
-    return 'whatever'
-    // return () => clearInterval(interval)
+    let timeout_id = BackgroundTimer.setInterval(() => {
+      clearInterval(initial_time_out);
+      state.timers[instruction_id].set(parseInt(timespan - (new Date().getTime() - start) / 1000));
+    }, 1000);
+
+    setTimeout(() => {
+      BackgroundTimer.clearInterval(timeout_id)
+    }, timespan * 1000)
   }
 
   this.updateTimer = (instruction_id, timer) => state.timers[instruction_id].set(timer)

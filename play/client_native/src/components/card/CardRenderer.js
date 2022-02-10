@@ -66,7 +66,10 @@ const CardElements = props => {
   }, [])
 
   return (
-    <Show when={state.design.types[props.design_type]}>
+    <Show
+      renderToHardwareTextureAndroid={true}
+      when={state.design.types[props.design_type]}
+    >
       <For each={state.design.types[props.design_type]}>
         {(element, index) => (
           <Show key={element.id}
