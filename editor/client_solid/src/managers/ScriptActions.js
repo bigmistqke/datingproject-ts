@@ -72,9 +72,9 @@ export default function ScriptActions({ state, setState, actions }) {
 
   //// INSTRUCTIONS
 
-  this.addInstruction = (role_id) => {
-    let instruction = getDefaultInstruction(role_id);
-    let instruction_id = uniqid();
+  this.addInstruction = ({ role_id, instruction, instruction_id }) => {
+    if (!instruction) instruction = getDefaultInstruction(role_id);
+    if (!instruction_id) instruction_id = uniqid();
     setState("script", "instructions", instruction_id, instruction);
     return { instruction, instruction_id };
   };
@@ -351,7 +351,7 @@ export default function ScriptActions({ state, setState, actions }) {
   this.addRoleToNode = ({ node_id, role_id }) => {
     if (Object.keys(state.script.nodes[node_id].in_outs).length === 0) {
       let { instruction_id } = this.addInstruction(role_id);
-      this.addInstructionId({ node_id, instruction_id });
+      this.addInstructionIdToNode({ node_id, instruction_id });
     }
 
     setState("script", "nodes", node_id, "in_outs", role_id, {
@@ -489,7 +489,7 @@ export default function ScriptActions({ state, setState, actions }) {
 
   };
 
-  this.addInstructionId = ({ node_id, instruction_id, index = false }) => {
+  this.addInstructionIdToNode = ({ node_id, instruction_id, index = false }) => {
     let instruction_ids = [...state.script.nodes[node_id].instructions];
     if (index) {
       setState(
@@ -1238,5 +1238,68 @@ export default function ScriptActions({ state, setState, actions }) {
     selection.forEach((node_id) => {
       setState("script", "nodes", node_id, "parent_id", group_id);
     });
+  };
+  this.mergeSelectedNodes = () => {
+    const selected_nodes = state.editor.selection.map(node_id => [node_id, state.script.nodes[node_id]]);
+    let [root_node_id, root_node] = selected_nodes.shift();
+
+    // save all the connections, instructions somewhere
+    let all_in_outs = selected_nodes.map(([node_id, node]) => node.in_outs);
+    let all_affected_role_ids = all_in_outs.map((in_outs, i, role_ids) =>
+      Object.keys(in_outs).filter(role_id => role_ids.indexOf(role_id) === -1)
+    );
+    let all_instructions = selected_nodes.map(([node_id, node]) =>
+      node.instructions.map(instruction_id =>
+        [instruction_id, state.script.instructions[instruction_id]]
+      )
+    )
+
+    // delete all groups except the first one
+    selected_nodes.forEach(([node_id]) => removeNode(node_id))
+
+    // re-connect all the connections to the first one (prioritize first one)
+    all_in_outs.forEach(in_outs => {
+      console.log('this happens', in_outs);
+      Object.entries(in_outs).forEach(([role_id, in_out]) => {
+        console.log(in_out, root_node_id, role_id);
+        this.addRoleToNode({
+          node_id: root_node_id,
+          role_id
+        });
+        if (in_out.in_node_id) {
+          console.log('add conneciton!!');
+          this.addConnection({
+            node_id: root_node_id,
+            connecting_node_id: in_out.in_node_id,
+            role_id,
+            direction: 'in'
+          })
+        }
+        if (in_out.out_node_id) {
+          this.addConnection({
+            node_id: root_node_id,
+            connecting_node_id: in_out.out_node_id,
+            role_id,
+            direction: 'out'
+          })
+        }
+      })
+    })
+
+    // add instructions back to root_node
+
+    all_instructions.forEach(instructions => instructions.forEach(([instruction_id, instruction]) => {
+      this.addInstruction({
+        role_id: instruction.role_id,
+        instruction,
+        instruction_id
+      })
+      this.addInstructionIdToNode({
+        node_id: root_node_id,
+        instruction_id: instruction_id
+      })
+    }))
+    console.log('merged all selected nodes');
+    controlRoles(all_affected_role_ids);
   };
 }

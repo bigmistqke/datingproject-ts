@@ -25,8 +25,8 @@ const Instruction = (props) => {
   };
 
   const addRow = () => {
-    let { instruction_id } = actions.addInstruction(props.role_id);
-    actions.addInstructionId({
+    let { instruction_id } = actions.addInstruction({ role_id: props.role_id });
+    actions.addInstructionIdToNode({
       node_id: props.node_id,
       instruction_id: instruction_id,
       prev_instruction_id: props.instruction_id,

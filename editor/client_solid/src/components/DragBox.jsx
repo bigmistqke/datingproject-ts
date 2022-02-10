@@ -206,6 +206,7 @@ function DragBox(props) {
     <DragBoxContainer
       ref={props.ref}
       id={`drag_${props.id}`}
+      className="drag_box_container"
       classList={{
         selected: props.isSelected,
         ...getClassList(),

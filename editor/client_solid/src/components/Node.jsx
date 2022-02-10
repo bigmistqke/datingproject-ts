@@ -128,7 +128,7 @@ function Node(props) {
 
     let result = await actions.openPrompt({
       type: "options",
-      data: { options: ["delete", "copy", "group", "convert roles"] },
+      data: { options: ["delete", "copy", "merge", "convert roles"] },
       header:
         state.editor.selection.length == 1 ? `adjust node` : `adjust nodes`,
     });
@@ -158,13 +158,15 @@ function Node(props) {
         }); */
         break;
       case "group":
-        console.info("imlement group");
         actions.groupSelectedNodes();
         break;
+      case "merge":
+        actions.mergeSelectedNodes();
+        break;
       case "convert roles":
-        console.info("imlement group");
         convertRoles();
         break;
+
       default:
         break;
     }
@@ -176,10 +178,10 @@ function Node(props) {
   );
 
   const addRow = () => {
-    let { instruction_id } = actions.addInstruction(
-      Object.keys(props.in_outs)[0]
-    );
-    actions.addInstructionId({
+    let { instruction_id } = actions.addInstruction({
+      role_id: Object.keys(props.in_outs)[0],
+    });
+    actions.addInstructionIdToNode({
       node_id: props.node_id,
       instruction_id: instruction_id,
       prev_instruction_id: props.instruction_id,
