@@ -11,6 +11,10 @@ import { useStore } from "../store/Store";
 import { measure, useAnimatedRef } from 'react-native-reanimated';
 import { FlatList } from 'react-native-gesture-handler';
 
+import FullScreenAndroid from 'react-native-fullscreen-chz';
+
+import { AppState } from "react-native";
+
 
 function Game({ design, instructions }) {
   const [state, actions] = useStore();
@@ -50,14 +54,18 @@ function Game({ design, instructions }) {
         }
     `;
 
-  const End = styled.Text`
-        font-size: 5px;
-        font-family: arial;
+  const End = styled.View`
         color: #03034e;
         background: transparent;
         border: none;
-        width: 70%;
-        text-align: center;
+        width: 100%;
+        height:100%;
+        justify-content: center;
+        align-items: center;
+        font-size: 150px;
+        z-index: 50;
+        position:absolute;
+        font-family: arial_rounded;
     `;
 
 
@@ -72,7 +80,17 @@ function Game({ design, instructions }) {
 
   useEffect(() => {
 
+    const subscription = AppState.addEventListener("change", nextAppState => {
+      if (
+        nextAppState === "active"
+      ) {
+        console.log("App has come to the foreground!");
+        FullScreenAndroid.enable();
+      }
+    });
 
+
+    FullScreenAndroid.enable();
   }, [])
 
   const Game = () => <>
@@ -103,7 +121,14 @@ function Game({ design, instructions }) {
           />
         </Swipe>
       )}
-      <End className='centered uiText'>The End</End>
+
+      <End>
+        <Text style={{
+          fontSize: 100,
+          fontFamily: "arial_rounded",
+          color: "#03034e"
+        }}>The End</Text>
+      </End>
     </View>
   </>
 

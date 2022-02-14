@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import ScanScreen from './screens/ScanScreen';
 import GameScreen from './screens/GameScreen';
 import LoadingScreen from './screens/LoadingScreen';
@@ -10,14 +10,11 @@ import KeepAwake from 'react-native-keep-awake';
 import { useStore } from "./store/Store"
 import { Show } from './components/solid-like-components';
 
-import FullScreenAndroid from 'react-native-fullscreen-chz';
 
 function App() {
   const [state, actions] = useStore();
 
   useEffect(() => {
-    FullScreenAndroid.enable();
-    console.log('hallo');
     actions.syncClock();
     actions.checkCachedGameId();
     actions.initNetInfo();
