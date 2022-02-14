@@ -16,6 +16,7 @@ const application_state = createState({
   game_start: null,
   timers: {},
   clock_delta: undefined,
+  mode: undefined,
   ids: {
     game: null,
     player: null,

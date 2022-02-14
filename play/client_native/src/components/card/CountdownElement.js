@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useState } from 'react';
+import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
 import { Text } from "react-native";
 
 import { useStore } from '../../store/Store';
@@ -14,6 +14,18 @@ const CountdownElement = props => {
     , []
   );
 
+  const formatted_time = useMemo(() => {
+    if (!state.timers[props.instruction.instruction_id]) return null
+    const time = parseInt(state.timers[props.instruction.instruction_id]);
+    const min = parseInt(time / 60);
+    const sec = time - min * 60;
+    if (min > 0) {
+      return `${min}m${sec}s`
+    } else {
+      return `${Math.max(0, sec)}s`
+    }
+  })
+
   return (
     <>
       <Text /* className="text-container" */ style={{
@@ -22,10 +34,9 @@ const CountdownElement = props => {
         textAlignVertical: "center",
         textAlign: "center",
       }}>
-
         {
           check(state.timers[props.instruction.instruction_id]) ?
-            state.timers[props.instruction.instruction_id] :
+            formatted_time :
             props.instruction.timespan
         }
       </Text>

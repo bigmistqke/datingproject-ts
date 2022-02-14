@@ -7,7 +7,7 @@ export default function DesignActions({ ref, state, actions }) {
 
   this.getBorderRadius = () => parseInt(ref.design.border_radius);
 
-  this.updateCardSize = () => {
+  this.updateCardSize = (design) => {
     if (ref.viewport.window_size.height / ref.viewport.window_size.width >
       ref.design.card_dimensions.height / ref.design.card_dimensions.width) {
 

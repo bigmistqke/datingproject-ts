@@ -6,8 +6,6 @@ import { log, error } from "../helpers/log"
 
 const socket = new MQTTManager();
 
-import queue, { Worker } from "react-native-job-queue";
-
 
 export default function Socket({ state, actions, ref }) {
 
@@ -45,6 +43,7 @@ export default function Socket({ state, actions, ref }) {
         () => {
           console.log("restart", ref.ids.game);
           actions.restartGame();
+          unconfirmed_messages = [];
           socket.send(
             `/monitor/${thisPath()}/restart/confirmation`,
             { success: true }
@@ -88,6 +87,7 @@ export default function Socket({ state, actions, ref }) {
         ({ instruction_id, role_id: received_role_id }) => {
           let message_id = `${received_role_id}_${instruction_id}`;
           unconfirmed_messages = array_remove_element(unconfirmed_messages, message_id);
+          console.log('confirmation', { unconfirmed_messages });
         }
       );
 
@@ -140,6 +140,7 @@ export default function Socket({ state, actions, ref }) {
 
   this.sendSwipe = ({ next_role_id, instruction_id }) => {
     try {
+      let swipe_id = `${next_role_id}_${instruction_id}`;
       socket.send(
         `/${ref.ids.room}/${next_role_id}/swipe`,
         {
@@ -149,20 +150,13 @@ export default function Socket({ state, actions, ref }) {
         });
 
       if (next_role_id == ref.ids.role) return;
-
-      unconfirmed_messages.push(`${next_role_id}_${instruction_id}`);
-
+      if (unconfirmed_messages.indexOf(swipe_id) === -1) {
+        unconfirmed_messages.push(swipe_id);
+      }
       setTimeout(() => {
-        if (unconfirmed_messages.indexOf(`${next_role_id}_${instruction_id}`) === -1)
+        if (unconfirmed_messages.indexOf(swipe_id) === -1)
           return
-
-        socket.send(
-          `/${ref.ids.room}/${next_role_id}/swipe`,
-          {
-            role_id: ref.ids.role,
-            instruction_id,
-            timestamp: this.getNow()
-          });
+        this.sendSwipe({ next_role_id, instruction_id });
       }, 500);
 
     } catch (err) {

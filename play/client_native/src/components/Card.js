@@ -9,9 +9,8 @@ import { View, Animated, Vibration } from 'react-native';
 const Card = React.memo((props) => {
   const [state, actions] = useStore();
   const [flip, setFlip] = useState(false);
-  const [renderToHardware, setRenderToHardware] = useState(false);
-  const [initialize, setInitialize] = useState(false);
-
+  const [initialized, setInitialized] = useState(false);
+  const random_angle = useRef(Math.random() * 15 + 3).current;
   const flip_value = useRef(new Animated.Value(1)).current;
 
   // Next, interpolate beginning and end values (in this case 0 and 1)
@@ -21,7 +20,7 @@ const Card = React.memo((props) => {
   })
   const rotation_ = flip_value.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '10deg']
+    outputRange: ['0deg', `${random_angle}deg`]
   })
 
   const reversed_rotation = flip_value.interpolate({
@@ -30,7 +29,7 @@ const Card = React.memo((props) => {
   })
   const reversed_rotation_ = flip_value.interpolate({
     inputRange: [0, 1],
-    outputRange: ['-10deg', '0deg']
+    outputRange: [`${random_angle * -1}deg`, '0deg']
   })
 
   const instruction_state = useRef();
@@ -52,14 +51,18 @@ const Card = React.memo((props) => {
     Animated.spring(flip_value, {
       toValue: 0,
       // speed: 8,
-      stiffness: 0.5,
-      damping: 0.1,
-      mass: 0.0025,
+      /* stiffness: 0.5,
+      damping: 0.3,
+      mass: 0.004, */
+      stiffness: 75,
+      mass: 1,
+      damping: 15,
+
       useNativeDriver: true // <-- Add this
     }).start(() => {
-      if (props.instruction.type === 'video') {
-        setRenderToHardware(false)
-      }
+
+      // setRenderToHardware(true);
+      // setTimeout(() => setRenderToHardware(false), 750)
     })
 
     if (
@@ -70,17 +73,28 @@ const Card = React.memo((props) => {
       setTimeout(() => {
         actions.swipeAway(state.instruction_index);
         actions.swipe(props.instruction)
-      }, 750)
+      }, 1500)
     }
   }, [flip])
 
+  const [test, setTest] = useState(0);
+  let _test = useRef(0).current;
+
   onMount(() => {
-    //  offset initializing front-card
-    //  to prevent too much activity while
-    //  the card on top of the deck is being flipped
-    setTimeout(() => {
-      setInitialize(true)
-    }, 500)
+    if (props.index < 3) {
+      setInitialized(true)
+    } else {
+      setTimeout(
+        () => setInitialized(true),
+        1000)
+    }
+    /* setInterval(() => {
+      _test = _test + 1;
+      setTest(_test);
+      console.log(_test);
+    },
+      1000
+    ) */
   })
 
   useEffect(() => {
@@ -89,6 +103,7 @@ const Card = React.memo((props) => {
       setFlip(true);
     } else {
       setFlip(false);
+
     }
   }, [instruction_state.current, props.instruction.prev_instruction_ids])
 
@@ -103,59 +118,76 @@ const Card = React.memo((props) => {
     height: state.viewport.card_size.height,
     left: ((state.viewport.window_size.width - state.viewport.card_size.width) / 2),
     top: ((state.viewport.window_size.height - state.viewport.card_size.height) / 2),
-    // borderRadius: 35,
+    borderRadius: 35,
     overflow: "hidden",
     backfaceVisibility: 'hidden',
+    elevation: 15
   }
 
 
   return (<>
-    <Show when={initialize}>
+    <Show when={initialized}>
       <Animated.View
         style={[{
           transform: [
             { rotateY: rotation },
             { rotateZ: rotation_ },
-            { perspective: 5000 }
-          ]
+            { perspective: 5000 },
+
+          ],
         }, container_style]}
       >
-        <View
-          style={card_style}>
-          <Show when={props.instruction.type !== 'video'}>
+        <Show when={props.instruction.type !== 'video'}>
+          <View
+            style={card_style}
+            renderToHardwareTextureAndroid
+          >
             <CardRenderer
+
               modes={{
                 timed: props.instruction.timespan && +props.instruction.timespan != 0 ? true : false,
                 choice: props.instruction.text && props.instruction.text.length > 1 ? true : false
               }}
               design_type={props.instruction.type}
               instruction={props.instruction}
+              instruction_id={props.instruction.instruction_id}
               flip={flip}
             />
-          </Show>
-          <Show when={props.instruction.type === 'video'}>
+
+          </View>
+
+        </Show>
+        <Show when={props.instruction.type === 'video'}>
+          <View
+            style={card_style}
+          >
             <VideoRenderer
               url={props.instruction.text}
               {...props}
             />
-          </Show>
+          </View>
+        </Show>
+
+      </Animated.View>
+      <Animated.View
+        style={[{
+          transform: [
+            { rotateY: reversed_rotation },
+            { rotateZ: reversed_rotation_ },
+            { perspective: 5000 }
+          ]
+        }, container_style]} >
+        <View
+          style={card_style}
+          renderToHardwareTextureAndroid={true}
+        >
+          <CardRenderer design_type="back" instruction_id={props.instruction.instruction_id} />
+
         </View>
       </Animated.View>
     </Show>
 
-    <Animated.View
-      style={[{
-        transform: [
-          { rotateY: reversed_rotation },
-          { rotateZ: reversed_rotation_ },
-          { perspective: 5000 }
-        ]
-      }, container_style]} >
-      <View style={card_style}>
-        <CardRenderer design_type="back" car />
 
-      </View>
-    </Animated.View>
   </>
   );
 }, (prev, next) => {

@@ -1,5 +1,6 @@
 import { useStore } from '../../store/Store';
 import React, { useState, useEffect, useMemo } from 'react';
+import { View } from 'react-native';
 import styled from 'styled-components/native';
 
 import CardElement from './CardElement';
@@ -25,7 +26,8 @@ const BackRenderer = props => (
   </CardContainer>
 )
 
-const CardRenderer = props => {
+const CardRenderer = React.memo(props => {
+  console.log("re-render:", props.design_type === 'back' ? 'back' : 'front', props.instruction_id)
   return (
     < CardContainer >
       <CardCompositor
@@ -33,15 +35,10 @@ const CardRenderer = props => {
       />
     </CardContainer >
   )
-}
+})
+// }, (prev, next) => !prev.instruction.timespan)
 
 const CardCompositor = props => {
-  useEffect(() => {
-    if (props.modes && props.modes.timed) {
-
-
-    }
-  })
   return (
     <>
       <CardElements {...props} masked={false}></CardElements>
@@ -65,24 +62,32 @@ const CardElements = props => {
     }
   }, [])
 
+  /*   useEffect(() => {
+      console.log("cardElements is being re-rendered");
+    }) */
+
   return (
     <Show
-      renderToHardwareTextureAndroid={true}
       when={state.design.types[props.design_type]}
     >
-      <For each={state.design.types[props.design_type]}>
-        {(element, index) => (
-          <Show key={element.id}
-            when={!props.modes || actions.isElementVisible({ element, modes: props.modes })}>
-            <CardElement
-              index={index}
-              element={element}
-              type={element.type}
-              {...props}>
-            </CardElement>
-          </Show>
-        )}
-      </For>
+      <View
+      // renderToHardwareTextureAndroid={true}
+      >
+        <For each={state.design.types[props.design_type]}>
+          {(element, index) => (
+            <Show key={element.id}
+              when={!props.modes || actions.isElementVisible({ element, modes: props.modes })}>
+              <CardElement
+                index={index}
+                element={element}
+                type={element.type}
+                {...props}>
+              </CardElement>
+            </Show>
+          )}
+        </For>
+      </View>
+
     </Show>
   )
 

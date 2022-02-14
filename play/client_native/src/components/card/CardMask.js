@@ -13,7 +13,7 @@ const CardMask = props => {
 
       mask_percentage.value = withTiming(100,
         {
-          duration: props.instruction.timespan * 1000,
+          duration: props.instruction.timespan * 1000 - 500,
           easing: Easing.linear
         });
     }, 300)

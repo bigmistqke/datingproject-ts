@@ -18,15 +18,15 @@ const Swipe = (props) => {
   const [tweened_margin, setTweenedMargin] = useState(props.margin);
   const [can_swipe, setCanSwipe] = useState(false);
 
-  const MARGIN_SIZE = 30;
+  const MARGIN_SIZE = 60;
 
-  const DRAG_TRESHOLD = useRef(100).current;
+  const DRAG_TRESHOLD = useRef(150).current;
 
 
   const translationX = useSharedValue(0);
   const translationY = useSharedValue(0);
   const rotationZ = useSharedValue(0);
-  const margin = useSharedValue(props.margin * MARGIN_SIZE);
+  const margin = useSharedValue((props.margin + 1) * MARGIN_SIZE);
   const screen = Dimensions.get("screen");
 
   const swipe = () => actions.swipe(props.instruction);
@@ -38,12 +38,15 @@ const Swipe = (props) => {
   }, [props.margin])
 
   const swipeAway = (delta = 25) => {
+    let angle;
     if (translationY.value === 0 && translationX.value === 0) {
-
+      angle = Math.random() * Math.PI * 2;
+    } else {
+      angle = translationY.value === 0 && translationX.value === 0 ?
+        Math.atan2(Math.random() * 2 * Math.PI, Math.random() * 2 * Math.PI) :
+        Math.atan2(translationY.value, translationX.value);
     }
-    const angle = translationY.value === 0 && translationX.value === 0 ?
-      Math.atan2(Math.random() * 2 * Math.PI, Math.random() * 2 * Math.PI) :
-      Math.atan2(translationY.value, translationX.value);
+
     translationX.value = withTiming(Dimensions.get('screen').width * 3 * Math.cos(angle), { duration: 200 });
     translationY.value = withTiming(Dimensions.get('screen').height * 3 * Math.sin(angle), { duration: 200 });
 
@@ -88,7 +91,6 @@ const Swipe = (props) => {
 
 
   useEffect(() => {
-    if (tweened_margin === props.margin) return;
     setTweenedMargin(props.margin);
     setTimeout(() => {
       margin.value = withSpring(
@@ -102,6 +104,7 @@ const Swipe = (props) => {
   }, [props.margin])
 
   useEffect(() => {
+    console.log("timer", state.timers[props.instruction.instruction_id])
     if (!check(state.timers[props.instruction.instruction_id])) return;
     if (state.timers[props.instruction.instruction_id] !== 0) return
     swipeAway(500);

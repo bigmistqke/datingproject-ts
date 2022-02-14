@@ -72,7 +72,7 @@ function Game({ design, instructions }) {
   const visible_instructions = useMemo(() => {
     if (!state.instructions) return []
     return state.instructions.slice(state.instruction_index,
-      state.instruction_index + 5
+      state.instruction_index + 3
     )
   },
     [state.instructions]
@@ -82,13 +82,14 @@ function Game({ design, instructions }) {
 
     const subscription = AppState.addEventListener("change", nextAppState => {
       if (
-        nextAppState === "active"
+        nextAppState === "active" && state.mode === 'play'
       ) {
         console.log("App has come to the foreground!");
-        FullScreenAndroid.enable();
+        FullScreenAndroid.enable()
+      } else {
+        console.log(nextAppState);
       }
     });
-
 
     FullScreenAndroid.enable();
   }, [])
@@ -97,7 +98,7 @@ function Game({ design, instructions }) {
     <View
       className="Cards"
       style={{
-        height: "100%"
+        height: "100%",
       }}
     >
       {visible_instructions.map((instruction, index) =>
@@ -121,14 +122,18 @@ function Game({ design, instructions }) {
           />
         </Swipe>
       )}
+      <Show when={state.instruction_index >= state.instructions.length - 3}>
+        <End>
+          <Text style={{
+            fontSize: 100,
+            width: "75%",
+            fontFamily: "arial_rounded",
+            color: "#03034e",
+            textAlign: "center"
+          }}>The End</Text>
+        </End>
+      </Show>
 
-      <End>
-        <Text style={{
-          fontSize: 100,
-          fontFamily: "arial_rounded",
-          color: "#03034e"
-        }}>The End</Text>
-      </End>
     </View>
   </>
 

@@ -12,8 +12,6 @@ import { log, error } from "../helpers/log"
 import NetInfo from "@react-native-community/netinfo";
 
 import Sound from "react-native-sound";
-
-import queue, { Worker } from "react-native-job-queue"
 // import { SvgCss } from "react-native-svg";
 
 export default function GeneralActions({ state, ref, actions }) {
@@ -42,26 +40,18 @@ export default function GeneralActions({ state, ref, actions }) {
     });
   }
 
+  this.setMode = (mode) => {
+    console.log(mode);
+    state.mode.set(mode)
+  }
 
   this.initGame = async (game_id, ignore_cache = false) => {
     try {
+      this.setMode("load")
       // this.setInstructions([]);
       state.timers.set({});
       await MMKV.setStringAsync("game_id", game_id);
       state.received_instruction_ids.set([]);
-
-      let result = await this.joinRoom(game_id);
-      if (!result || !result.success) throw "joinRoom did not succeed ";
-
-      console.log('result joinRoom ', result);
-
-      queue.configure({
-        onQueueFinish: (executedJobs) => {
-          console.log("Queue stopped and executed", executedJobs)
-        }
-      });
-
-
 
       let {
         instructions,
@@ -72,51 +62,43 @@ export default function GeneralActions({ state, ref, actions }) {
         design,
         design_id,
         instruction_index,
-        sound
-      } = result;
+        sound,
+        autoswipe,
+        success
+      } = await this.joinRoom(game_id);
 
-      if (!instructions) {
-        throw "INSTRUCTIONS IS NULL"
-      }
-      const STATUS_HEIGHT = StatusBar.currentHeight || 24;
+      console.log(design);
+
+      if (!success) throw "joinRoom did not succeed "
+      if (!instructions) throw "INSTRUCTIONS IS NULL"
+
       state.game_start.set(new Date().getTime());
+      state.autoswipe.set(autoswipe);
+
       this.setDesign(design);
-      actions.updateCardSize();
+      actions.updateCardSize(design);
+
       this.setIds({
         player: player_id,
         role: role_id,
         room: room_id,
         game: game_id
       });
-      if (!ref.bools.isInitialized) {
-        actions.initSocket();
-      }
 
-      console.log('instructions are ', instructions);
+      if (!ref.bools.isInitialized)
+        actions.initSocket()
 
       // IMPORTANT: both downloadVideos mutate instructions (sets url to local file-path)!
-      await downloadSound(sound);
-      await downloadVideos(instructions, ignore_cache);
-      await downloadDesignElements({ design, design_id });
+      await Promise.all([
+        downloadVideos(instructions, ignore_cache),
+        downloadDesignElements({ design, design_id, ignore_cache }),
+        downloadSound(sound),
+      ])
+
+
 
 
       state.viewport.loading_percentage.set(false);
-
-
-      // this.setInstructions(instructions);
-
-      /*       if (ref.instructions) {
-              // idk why this hack is necessary, but otherwhise i couldn't get it to work 
-              // i m guessing something specific to statehook
-              // this.setInstructions(instructions)
-              instructions.forEach((instruction, index) =>
-                state.instructions[index].set(instruction)
-              )
-            } else {
-              this.setInstructions(instructions);
-            } */
-
-      // this.setInstructions(instructions);
 
       state.instructions.set(instructions);
 
@@ -126,11 +108,13 @@ export default function GeneralActions({ state, ref, actions }) {
 
       state.bools.isInitialized.set(true);
 
-      console.log('instruction_index is ', instruction_index);
-
-
+      this.setMode("play")
     } catch (err) {
       console.error("ERROR WHILE INITIGAME", err);
+      state.viewport.loading_error.set(err);
+      setTimeout(() => {
+        actions.setMode("new")
+      }, 3000)
       return false
     }
 
@@ -140,8 +124,8 @@ export default function GeneralActions({ state, ref, actions }) {
 
   this.checkCachedGameId = async () => {
     const previous_game_id = await MMKV.getStringAsync("game_id");
-
-    state.previous_game_id.set(previous_game_id)
+    state.previous_game_id.set(previous_game_id);
+    return previous_game_id;
   }
 
   this.getPreviousGameId = () => ref.previous_game_id;
@@ -207,9 +191,41 @@ export default function GeneralActions({ state, ref, actions }) {
 
   }
 
-  const downloadDesignElements = async ({ design, design_id }) => {
-    try {
 
+  const downloadWithProgress = ({
+    from_path, to_path, modified, ignore_cache
+  }) =>
+    new Promise(async (resolve, reject) => {
+
+      if (await RNFS.exists(to_path)) {
+        let stat = await RNFS.stat(to_path);
+        if (
+          !ignore_cache &&
+          (modified && new Date(stat.mtime).getTime() > modified)
+        ) {
+          resolve();
+          return;
+        }
+      }
+
+      RNFS.downloadFile({
+        fromUrl: from_path,
+        toFile: to_path,
+        progress: (e) => {
+          console.log(e.contentLength);
+          progresses[to_path] = [e.bytesWritten, e.contentLength];
+          updateProgress();
+        },
+      }).promise.then((result) => {
+        resolve();
+      });
+    })
+
+
+
+  const downloadDesignElements = async ({ design, design_id, ignore_cache }) => {
+    try {
+      console.log(design);
       const base_url = RNFS.DocumentDirectoryPath + '/designs';
 
       if (!(await RNFS.exists(base_url)))
@@ -222,25 +238,65 @@ export default function GeneralActions({ state, ref, actions }) {
       let promises = [];
 
       for (let svg of svgs) {
-        svg.url = {};
-        promises.push(new Promise((resolve, reject) => {
+        promises.push(downloadWithProgress({
+          from_path: `${urls.fetch}/api/designs/${design_id}/${svg.id}_normal.png?${new Date().getTime()}`,
+          to_path: `${base_url}/${svg.id}_normal.png`,
+          modified: design.modified,
+          ignore_cache
+        }))
+        promises.push(downloadWithProgress({
+          from_path: `${urls.fetch}/api/designs/${design_id}/${svg.id}_masked.png?${new Date().getTime()}`,
+          to_path: `${base_url}/${svg.id}_masked.png`,
+          modified: design.modified,
+          ignore_cache
+        }))
+        /* promises.push(new Promise(async (resolve, reject) => {
+
+
+
           let filename = `${svg.id}_normal.png`;
+          let to_file = `${base_url}/${filename}`;
+
+          if (await RNFS.exists(to_file)) {
+            let stat = await RNFS.stat(to_file);
+
+            if (
+              !ignore_cache &&
+              (design.modified && new Date(stat.mtime).getTime() > design.modified)
+            ) {
+              resolve();
+              return;
+            }
+          }
 
           RNFS.downloadFile({
             fromUrl: `${urls.fetch}/api/designs/${design_id}/${filename}?${new Date().getTime()}`,
-            toFile: `${base_url}/${filename}`
+            toFile,
+            progress: (e) => {
+              console.log(e.contentLength);
+              progresses[filename] = [e.bytesWritten, e.contentLength];
+              updateProgress();
+            },
           }).promise.then((result) => {
-            console.log('downloaded', filename);
             resolve();
           });
         }))
         promises.push(new Promise((resolve, reject) => {
           let filename = `${svg.id}_masked.png`;
+          console.log('downloading', filename);
+
           RNFS.downloadFile({
             fromUrl: `${urls.fetch}/api/designs/${design_id}/${filename}?${new Date().getTime()}`,
-            toFile: `${base_url}/${filename}`
-          }).promise.then(resolve);
-        }))
+            toFile: `${base_url}/${filename}`,
+            progress: (e) => {
+              progresses[filename] = [e.bytesWritten, e.contentLength];
+              updateProgress();
+            },
+          }).promise.then(() => {
+            console.log('downloaded', filename);
+            resolve();
+          });
+        })) */
       }
       return Promise.all(promises);
     } catch (err) {
@@ -249,53 +305,59 @@ export default function GeneralActions({ state, ref, actions }) {
     }
   }
 
+  let progresses = {};
 
+  const updateProgress = () => {
+    let total_progress = Object.values(progresses).reduce((a, b) => [a[0] + b[0], a[1] + b[1]]).reduce((a, b) => a / b * 100);
+    state.viewport.loading_percentage.set(total_progress);
+  }
 
   const downloadVideos = async (instructions, ignore_cache) => {
     const base_url = RNFS.DocumentDirectoryPath + '/videos';
-    let progresses = {};
 
-    const updateProgress = () => {
-      let total_progress = Object.values(progresses).reduce((a, b) => a + b, 0) / Object.values(progresses).length;
-      console.log('progress', total_progress);
-      state.viewport.loading_percentage.set(total_progress);
-    }
 
     const downloadVideo = (video) =>
       new Promise(async (resolve, reject) => {
-        console.log("DOWNLOAD VIDEO!!!!!", ignore_cache);
-        const filename = video.text.split("/")[(video.text.split("/").length - 1)];
-        const to_path = `${base_url}/${filename}`;
+        try {
+          console.log("DOWNLOAD VIDEO!!!!!", ignore_cache);
+          const filename = video.text.split("/")[(video.text.split("/").length - 1)];
+          const postername = filename.replace(filename.split(".").pop(), "jpg");
 
-        if (await RNFS.exists(to_path)) {
-          let stat = await RNFS.stat(to_path);
+          const to_path = `${base_url}/${filename}`;
 
-          console.log('video', video.filesize, stat.size, parseInt(video.filesize) === stat.size)
-          if (
-            !ignore_cache &&
-            parseInt(video.filesize) === stat.size &&
-            (!video.modified || new Date(stat.mtime).getTime() > video.modified)
-          ) {
-            resolve();
-            return;
+          if (await RNFS.exists(to_path)) {
+            let stat = await RNFS.stat(to_path);
+
+            console.log('video', video.filesize, stat.size, parseInt(video.filesize) === stat.size)
+            if (
+              !ignore_cache &&
+              parseInt(video.filesize) === stat.size &&
+              (!video.modified || new Date(stat.mtime).getTime() > video.modified)
+            ) {
+              resolve();
+              return;
+            }
           }
-        }
 
-        RNFS.downloadFile({
-          fromUrl: `${urls.fetch}${video.text}`,
-          toFile: `${base_url}/${filename}`,
-          progress: (e) => {
-            const percentComplete = ((e.bytesWritten / e.contentLength) * 100 | 0) + '%';
-            progresses[video.instruction_id] = parseInt(percentComplete);
-            updateProgress();
-          },
-        }).promise.then(async (response) => {
-          if (response.statusCode !== 200) { // Or something else, basically a check for failed responses
+          let video_response = await RNFS.downloadFile({
+            fromUrl: `${urls.fetch}${video.text}`,
+            toFile: `${base_url}/${filename}`,
+            progress: (e) => {
+              progresses[filename] = [e.bytesWritten, e.contentLength];
+              updateProgress();
+            },
+          }).promise;
+
+          if (video_response.statusCode !== 200) { // Or something else, basically a check for failed responses
             throw `error while downloading ${filename}`
           } else {
             resolve(true);
           }
-        });
+        } catch (err) {
+          console.error(err);
+          resolve(false);
+        }
+
       })
 
 
@@ -306,9 +368,7 @@ export default function GeneralActions({ state, ref, actions }) {
 
       let videos = instructions.filter(instruction => instruction.type === "video")
       let promises = videos.map(video => downloadVideo(video));
-      let results = Promise.all(promises);
-      console.log(results);
-      return results;
+      return Promise.all(promises)
     } catch (err) {
       console.error(err);
       // alert(err);
