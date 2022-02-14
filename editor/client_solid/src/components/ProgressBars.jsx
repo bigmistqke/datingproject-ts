@@ -1,34 +1,77 @@
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { styled } from "solid-styled-components";
 import { useStore } from "../managers/Store";
 
 export default function ProgressBars(props) {
   const [uploaders, setUploaders] = createSignal({});
   const [state] = useStore();
 
-  /* createEffect(() => {
-    if (!state.videoUploader) return;
-    state.videoUploader.addEventListener("update", ({ detail }) => {
-      setUploaders(detail);
-    });
-  }); */
+  const ProgressBar = styled("div")`
+    display: inline-block;
+    background: white;
+    border-radius: 15px;
+    height: 16pt;
+    line-height: 16pt;
+    font-size: 8pt;
+    position: relative;
+    margin: 4px;
+    margin-right: 0px;
+    width: 150px;
+    overflow: hidden;
+    background: var(--light-grey);
+    border: 1px solid white;
 
-  return Object.keys(uploaders).length != 0 ? (
-    <div className="progressBars">
-      {uploaders.map(({ instruction_id, uploader }) => {
-        return (
-          <div key={instruction_id} className="progressBar">
-            <div
-              className="progress"
-              style={{ width: `${uploader.progress.percentage}%` }}
-            ></div>
-            <div className="text">
+    & > span {
+      position: absolute;
+      height: 100%;
+      left: 0px;
+      top: 0px;
+    }
+    & > span:first-child {
+      position: relative;
+      z-index: 1;
+      color: black;
+      margin-top: 1px;
+      padding-left: 15px;
+      padding-right: 15px;
+    }
+    & > span:last-child {
+      background: var(--darker-grey);
+      position: absolute;
+      top: 0px;
+      bottom: 0px;
+      left: 0px;
+      width: 0%;
+      transition: width 0.5s;
+    }
+  `;
+
+  const ProgressBars = styled("div")`
+    position: absolute;
+    z-index: 10;
+    bottom: 0px;
+    width: 100%;
+    line-height: 24pt;
+    height: 24pt;
+    white-space: nowrap;
+  `;
+
+  return (
+    <Show when={Object.keys(state.editor.uploaders).length != 0}>
+      <ProgressBars>
+        <For each={Object.values(state.editor.uploaders)}>
+          {(uploader) => (
+            <ProgressBar className="progress">
               <span>
-                {instruction_id} is {uploader.status}
+                {uploader.instruction_id} : {uploader.state}
               </span>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  ) : null;
+              <Show when={uploader.progress}>
+                <span style={{ width: `${uploader.progress.percentage}%` }} />
+              </Show>
+            </ProgressBar>
+          )}
+        </For>
+      </ProgressBars>
+    </Show>
+  );
 }

@@ -313,8 +313,13 @@ function Node(props) {
                         type={instruction.type}
                         role_id={instruction.role_id}
                         sound={instruction.sound}
+                        filesize={instruction.filesize}
                         node_id={props.node_id}
-                        role_hue={state.script.roles[instruction.role_id].hue}
+                        role_hue={
+                          state.script.roles[instruction.role_id]
+                            ? state.script.roles[instruction.role_id].hue
+                            : null
+                        }
                         in_outs={props.in_outs}
                         updateNodeDimensions={updateNodeDimensions}
                       />

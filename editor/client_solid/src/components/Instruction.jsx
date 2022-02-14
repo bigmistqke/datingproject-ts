@@ -41,6 +41,11 @@ const Instruction = (props) => {
         type,
       });
     } else {
+      if (props.type === "video") {
+        actions.setInstruction(props.instruction_id, "modified", undefined);
+        actions.setInstruction(props.instruction_id, "filesize", undefined);
+        actions.setInstruction(props.instruction_id, "text", "");
+      }
       actions.setInstruction(props.instruction_id, {
         type,
       });
@@ -62,6 +67,8 @@ const Instruction = (props) => {
     if (!types.test(file.type) || !types.test(file.name)) return;
     let upload = await actions.processVideo(file, props.instruction_id);
     if (!upload.success) console.error(upload.error);
+
+    console.log(upload.response);
     actions.setInstruction(props.instruction_id, {
       text: `/api${upload.response.substring(1)}`,
       modified: new Date().getTime(),

@@ -75,7 +75,7 @@ export function Provider(props) {
       role_offsets: {},
       node_dimensions: {},
       temporary_connections: [],
-      uploaders: [],
+      uploaders: {},
       visited_parent_ids: [],
       parent_ids: [],
     },

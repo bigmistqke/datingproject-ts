@@ -256,6 +256,28 @@ function Editor(props) {
           console.log("setRoles", new Date().getTime() - timestamp);
           timestamp = new Date().getTime();
 
+          let instructions = res.instructions ? res.instructions : {};
+          Object.entries(instructions)
+            .filter(
+              ([instruction_id, instruction]) =>
+                instruction.type === "video" &&
+                instruction.text !== "" &&
+                !instruction.filesize
+            )
+            .forEach(async ([instruction_id, instruction]) => {
+              const response = await fetch(urls.fetch + instruction.text, {
+                method: "HEAD",
+              });
+              if (response.status === 200) {
+                const filesize = response.headers.get("Content-Length");
+                console.log(instruction_id, filesize);
+                actions.setFilesize({
+                  instruction_id,
+                  filesize,
+                });
+              }
+            });
+
           actions.setInstructions(res.instructions ? res.instructions : {});
           console.log("setInstructions", new Date().getTime() - timestamp);
           timestamp = new Date().getTime();

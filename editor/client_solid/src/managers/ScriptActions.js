@@ -95,6 +95,10 @@ export default function ScriptActions({ state, setState, actions }) {
     }
   };
 
+  this.setFilesize = ({ instruction_id, filesize }) =>
+    setState("script", "instructions", instruction_id, "filesize", filesize);
+
+
   //// BLOCKS
 
   /*   const updateNode = (node_id, data) => {
@@ -350,7 +354,7 @@ export default function ScriptActions({ state, setState, actions }) {
 
   this.addRoleToNode = ({ node_id, role_id }) => {
     if (Object.keys(state.script.nodes[node_id].in_outs).length === 0) {
-      let { instruction_id } = this.addInstruction(role_id);
+      let { instruction_id } = this.addInstruction({ role_id });
       this.addInstructionIdToNode({ node_id, instruction_id });
     }
 
@@ -1194,13 +1198,37 @@ export default function ScriptActions({ state, setState, actions }) {
   this.processVideo = (file, instruction_id) =>
     new Promise(async (resolve) => {
       const uploader = new Uploader();
-      setState("editor", "uploaders", (uploaders) => [...uploaders, uploader]);
+      let start_time = new Date().getTime();
+      setState("editor", "uploaders", start_time, { state: 'uploading', progress: { percentage: 0 }, instruction_id });
+      uploader.onProgress = progress => {
+        setState("editor", "uploaders", start_time, 'progress', progress)
+
+        if (progress.percentage === 100) {
+          setState("editor", "uploaders", start_time, 'state', 'processing')
+        }
+      }
       let result = await uploader.process(
-        `${urls.fetch}/api/uploadVideo/${state.script.script_id}/mp4`,
-        { file, instruction_id }
+        {
+          url: `${urls.fetch}/api/uploadVideo/${state.script.script_id}/mp4`,
+          data: {
+            file,
+            instruction_id,
+          }
+        }
       );
+
+      if (result.success) {
+        setState("editor", "uploaders", start_time, "state", 'completed');
+
+      } else {
+        setState("editor", "uploaders", start_time, "state", 'failed');
+      }
+
+      setTimeout(() => setState("editor", "uploaders", start_time, undefined), 2000)
+
       resolve(result);
     });
+
 
   this.groupSelectedNodes = () => {
     const selection = [...state.editor.selection];
