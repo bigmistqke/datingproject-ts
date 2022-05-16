@@ -14,6 +14,12 @@ function DatabaseManager({ _mongo, _redis }) {
   this.getScript = async (script_id) => _mongo.getCollection('scripts')
     .findDocument({ script_id });
 
+  this.deleteScript = async (script_id) => _mongo.getCollection('scripts')
+    .deleteDocument({ script_id });
+
+  this.getAllScripts = async () => _mongo.getCollection('scripts').dump()
+
+
   this.testScript = async ({ script_id, script }) => {
     let { room_url, room } = await this.room.create({ script, script_id });
     let roles = {};
@@ -74,6 +80,38 @@ function DatabaseManager({ _mongo, _redis }) {
     let data = await _mongo.getCollection('cards').findDocument({ card_id: design_id });
     if (!data) return false;
     return data
+  }
+
+  this.getAllDesigns = async () => await _mongo.getCollection('cards')
+
+  this.saveStats = async ({ room_id, role_id, stats }) => {
+    try {
+      console.log("saveStats", room_id, role_id, stats)
+      _mongo.getCollection('stats').pushDocument(
+        { room_id },
+        { [role_id]: stats }
+      );
+      return true;
+    } catch (e) {
+      console.error(e);
+      return false;
+    }
+
+  }
+
+  this.initStats = async ({ room_id, script_id, role_ids }) => {
+    if (!role_ids) {
+      console.error('role_ids are undefined while trying to initStats');
+      return;
+    }
+    _mongo.getCollection('stats').updateDocument(
+      { room_id },
+      {
+        room_id,
+        script_id,
+        ...Object.fromEntries(role_ids.map(id => [id, []]))
+      }
+    );
   }
 }
 

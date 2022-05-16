@@ -16,9 +16,14 @@ const _Mongo = function ({ url }) {
     let collection = db.collection(collection_name);
 
     this.findDocument = async (query) => await collection.findOne(query)
+    this.deleteDocument = async (query) => await collection.remove(query)
     this.updateDocument = async (query, content) => await collection.updateOne(query, { $set: content }, { upsert: true })
+    this.replaceDocument = async (query, content) => await collection.replaceOne(query, content, { upsert: true })
+    this.pushDocument = async (query, content) => await collection.updateOne(query, { $push: content }, { upsert: true })
+
     this.insertDocument = async (content) => await collection.insertOne(content)
 
+    this.dump = () => collection.find().toArray()
   }
 
   this.connect = (dbName) => {

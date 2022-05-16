@@ -27,27 +27,24 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
   }
 
   this.createRoom = async ({ script, script_id }) => {
-
     const new_room = new Room({ _redis, _mongo, _mqtt });
-    const { room_id } = await new_room.create({ script, script_id });
+    const { room_id, role_ids } = await new_room.create({ script, script_id });
     rooms[room_id] = new_room;
 
-
     await process(async () => {
-      let rooms = await _redis.get("rooms");
-      if (!rooms) rooms = {};
-      if (!rooms[script_id]) rooms[script_id] = [];
-      rooms[script_id].push(room_id);
-      await _redis.set("rooms", rooms);
+      let _rooms = await _redis.get("rooms");
+
+      if (!_rooms) _rooms = {};
+      if (!_rooms[script_id]) _rooms[script_id] = [];
+
+      _rooms[script_id].push(room_id);
+      await _redis.set("rooms", _rooms);
     })
 
-    return { room_id };
+    return { room_id, role_ids };
   }
 
-  /*   this.monitorRoom = ({ room_id }) => {
-  
-      rooms[room_id].monitor();
-    } */
+  this.renameRoom = ({ script_id, room_id, room_name }) => rooms[room_id].setRoomName(room_name)
 
   this.joinRoom = ({ room_id, player_id }) =>
     rooms[room_id] ?
@@ -67,11 +64,6 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
       _rooms[script_id] = array_remove_element(_rooms[script_id], room_id)
       await _redis.set("rooms", _rooms);
     })
-    console.log('finished deleting room');
-
-
-
-    // delete rooms[room_id];
   }
 
   this.restartRoom = ({ room_id }) => rooms[room_id].restart();
@@ -83,8 +75,6 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
     if (Object.values(room_categories).length === 0) return [];
     return Object.values(room_categories).reduce((a, b) => a.concat(b), [])
   }
-
-  // this.getRoom = ({ room_id }) => rooms[room_id].get();
 
   this.getRooms = async ({ script_id }) => {
     let { [script_id]: room_ids } = await _redis.get("rooms");
@@ -100,6 +90,11 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
 
   this.getAllMetas = async ({ script_id }) => {
     let { [script_id]: room_ids } = await _redis.get("rooms");
+
+    console.log(room_ids);
+
+    if (!room_ids) return {};
+
     return Object.fromEntries(await Promise.all(
       room_ids.map(async room_id => (
         [
@@ -130,11 +125,7 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
     this.set(room);
   })
 
-
-
-  this.toggleAutoswipeRole = async ({ room_id, role_id }) => {
-
-  }
+  this.getGameCount = ({ room_id }) => rooms[room_id].getGameCount();
 }
 
 function Room({ _redis, _mongo, _mqtt }) {
@@ -160,6 +151,11 @@ function Room({ _redis, _mongo, _mqtt }) {
   this.getMeta = () => _redis.get(room_id)
   this.getInstructionsMap = () => _redis.get(`${room_id}_instructions_map`)
 
+  this.getGameCount = async () => {
+    let meta = await this.getMeta();
+    return meta.game_count;
+  }
+
   this.getPlayer = (player_id) => _redis.get(`${room_id}${player_id}`)
   this.getPlayerRestart = (player_id) => _redis.get(`${room_id}${player_id}_restart`)
   this.getScriptId = async () => {
@@ -171,11 +167,19 @@ function Room({ _redis, _mongo, _mqtt }) {
   }
 
   this.setMeta = (meta) => _redis.set(room_id, meta)
-  this.setInstructionsMap = (instructions_map) => _redis.set(`${room_id}_instructions_map`, instructions_map)
+
+  const setInstructionsMap = (instructions_map) => _redis.set(`${room_id}_instructions_map`, instructions_map)
 
   this.setPlayer = ({ player_id, player }) => _redis.set(`${room_id}${player_id}`, [player])
   this.setPlayerRestart = ({ player_id, player }) => _redis.set(`${room_id}${player_id}_restart`, [player])
   this.setRoomId = id => room_id = id
+
+  this.setRoomName = room_name => process('meta', async () => {
+    let meta = await this.getMeta();
+    meta.room_name = room_name;
+    await this.setMeta(meta);
+    return true;
+  })
 
 
   const updateMeta = (func) => process('meta', async () => {
@@ -186,8 +190,6 @@ function Room({ _redis, _mongo, _mqtt }) {
 
   this.create = async ({ script, script_id }) => {
     try {
-      console.log("SCRIPT_ID IS ", script_id);
-
       room_id = crypto.randomBytes(3).toString('hex');
 
       let players_instructions = {};
@@ -215,13 +217,15 @@ function Room({ _redis, _mongo, _mqtt }) {
       Object.keys(players_meta).forEach(player_id => received_swipes[player_id] = []);
 
       let meta = {
-        design_id: script.design_id ? script.design_id : 'oldie_3',
+        design_id: script.design_id ? script.design_id : 'europalia3_mikey',
         players: players_meta,
+        room_name: room_id,
+        game_count: 0,
         script_id
       }
       await this.setMeta(meta);
 
-      await this.setInstructionsMap(instructions_map)
+      await setInstructionsMap(instructions_map)
 
 
       Object.entries(players_instructions).forEach(([player_id, player]) => {
@@ -231,7 +235,7 @@ function Room({ _redis, _mongo, _mqtt }) {
 
       this.monitor();
 
-      return { room_id };
+      return { room_id, role_ids: Object.keys(script.roles) };
     } catch (error) {
       console.error(error);
       return { error };
@@ -280,7 +284,7 @@ function Room({ _redis, _mongo, _mqtt }) {
         { ...player, instruction_index: 0 }
       ])
     ))
-    console.log(meta.players);
+    meta.count = meta.count + 1;
     await this.setMeta(meta);
 
     Object.keys(meta.players).forEach(async (player_id) => {
@@ -376,7 +380,7 @@ function Room({ _redis, _mongo, _mqtt }) {
     const instructions = await this.getPlayer(player_id);
     const instruction = instructions[instruction_index];
     meta.players[player_id].instruction = instruction;
-    _mqtt.send(`/monitor/${room_id}/${player.role_id}/current_instruction`, instruction);
+    _mqtt.send(`/monitor/${room_id}/${meta.players[player_id].role_id}/current_instruction`, instruction);
     return meta;
   })
 
@@ -385,8 +389,12 @@ function Room({ _redis, _mongo, _mqtt }) {
     async () => {
       try {
         let player = await this.getPlayer(player_id);
-        let instruction_index = player.findIndex(v => v.prev_instruction_ids.indexOf(instruction_id) !== -1);
-        if (!instruction_index)
+        console.log('removeFromPrevInstructionIdsOfPlayer', player[0].prev_instruction_ids);
+        let instruction_index = player.findIndex(instruction => {
+
+          return instruction.prev_instruction_ids.indexOf(instruction_id) !== -1
+        });
+        if (!instruction_index && instruction_index !== 0)
           throw `could not find instruction ${instruction_id} in player ${player_id}`
 
         let instruction = player[instruction_index];
@@ -579,12 +587,13 @@ function Room({ _redis, _mongo, _mqtt }) {
   this.monitor = async () => {
     try {
       console.log('monitor room ', room_id);
-      let { players, script_id } = await this.getMeta();
+      let { players, script_id, room_name } = await this.getMeta();
+      let instructions_map = await this.getInstructionsMap();
 
       Object.entries(players).forEach(([player_id, player]) =>
         monitorPlayer({ player_id, player })
       )
-      _mqtt.send(`/createRoom/${script_id}`, JSON.stringify({ room_id, players, script_id }));
+      _mqtt.send(`/createRoom/${script_id}`, JSON.stringify({ room_id, players, script_id, instructions_map, room_name }));
 
       checkLastInteractions();
     } catch (err) {

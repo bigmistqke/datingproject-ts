@@ -87,7 +87,15 @@ app.post('/api/uploadVideo/:script_id/:type', async function (req, res) {
   } catch (e) {
     console.error('an error happened while trying to upload a video: ', e)
   }
+})
 
+app.post('/api/video/createPoster', function (req, res, next) {
+  let file_path = req.body.file_path;
+  if (!file_path) res.status(400).send("did not include file_path in the body")
+  console.log(file_path);
+  createPoster(file_path);
+  /* createPoster(new_path);
+  res.status(200) */
 })
 
 // access point to download video 
@@ -118,7 +126,34 @@ app.get('/api/script/get/:script_id/:mode', async function (req, res) {
   console.log('get script', script_id, new Date().getTime() - start);
 
   if (results) {
-    res.status(200).send(results[mode])
+    console.log(mode in results ? results[mode] : results);
+
+    res.status(200).send(mode in results ? results[mode] : results)
+  } else {
+    res.sendStatus(404)
+  }
+})
+
+// delete script
+app.get('/api/script/delete/:script_id', async function (req, res, next) {
+  try {
+    const script_id = req.params.script_id;
+    let response = await _db.deleteScript({ script_id });
+    res.send(response)
+  } catch (e) {
+    console.error(e);
+  }
+})
+
+// get all scripts
+app.get('/api/script/get_all', async function (req, res) {
+  const { mode, script_id } = req.params;
+
+  let results = await _db.getAllScripts(script_id);
+  results = results.map(r => r.script_id);
+
+  if (results) {
+    res.status(200).json(results)
   } else {
     res.sendStatus(404)
   }
@@ -130,14 +165,13 @@ app.get('/api/script/get/:script_id/:mode', async function (req, res) {
 app.post('/api/script/test/:script_id', async function (req, res, next) {
   const { script_id } = req.params;
   let script = req.body;
-  let { room, room_id } = await _rooms.createRoom({ script_id, script });
+  let { room, room_id, role_ids } = await _rooms.createRoom({ script_id, script });
+  _db.initStats({ script_id, room_id, role_ids })
   // _rooms.monitor({ room_id });
-  res.json({ ...room, room_id });
+  res.json({ room_id });
 })
 
 // ROOM
-
-
 
 /* // create room
 app.post('/api/room/create/:script_id', async function (req, res, next) {
@@ -170,6 +204,19 @@ app.get('/api/room/restart/:room_id', async function (req, res, next) {
   }
 })
 
+// rename room
+app.post('/api/room/rename/:room_id', async function (req, res, next) {
+  try {
+    const room_id = req.params.room_id;
+    let { room_name, script_id } = req.body;
+
+    let response = await _rooms.renameRoom({ script_id, room_id, room_name });
+    res.send(response)
+  } catch (e) {
+    console.error(e);
+  }
+})
+
 // status room
 app.get('/api/room/status', async function (req, res, next) {
   try {
@@ -195,7 +242,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
   }
 
   if (!join_result.sound) join_result.sound = "ping.mp3";
-  if (!join_result.design_id) join_result.design_id = "oldie_3";
+  if (!join_result.design_id) join_result.design_id = "europalia3_mikey";
   let { design, modified } = await _db.getDesign({ design_id: join_result.design_id });
 
   _mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'connected' }));
@@ -208,8 +255,6 @@ app.get('/api/room/join/:url', async function (req, res, next) {
     ...join_result,
   });
 })
-
-
 
 // get all the player_ids of a room (for the combo-test)
 app.get('/api/room/getRoleUrls/:room_id', async function (req, res, next) {
@@ -296,6 +341,17 @@ app.get('/api/room/update/:room_id/:script_id', async function (req, res, next) 
   }
 })
 
+// get stats from a player regarding time it took to perform a swipe
+app.post('/api/room/stats/save/:room_id/:role_id', async function (req, res, next) {
+  const { room_id, role_id } = req.params;
+  console.log("save stats room", room_id, role_id)
+
+  const stats = req.body;
+  const game_count = await _rooms.getGameCount({ room_id });
+  console.log(`add stats for role_id ${role_id} in room ${room_id}`);
+  _db.saveStats({ room_id, role_id, stats })
+  res.sendStatus(200);
+})
 // CARD
 
 app.post('/api/design/uploadImage/:card_id/:image_id', async function (req, res, next) {
@@ -366,6 +422,14 @@ app.post('/api/design/save/:design_id', async function (req, res, next) {
     res.status(500).send(err)
   }
 
+})
+
+
+
+app.get('/api/design/get_all', async (req, res, next) => {
+  let data = await _db.getAllDesigns();
+  if (!data) res.status(500).send("error while querying database")
+  else res.status(200).json(data);
 })
 
 app.get('/api/design/get/:design_id/:mode', async function (req, res, next) {
