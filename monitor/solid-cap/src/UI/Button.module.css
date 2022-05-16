@@ -1,0 +1,12 @@
+.button {
+  background: white;
+  color: black;
+  height: 25px;
+  border-radius: 25px;
+  text-align: center;
+  border: none;
+}
+.selected {
+  background: black;
+  color: white;
+}

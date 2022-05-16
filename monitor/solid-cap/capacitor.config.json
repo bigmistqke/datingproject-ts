@@ -1,0 +1,6 @@
+{
+  "appId": "com.bigmistqke.monitor",
+  "appName": "monitor",
+  "webDir": "build",
+  "bundledWebRuntime": false
+}

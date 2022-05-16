@@ -1,0 +1,28 @@
+.settings {
+  width: 50%;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 50%;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings label {
+  font-size: 8pt;
+  color: var(--darker-grey);
+  margin-left: -5px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.buttons_container {
+  display: flex;
+}
+
+.buttons_container button {
+  flex: 1;
+}
+.buttons_container button:not(:first-child) {
+  margin-left: 10px;
+}
