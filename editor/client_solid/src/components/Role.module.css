@@ -1,0 +1,13 @@
+.role {
+  border-radius: 20px;
+  background: white;
+  text-align: center;
+  box-sizing: border-box;
+  line-height: var(--r-height);
+  cursor: pointer;
+  color: white;
+  z-index: 50;
+  font-size: 7pt;
+  line-height: 8pt;
+  pointer-events: all;
+}

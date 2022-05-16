@@ -7,7 +7,8 @@ import Bubble from "./Bubble";
 import { useStore } from "../managers/Store";
 import { styled } from "solid-styled-components";
 
-import { DragBoxClassName } from "./DragBox";
+import { dragbox_container } from "./DragBox.module.css";
+import styles from "./Role.module.css";
 
 function Role(props) {
   const [state, actions] = useStore();
@@ -63,7 +64,7 @@ function Role(props) {
 
     console.log("IS SHIFT PRESSED??? ", state.editor.bools.isShiftPressed);
 
-    if (target.classList.contains(DragBoxClassName)) {
+    if (target.classList.contains(dragbox_container)) {
       let connecting_node_id = target.id.split("_")[1];
       // if it does not have a role yet in the node, add the role
       if (
@@ -136,7 +137,7 @@ function Role(props) {
   };
 
   const updateRoleOffset = () => {
-    // setTimeout(() => {
+    if (!role_dom) return;
     actions.updateRoleOffset({
       node_id: props.node_id,
       role_id: props.role_id,
@@ -277,8 +278,9 @@ function Role(props) {
 
   return (
     <RolesContainer>
-      <Role
+      <Bubble
         ref={role_dom}
+        class={styles.role}
         onMouseEnter={showDescriptionAfterAWhile}
         onMouseOut={() => {
           clearTimeout(getDelay());
@@ -293,7 +295,7 @@ function Role(props) {
         background_hue={props.role_hue}
       >
         {props.name}
-      </Role>
+      </Bubble>
     </RolesContainer>
   );
 }

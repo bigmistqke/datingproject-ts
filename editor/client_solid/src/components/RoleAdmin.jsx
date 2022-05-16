@@ -1,4 +1,4 @@
-import { DragBox } from "./DragBox";
+import DragBox from "./DragBox";
 import getColorFromHue from "../helpers/getColorFromHue";
 import { For, onMount, createSignal, createEffect } from "solid-js";
 

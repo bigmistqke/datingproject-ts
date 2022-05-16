@@ -1,31 +1,28 @@
-import { DragBox } from "./DragBox";
-import dragHelper from "../helpers/dragHelper";
-import { createMemo, createEffect, For, onMount, createSignal } from "solid-js";
-import { createStore } from "solid-js/store";
+import { createMemo, createEffect, For, createSignal } from "solid-js";
 import { useStore } from "../managers/Store";
-
+// components
 import InOuts from "./InOuts";
 import Instruction from "./Instruction";
 import Bubble from "./Bubble";
+import DragBox from "./DragBox";
+// helpers
+import getColorFromHue from "../helpers/getColorFromHue";
+import { overlaps } from "../helpers/collisionDetection";
 
 import { styled } from "solid-styled-components";
-import getColorFromHue from "../helpers/getColorFromHue";
-
-import { overlaps } from "../helpers/collisionDetection";
 
 function Node(props) {
   const [state, actions, q] = useStore();
 
-  // const [isVisible, setIsVisible] = createSignal(false);
   const [isInitialized, setIsInitialized] = createSignal(false);
+  const [updateRoleOffset, setUpdateRoleOffset] = createSignal(
+    performance.now()
+  );
 
   const isSelected = createMemo(
     () => state.editor.selection.indexOf(props.node_id) !== -1
   );
 
-  const [updateRoleOffset, setUpdateRoleOffset] = createSignal(
-    performance.now()
-  );
   let dom;
 
   createEffect(() => {
@@ -39,12 +36,6 @@ function Node(props) {
       actions.unobserve({ dom });
     }
   });
-
-  /*   onMount(() => {
-    setTimeout(() => {
-      setIsVisible(true);
-    }, 0);
-  }); */
 
   createEffect(() => {
     if (!dom) return;
@@ -189,14 +180,11 @@ function Node(props) {
     });
   };
 
-  const Instructions = styled("div")`
-    /* pointer-events: all; */
-    flex: 1;
-  `;
-
   const isVisible = createMemo(
     () => props.visible && state.editor.navigation.zoom > 0.125
   );
+
+  // const isVisible = createMemo(() => true);
 
   createEffect(() => {
     let selection_box = actions.getSelectionBox();
@@ -235,24 +223,18 @@ function Node(props) {
   return (
     <DragBox
       id={props.node_id}
-      classList={{
-        node: true,
-        /*  isConnecting: state.editor.bools.isConnecting,
-        isTranslating: state.editor.bools.isTranslating, */
-        isErrored: isErrored(),
-      }}
       onContextMenu={contextMenu}
       position={props.position}
       instructions={props.instructions}
       isSelected={isSelected()}
       isVisible={isVisible()}
+      isErrored={isErrored()}
       ref={dom}
       style={{
         height:
           isInitialized() || !props.dimensions
             ? ""
             : props.dimensions.height + "px",
-        // "box-shadow": isVisible() ? "var(--dark-shadow)" : "",
       }}
     >
       <div
@@ -269,13 +251,13 @@ function Node(props) {
           direction="in"
           isVisible={true}
           updateRoleOffset={updateRoleOffset()}
-
-          // isVisible={isVisible()}
-        ></InOuts>
+          visible={props.visible}
+        />
         {
-          <Instructions
+          <div
             style={{
               "pointer-events": isVisible() ? "all" : "none",
+              flex: 1,
             }}
           >
             <div
@@ -328,7 +310,7 @@ function Node(props) {
                 </For>
               </Show>
             </div>
-          </Instructions>
+          </div>
         }
         <Show when={props.node.type === "group"}>
           <div style={{ "text-align": "center", padding: "6px" }}>
@@ -350,7 +332,7 @@ function Node(props) {
           instructions={props.instructions}
           direction="out"
           updateRoleOffset={updateRoleOffset()}
-        ></InOuts>
+        />
       </div>
     </DragBox>
   );

@@ -1,12 +1,10 @@
-line,
-path {
+.bezier line,
+.bezier path {
   stroke-width: 2;
   fill: none;
   stroke-dasharray: 5 3;
-  /* animation: dash 3s linear infinite; */
 }
-
-.connectionLine {
+.bezier {
   position: absolute;
   pointer-events: none;
   z-index: 50;

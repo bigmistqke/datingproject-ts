@@ -1,25 +1,11 @@
-import { styled } from "solid-styled-components";
+import styles from "./UI_Components.module.css";
 
-const Row = styled("div")`
-  display: flex;
-  flex-direction: row;
-  font-size: 10pt;
-  /* line-height: var(--r-height); */
-  /* min-height: var(--r-height); */
-  margin: auto;
-  overflow: hidden;
-  cursor: default;
-  width: 100%;
-  line-height: calc(var(--r-height) * 3 / 4) !important;
-  min-height: calc(var(--r-height) * 3 / 4) !important;
-  & * {
-    font-size: 10pt;
-  }
-`;
+const Row = (props) => (
+  <div class={[styles.Row, props.class].join(" ")} {...props} />
+);
 
-const Flex = styled("div")`
-  flex: 1;
-  display: flex;
-`;
+const Flex = (props) => (
+  <div class={[styles.Flex, props.class].join(" ")} {...props} />
+);
 
 export { Row, Flex };

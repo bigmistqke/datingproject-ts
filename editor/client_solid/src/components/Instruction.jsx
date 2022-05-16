@@ -64,6 +64,7 @@ const Instruction = (props) => {
     const types = /(\.|\/)(mp4)$/i;
     if (!e.target) return;
     const file = e.target.files[0];
+    console.log("PROCESSS", file);
     if (!types.test(file.type) || !types.test(file.name)) return;
     let upload = await actions.processVideo(file, props.instruction_id);
     if (!upload.success) console.error(upload.error);
@@ -71,6 +72,7 @@ const Instruction = (props) => {
     console.log(upload.response);
     actions.setInstruction(props.instruction_id, {
       text: `/api${upload.response.substring(1)}`,
+      filesize: file.size,
       modified: new Date().getTime(),
     });
   };
@@ -118,7 +120,7 @@ const Instruction = (props) => {
         options={[
           { value: "do", label: "do" },
           { value: "say", label: "say" },
-          { value: "think", label: "think" },
+          // { value: "think", label: "think" },
           { value: "narrator", label: "narrator" },
           { value: "video", label: "video" },
         ]}
@@ -195,7 +197,7 @@ const Instruction = (props) => {
             className="flexing"
             src={urls.fetch + props.text.split(".")[0] + ".jpg"}
             onLoad={() => props.updateNodeDimensions()}
-            // onError={createPoster}
+            // onError={() => createPoster(props.text)}
           />
           {/* <video
             controls

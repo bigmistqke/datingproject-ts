@@ -1,10 +1,10 @@
-import { createMemo, createEffect, onMount } from "solid-js";
+import { createEffect } from "solid-js";
 import { createStore } from "solid-js/store";
-import "./Connection.css";
-import Bezier from "./Bezier";
-import getColorFromHue from "../helpers/getColorFromHue";
-
 import { useStore } from "../managers/Store";
+// components
+import Bezier from "./Bezier";
+// helpers
+import getColorFromHue from "../helpers/getColorFromHue";
 
 const Connection = (props) => {
   const [state, actions] = useStore();

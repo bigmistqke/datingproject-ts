@@ -1,0 +1,12 @@
+.add_button {
+  color: white;
+  background: transparent !important;
+  width: 80px;
+  pointer-events: all;
+  text-align: center;
+}
+
+.roles_row {
+  background: var(--dark-grey);
+  pointer-events: none;
+}

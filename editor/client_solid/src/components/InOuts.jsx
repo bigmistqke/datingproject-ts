@@ -1,11 +1,12 @@
-import { For, onMount } from "solid-js";
-import { styled } from "solid-styled-components";
-
+import { For, Show } from "solid-js";
 import { useStore } from "../managers/Store";
+// components
 import Role from "./Role.jsx";
 import { Row, Flex } from "./UI_Components.jsx";
-
+// helpers
 import prevOrNext from "../helpers/prevOrNext";
+// css
+import styles from "./InOuts.module.css";
 
 const NodeRoles = (props) => {
   const [state, actions] = useStore();
@@ -47,20 +48,8 @@ const NodeRoles = (props) => {
     return "";
   };
 
-  const AddButon = styled("button")`
-    color: white;
-    background: transparent !important;
-    width: 80px;
-    pointer-events: all;
-  `;
-
-  const Roles = styled(Row)`
-    background: var(--dark-grey);
-    pointer-events: none;
-  `;
   return (
-    // <Row style={{background: `var(--dark-grey)`}}>
-    <Roles>
+    <Row class={styles.roles_row}>
       <Show when={props.in_outs}>
         <Flex>
           {
@@ -73,7 +62,6 @@ const NodeRoles = (props) => {
               {([role_id, role]) => {
                 return (
                   <Role
-                    // role_color={props.all_roles[role.role_id].color}
                     node_id={props.node_id}
                     role_id={role_id}
                     role={role}
@@ -82,9 +70,7 @@ const NodeRoles = (props) => {
                     role_hue={state.script.roles[role_id].hue}
                     name={state.script.roles[role_id].name}
                     description={state.script.roles[role_id].description}
-                    // all_roles={props.all_roles}
                     in_outs={props.in_outs}
-                    node_id={props.node_id}
                     direction={props.direction}
                     hasError={checkErrors(role_id)}
                     instructions={
@@ -92,7 +78,7 @@ const NodeRoles = (props) => {
                     }
                     isVisible={props.isVisible}
                     updateRoleOffset={props.updateRoleOffset}
-                    // isShiftPressed={props.isShiftPressed}
+                    visible={props.visible}
                   ></Role>
                 );
               }}
@@ -101,15 +87,18 @@ const NodeRoles = (props) => {
         </Flex>
         {Object.keys(props.in_outs).length <
         Object.keys(state.script.roles).length ? (
-          <AddButon id={`add_${props.node_id}`} onClick={addRoleMaybe}>
+          <div
+            class={styles.add_button}
+            id={`add_${props.node_id}`}
+            onClick={addRoleMaybe}
+          >
             add role
-          </AddButon>
+          </div>
         ) : (
           <span></span>
         )}
       </Show>
-    </Roles>
-    // </Roles>
+    </Row>
   );
 };
 

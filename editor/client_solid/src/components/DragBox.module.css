@@ -1,0 +1,46 @@
+.dragbox_container {
+  display: block;
+  cursor: grab;
+  position: absolute;
+  box-sizing: border-box;
+  border-radius: 25px;
+  background: var(--light-grey);
+  width: 900px;
+  transform: translate(0px, 0px);
+}
+
+.dragbox_container.selected {
+  z-index: 1;
+}
+.dragbox_container.selected .handle,
+.dragbox_container.handle:hover {
+  background: var(--selected-color);
+  border-radius: 28px;
+  border: 4px solid var(--selected-color);
+  margin: -4px;
+}
+
+.dragbox_container.isErrored > .handle {
+  background: hsl(0, 100%, 92%) !important;
+}
+
+.handle {
+  z-index: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transition: background 0.125s;
+  box-sizing: content-box;
+  /* background: var(--dark-grey); */
+}
+
+.children {
+  margin: 11px;
+  position: relative;
+  height: calc(100% - 22px);
+  z-index: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  pointer-events: none;
+}

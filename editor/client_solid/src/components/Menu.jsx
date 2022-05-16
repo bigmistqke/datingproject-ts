@@ -9,7 +9,7 @@ import urls from "../urls";
 const MenuHeader = function (props) {
   return (
     <header>
-      <h1>{props.header}</h1>
+      <h1 style={{ "word-wrap": "break-word" }}>{props.header}</h1>
       {props.children}
     </header>
   );
@@ -24,6 +24,23 @@ const MenuBody = function (props) {
 
 const MainMenu = function (props) {
   const [state, actions] = useStore();
+  const [saveState, setSaveState] = createSignal(0);
+
+  let ref;
+
+  const saveScript = async () => {
+    ref.innerHTML = "saving script...";
+    let response = await actions.saveScript();
+    console.log("save response: ", response);
+    setTimeout(() => {
+      if (response.ok === 1) {
+        ref.innerHTML = "saved script!";
+        setTimeout(() => {
+          ref.innerHTML = "save script";
+        }, 2000);
+      }
+    }, 1000);
+  };
 
   return (
     <div classList={{ main_menu: true, open: props.open }}>
@@ -37,7 +54,7 @@ const MainMenu = function (props) {
         ></TextArea>
       </MenuHeader>
       <MenuBody>
-        <button className="bubble" onClick={() => props.saveScript()}>
+        <button ref={ref} className="bubble" onClick={saveScript}>
           save script
         </button>
 
@@ -243,13 +260,15 @@ const GamesMenu = function (props) {
           <h1 className="flex">
             <span className="flexing">games manager</span>
             <div className="bubble-container">
-              <Bubble onClick={props.createGame} color="black">
+              <Bubble onClick={actions.createGame} color="black">
                 create game
               </Bubble>
             </div>
           </h1>
         </header>
-        <iframe src={`${urls.monitor}/${state.script.script_id}`}></iframe>
+        <iframe
+          src={`${urls.monitor}/${state.script.script_id}/advanced`}
+        ></iframe>
       </div>
     </Show>
   );

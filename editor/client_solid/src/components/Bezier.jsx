@@ -1,9 +1,8 @@
-import { createEffect, createMemo } from "solid-js";
-import { createStore } from "solid-js/store";
-import { useStore } from "../managers/Store";
+import { createMemo } from "solid-js";
+// css
+import styles from "./Bezier.module.css";
 
 function Bezier(props) {
-  const [state, actions] = useStore();
   const PADDING = 150;
 
   const getBoundary = (points) => {
@@ -84,7 +83,7 @@ function Bezier(props) {
 
   return (
     <svg
-      className="connectionLine"
+      className={styles.bezier}
       width={memo().boundary.width}
       height={memo().boundary.height}
       style={{
