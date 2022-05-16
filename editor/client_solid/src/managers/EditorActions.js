@@ -297,4 +297,55 @@ export default function EditorActions({ state, setState, actions }) {
     this.emptySelection();
     this.emptyRoleOffset();
   }
+
+  this.initWindowInteractions = () => {
+    const mousemove = (e) => this.setCursor({ x: e.clientX, y: e.clientY });
+
+    const keydown = (e) => {
+      if (state.editor.bools.isCtrlPressed || e.metaKey) {
+        switch (e.code) {
+          case "KeyD":
+            e.preventDefault();
+            actions.duplicateSelectedNodes({
+              cursor,
+              zoom: props.zoom,
+            });
+            break;
+          case "ArrowUp":
+            e.preventDefault();
+            this.zoomIn();
+            break;
+          case "ArrowDown":
+            e.preventDefault();
+            this.zoomOut();
+            break;
+        }
+      } else {
+        switch (e.key) {
+          case "Backspace":
+            // actions.deleteSelectedNodes();
+            break;
+          case "Control":
+            this.setBool("isCtrlPressed", true);
+            break;
+          case "Shift":
+            this.setBool("isShiftPressed", true);
+            break;
+        }
+      }
+    };
+
+    const keyup = (e) => {
+      if (state.editor.bools.isCtrlPressed && !e.ctrlKey) {
+        this.setBool("isCtrlPressed", false);
+      }
+      if (state.editor.bools.isShiftPressed && !e.shiftKey) {
+        this.setBool("isShiftPressed", false);
+      }
+    };
+
+    window.addEventListener("keydown", keydown);
+    window.addEventListener("keyup", keyup);
+    window.addEventListener("mousemove", mousemove);
+  }
 }

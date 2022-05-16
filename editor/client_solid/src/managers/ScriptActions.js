@@ -9,9 +9,10 @@ import urls from "../urls";
 
 import prevOrNext from "../helpers/prevOrNext";
 import reverseDirection from "../helpers/reverseDirection";
-import { unwrap } from "solid-js/store";
 import clone from "../helpers/clone";
 import { batch } from "solid-js";
+import postData from "../helpers/postData";
+import getData from "../helpers/getData";
 
 export default function ScriptActions({ state, setState, actions }) {
   // default
@@ -218,7 +219,7 @@ export default function ScriptActions({ state, setState, actions }) {
     role_id,
     direction,
   }) => {
-    console.info("set connection!!!");
+    console.info("set connection!!!", state.script.nodes, node_id);
     setState(
       "script",
       "nodes",
@@ -1267,6 +1268,7 @@ export default function ScriptActions({ state, setState, actions }) {
       setState("script", "nodes", node_id, "parent_id", group_id);
     });
   };
+
   this.mergeSelectedNodes = () => {
     const selected_nodes = state.editor.selection.map(node_id => [node_id, state.script.nodes[node_id]]);
     let [root_node_id, root_node] = selected_nodes.shift();
@@ -1329,5 +1331,120 @@ export default function ScriptActions({ state, setState, actions }) {
     }))
     console.log('merged all selected nodes');
     controlRoles(all_affected_role_ids);
+  };
+
+
+  this.saveScript = async () => {
+    try {
+      let processed_roles = await this.processScript();
+      if (!processed_roles) {
+        let result = await actions.openPrompt({
+          type: "confirm",
+          header: "the script is not playable, are you sure you want to save?",
+        });
+        if (!result) return;
+      }
+
+      let processed_nodes = Object.fromEntries(
+        Object.entries(state.script.nodes).map(([node_id, node]) => {
+          node = { ...node };
+          delete node.visible;
+          return [node_id, node];
+        })
+      );
+
+      return await postData(`${urls.fetch}/api/script/save/${state.script.script_id}`, {
+        development: {
+          design_id: state.script.design_id,
+          nodes: processed_nodes,
+          instructions: state.script.instructions,
+          roles: state.script.roles,
+          groups: state.script.groups,
+        },
+        production: {
+          design_id: state.script.design_id,
+          roles: processed_roles,
+        },
+        script_id: state.script.script_id,
+      });
+
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
+  this.createGame = async () => {
+    try {
+
+      let roles = await this.processScript();
+      if (!roles) throw "processScript failed";
+
+      const { error } = await postData(
+        `${urls.fetch}/api/script/test/${state.script.script_id}`,
+        {
+          roles,
+          design_id: state.script.design_id,
+        }
+      );
+      if (error) throw error;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
+  };
+
+  this.fetchGeneralData = async () => {
+    let card_designs = await getData(`${urls.fetch}/api/design/get_all`);
+    console.log(card_designs);
+  };
+
+  this.fetchScript = async () => {
+    let data = await getData(
+      `${urls.fetch}/api/script/get/${state.script.script_id}/development`
+    );
+
+    console.log("FETCH", data);
+
+    if (!data) {
+      actions.setBool("isInitialized", true);
+      this.addRoleToScript();
+      this.addRoleToScript();
+      return;
+    }
+
+    batch(() => {
+      this.setRoles(data.roles ? data.roles : {});
+      this.setNodes(data.nodes);
+
+      let instructions = data.instructions ? data.instructions : {};
+
+      Object.entries(instructions)
+        .filter(
+          ([instruction_id, instruction]) =>
+            instruction.type === "video" &&
+            instruction.text !== "" &&
+            !instruction.filesize
+        )
+        .forEach(async ([instruction_id, instruction]) => {
+          const response = await fetch(urls.fetch + instruction.text, {
+            method: "HEAD",
+          });
+          if (response.status === 200) {
+            const filesize = response.headers.get("Content-Length");
+            this.setFilesize({
+              instruction_id,
+              filesize,
+            });
+          }
+        });
+
+      this.setInstructions(data.instructions ? data.instructions : {});
+
+      this.setGroups(data.groups ? data.groups : {});
+
+      this.setDesignId(data.design_id ? data.design_id : "europalia3_mikey");
+    });
+
   };
 }
