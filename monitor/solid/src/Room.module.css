@@ -1,0 +1,64 @@
+.room {
+  width: 100%;
+  background: var(--light);
+  display: inline-block;
+  padding: 12.5px;
+  box-sizing: border-box;
+  margin-bottom: 25px;
+  border-radius: 25px;
+  box-shadow: var(--dark-shadow);
+}
+
+/* .room.advanced {
+  font-size: 8pt !important;
+} */
+
+.room button {
+  background: var(--medium);
+  border: 0px;
+  border-radius: 15px;
+  line-height: 12pt;
+  cursor: pointer;
+  font-size: 10pt;
+}
+
+.room .top {
+  display: flex;
+  align-items: baseline;
+}
+.room .top > *:first-child {
+  flex: 1;
+}
+.room .top h1,
+.room .top > button {
+  padding: 5px;
+  padding-right: 5px;
+  padding-left: 5px;
+  border-radius: 25px;
+  background: white;
+  display: inline-block;
+  margin-top: 0px;
+  font-weight: normal;
+  padding-right: 25px;
+  padding-left: 25px;
+  border: none;
+}
+
+.room h1 {
+  font-size: 12pt;
+}
+
+.room input {
+  border: none;
+}
+
+.room button:hover {
+  background: black;
+  color: white;
+}
+
+.roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 25px;
+}
