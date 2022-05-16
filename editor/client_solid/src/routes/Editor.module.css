@@ -13,10 +13,10 @@
   height: 100%;
 }
 
-.menu-button.selected {
+.menu_button.selected {
   transform: rotateZ(45deg);
 }
-.menu-button {
+.menu_button {
   font-size: 15pt;
   line-height: 15px;
   position: fixed;
@@ -37,3 +37,25 @@
     flex: 1;
     position: relative;
 } */
+
+.selection_box {
+  position: absolute;
+  border: 2px dashed white;
+  pointer-events: none;
+  z-index: 2;
+  background: #836dc841;
+}
+
+.visited_group_ids {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
+}
+
+line,
+path {
+  stroke-width: 2;
+  fill: none;
+  stroke-dasharray: 5 3;
+}
