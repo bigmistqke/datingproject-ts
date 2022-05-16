@@ -1,7 +1,11 @@
 import { createMemo, For, onMount } from "solid-js";
+import postData from "../../../editor/client_solid/src/helpers/postData";
 
 import Role from "./Role";
-import "./Room.css";
+import RoleSimple from "./RoleSimple";
+
+// import "./Room.css";
+import styles from "./Room.module.css";
 import urls from "./urls.js";
 
 export default function Room(props) {
@@ -14,90 +18,78 @@ export default function Room(props) {
     if (!response) return;
   };
 
-  /*   const updateRoom = async (e) => {
-    try {
-      let shouldUpdate = window.confirm(
-        "are you sure you want to update the game?"
-      );
-      if (!shouldUpdate) return;
-      let response = await fetch(
-        `${urls.fetch}/api/room/update/${props.room_id}/${props.script_id}`
-      );
-      response = await response.json();
-      console.log(response);
-      if (!response.success) {
-        console.error(response.errors);
-      } else {
-        e.target.innerHTML = "script updated!";
-        setTimeout(() => {
-          e.target.innerHTML = "update script";
-        }, 1000);
-      }
-    } catch (e) {
-      console.error(e);
+  let sorted_players = createMemo(() => {
+    if (!props.room.players) return [];
+    return Object.entries(props.room.players).sort(
+      (a, b) => a[1].name - b[1].name
+    );
+  });
+
+  const changeName = async (e) => {
+    let room_name = e.target.value;
+    let response = await postData(
+      `${urls.fetch}/api/room/rename/${props.room_id}`,
+      { room_name, script_id: props.script_id }
+    );
+    if (response.status !== 200) {
+      console.error("changing name did not succeed: ", response.body);
     }
-  }; 
-  const openCombo = () => {
-    window.open(`${urls.editor}/test/${props.room_id}`);
-  };*/
-
-  /*  var monitor = () => {
-    // if (!props.room.players) return;
-    Object.entries(props.room.players).forEach(([player_id, role]) => {
-      console.log("ROLE IS ", role);
-      if (!role) return;
-      props.mqtt.subscribe(
-        `/monitor/${props.room_id}/${role.role_id}/current_instruction`,
-        (instruction, topic) =>
-          props.setRoom("players", player_id, "instruction", instruction)
-      );
-      props.mqtt.subscribe(
-        `/monitor/${props.room_id}/${role.role_id}/status`,
-        (status, topic) => props.setRoom("players", player_id, "status", status)
-      );
-      props.mqtt.subscribe(
-        `/monitor/${props.room_id}/${role.role_id}/ping`,
-        (ping, topic) => props.setRoom("players", player_id, "status", ping)
-      );
-    });
-
-    props.mqtt.subscribe(`/${props.room_id}/#`, (message, topic) => {
-      message = JSON.parse(message);
-    });
   };
 
-  onMount(monitor); */
-
-  let sorted_players = createMemo(() =>
-    Object.entries(props.room.players).sort((a, b) => a[1].name - b[1].name)
-  );
-
   return (
-    <div className="room">
-      <div className="top">
+    <div
+      classList={{
+        [styles.room]: true,
+        [styles.advanced]: props.mode === "advanced",
+      }}
+    >
+      <div class={styles.top}>
         <div>
-          <h1>id: {props.room_id} </h1>
+          <h1>
+            <Show when={props.mode === "advanced"}>
+              <input
+                class={styles.input}
+                onChange={changeName}
+                value={props.room.room_name}
+              />
+            </Show>
+            <Show when={props.mode === "simple"}>
+              <div class={styles.input}>{props.room.room_name}</div>
+            </Show>
+          </h1>
         </div>
-        <button onClick={props.deleteRoom}>delete</button>
+        <Show when={props.mode === "advanced"}>
+          <button onClick={props.deleteRoom}>delete</button>
+        </Show>
         <button onClick={restartRoom}>restart</button>
-        {/* <button onClick={updateRoom}>update script</button> */}
-        {/* <button onClick={openCombo}>combo</button> */}
       </div>
 
-      <div className="roles">
+      <div class={styles.roles}>
         <Show when={props.room && props.room.players}>
           <For each={sorted_players()}>
-            {([role_id, role]) => (
-              <Role
-                mqtt={props.mqtt}
-                room_id={props.room_id}
-                role_id={role_id}
-                role={role}
-                openQR={props.openQR}
-                setRoom={props.setRoom}
-                instructions_map={props.room.instructions_map}
-              ></Role>
-            )}
+            {([role_id, role]) =>
+              props.mode === "simple" ? (
+                <RoleSimple
+                  mqtt={props.mqtt}
+                  room_id={props.room_id}
+                  role_id={role_id}
+                  role={role}
+                  openQR={props.openQR}
+                  setRoom={props.setRoom}
+                  instructions_map={props.room.instructions_map}
+                />
+              ) : (
+                <Role
+                  mqtt={props.mqtt}
+                  room_id={props.room_id}
+                  role_id={role_id}
+                  role={role}
+                  openQR={props.openQR}
+                  setRoom={props.setRoom}
+                  instructions_map={props.room.instructions_map}
+                />
+              )
+            }
           </For>
         </Show>
       </div>

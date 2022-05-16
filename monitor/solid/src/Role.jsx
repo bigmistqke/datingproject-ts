@@ -1,6 +1,8 @@
 import copy from "copy-to-clipboard";
 import { createMemo, onMount, Show } from "solid-js";
-import "./Role.css";
+// import "./Role.css";
+import styles from "./Role.module.css";
+
 import urls from "./urls";
 
 export default function Role(props) {
@@ -96,7 +98,9 @@ export default function Role(props) {
   };
 
   const prevs_and_roles = createMemo(() =>
-    props.role.instruction && props.role.instruction.prev_instruction_ids
+    props.instructions_map &&
+    props.role.instruction &&
+    props.role.instruction.prev_instruction_ids
       ? props.role.instruction.prev_instruction_ids.map(
           (prev_instruction_id) => [
             prev_instruction_id,
@@ -108,130 +112,156 @@ export default function Role(props) {
 
   return (
     <div
+      style={{ position: "relative" }}
       classList={{
-        role: true,
-        connected: props.role.status === "connected",
-        finished: props.role.status === "finished",
-        disconnected: props.role.status === "disconnected",
+        [styles.advanced]: true,
+        [styles.role]: true,
+        [styles.connected]: props.role.status === "connected",
+        [styles.finished]: props.role.status === "finished",
+        [styles.disconnected]: props.role.status === "disconnected",
       }}
     >
-      <Show when={props.role}>
-        <div class="marginBottom">
-          <div class="row">
-            <label>role</label>
-            <span>{props.role.name}</span>
-          </div>
-          <div class="row">
-            <label>status</label>
-            <span
+      <div class={styles.panel}>
+        <Show when={props.role}>
+          <Show when={props.role.autoswipe}>
+            <div
               style={{
-                color:
-                  props.role.status === "connected"
-                    ? "green"
-                    : props.role.status === "finished"
-                    ? "blue"
-                    : "red",
+                position: "absolute",
+                right: "5px",
+                top: "5px",
+                background: "rgb(0,250,0)",
+                "border-radius": "50%",
+                width: "20px",
+                height: "20px",
               }}
-            >
-              {props.role.status ? props.role.status : "never connected"}
-            </span>
-          </div>
-          <div class="row">
-            <label>ping</label>
-            <span
-              style={{
-                color: props.role.ping === "error" ? "red" : "black",
-              }}
-            >
-              <Show when={props.role.status === "connected" && props.role.ping}>
-                {props.role.ping}ms
-              </Show>
-            </span>
-          </div>
-        </div>
-
-        <div class="marginBottom instruction">
-          <div class="row">
-            <label>card</label>
-          </div>
-          <div class="row">
-            <label class="margin">index</label>
-            <span class="italic">
-              {props.role.instruction_index} / {props.role.instructions_length}
-            </span>
-          </div>
-
-          <Show
-            when={
-              props.role.instruction &&
-              props.role.instruction.prev_instruction_ids
-            }
-          >
-            <div class="row">
-              <label class="margin">type</label>
-              <span class="italic">{props.role.instruction.type}</span>
+            ></div>
+          </Show>
+          <div class={styles.marginBottom}>
+            <div class={styles.row}>
+              <label>role</label>
+              <span>{props.role.name}</span>
             </div>
-            <div class="row">
-              <label class="margin">prevs</label>
-              <div class="italic prev_and_roles">
-                <For each={prevs_and_roles().slice(0, 5)}>
-                  {([prev_instruction_id, role_id]) => (
-                    <div class="prev_and_role">
-                      <label>{prev_instruction_id}</label>
-                      <span>{role_id}</span>
-                    </div>
-                  )}
-                </For>
-                <Show when={prevs_and_roles().length > 5}>
-                  <div>
-                    ... ({prevs_and_roles().length - 5} more of{" "}
-                    {prevs_and_roles().length})
-                  </div>
-                </Show>
-              </div>
-            </div>
-            <div class="row">
-              <label class="margin">text</label>
+            <div class={styles.row}>
+              <label>status</label>
               <span
-                className="instruction_text"
-                classList={{
-                  wait:
-                    props.role.instruction.prev_instruction_ids.length !== 0,
+                style={{
+                  color:
+                    props.role.status === "connected"
+                      ? "green"
+                      : props.role.status === "finished"
+                      ? "blue"
+                      : "red",
+                }}
+              >
+                {props.role.status ? props.role.status : "never connected"}
+              </span>
+            </div>
+            <div class={styles.row}>
+              <label>ping</label>
+              <span
+                style={{
+                  color: props.role.ping === "error" ? "red" : "black",
                 }}
               >
                 <Show
-                  when={
-                    props.role.instruction.type !== "video" &&
-                    props.role.instruction.text
-                  }
+                  when={props.role.status === "connected" && props.role.ping}
                 >
-                  {props.role.instruction.text.map((v) => v.content).join()}
-                </Show>
-                <Show when={props.role.instruction.type === "video"}>
-                  video
+                  {props.role.ping}ms
                 </Show>
               </span>
             </div>
-          </Show>
-        </div>
+          </div>
 
-        <div class="flex role_buttons marginBottom">
-          <button
-            onClick={() => {
-              props.openQR({ game_url: props.room_id + props.role_id });
+          <div classList={{ [styles.row]: true, [styles.instruction]: true }}>
+            <div class={styles.row}>
+              <label>card</label>
+            </div>
+            <div class={styles.row}>
+              <label class={styles.margin}>index</label>
+              <span class={styles.italic}>
+                {props.role.instruction_index} /{" "}
+                {props.role.instructions_length}
+              </span>
+            </div>
+
+            <Show
+              when={
+                props.role.instruction &&
+                props.role.instruction.prev_instruction_ids
+              }
+            >
+              <div class={styles.row}>
+                <label class={styles.margin}>type</label>
+                <span class={styles.italic}>{props.role.instruction.type}</span>
+              </div>
+              <div class={styles.row}>
+                <label class={styles.margin}>prevs</label>
+                <div class={[styles.italic, styles.prev_and_roles]}>
+                  <For each={prevs_and_roles().slice(0, 5)}>
+                    {([prev_instruction_id, role_id]) => (
+                      <div class={styles.prev_and_role}>
+                        <label>{prev_instruction_id}</label>
+                        <span>{role_id}</span>
+                      </div>
+                    )}
+                  </For>
+                  <Show when={prevs_and_roles().length > 5}>
+                    <div>
+                      ... ({prevs_and_roles().length - 5} more of{" "}
+                      {prevs_and_roles().length})
+                    </div>
+                  </Show>
+                </div>
+              </div>
+              <div class={styles.row}>
+                <label class={styles.margin}>text</label>
+                <span
+                  class={styles.instruction_text}
+                  classList={{
+                    wait:
+                      props.role.instruction.prev_instruction_ids.length !== 0,
+                  }}
+                >
+                  <Show
+                    when={
+                      props.role.instruction.type !== "video" &&
+                      props.role.instruction.text
+                    }
+                  >
+                    {props.role.instruction.text.map((v) => v.content).join()}
+                  </Show>
+                  <Show when={props.role.instruction.type === "video"}>
+                    video
+                  </Show>
+                </span>
+              </div>
+            </Show>
+          </div>
+
+          <div
+            classList={{
+              [styles.flex]: true,
+              [styles.role_buttons]: true,
+              [styles.marginBottom]: true,
             }}
           >
-            qr
-          </button>
-          <button onClick={forcedRefresh}>refresh</button>
-        </div>
-        <div class="flex">
-          <button onClick={forcedSwipe}>swipe</button>
-          <button onClick={autoswipe}>
-            {props.role.autoswipe ? "stop" : "start"} autoswipe
-          </button>
-        </div>
-      </Show>
+            <button
+              onClick={() => {
+                props.openQR({ game_url: props.room_id + props.role_id });
+              }}
+            >
+              qr
+            </button>
+            <button onClick={forcedRefresh}>refresh</button>
+          </div>
+          <div class={styles.flex}>
+            <button onClick={forcedSwipe}>swipe</button>
+            <button onClick={autoswipe}>
+              {props.role.autoswipe ? "stop" : "start"} autoswipe
+            </button>
+          </div>
+        </Show>
+      </div>
     </div>
   );
 }

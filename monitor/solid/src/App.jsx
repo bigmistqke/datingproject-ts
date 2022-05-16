@@ -10,7 +10,7 @@ import Room from "./Room";
 import QR from "./QR";
 
 function App() {
-  let { script_id } = useParams();
+  let { script_id, mode } = useParams();
 
   const [rooms, setRooms] = new createStore({});
 
@@ -28,16 +28,23 @@ function App() {
 
     let all_rooms = await fetch(
       `${urls.fetch}/api/room/metadata/${script_id}?${new Date().getTime()}`
-    ).then((res) => res.json());
+    );
 
-    console.log(all_rooms);
+    if (all_rooms.status !== 200) return;
 
-    if (!all_rooms) return;
+    all_rooms = await all_rooms.json();
 
     mqtt.subscribe(
       `/createRoom/${script_id}`,
-      ({ room_id, players, script_id }, topic) =>
-        setRooms(room_id, { players, script_id })
+      ({ room_id, players, script_id, instructions_map, room_name }) => {
+        console.log(`/createRoom/${script_id}`, {
+          room_id,
+          players,
+          script_id,
+          instructions_map,
+        });
+        setRooms(room_id, { players, script_id, room_name });
+      }
     );
 
     setRooms(all_rooms);
@@ -67,6 +74,7 @@ function App() {
                 room={room}
                 room_id={room_id}
                 openQR={openQR}
+                mode={mode ? mode : "simple"}
               ></Room>
             </Show>
           )}

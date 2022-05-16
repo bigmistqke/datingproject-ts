@@ -2,7 +2,6 @@
   width: 100%;
   background: var(--light);
   display: inline-block;
-  padding: 12.5px;
   box-sizing: border-box;
   margin-bottom: 25px;
   border-radius: 25px;
@@ -52,5 +51,5 @@
 .roles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 5px;
+  gap: 50px;
 }

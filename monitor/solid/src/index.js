@@ -9,6 +9,8 @@ render((
   <Router>
     <Routes>
       <Route path="/:script_id" element={<App />} />
+      <Route path="/:script_id/:mode" element={<App />} />
+
     </Routes>
   </Router>
 ), document.getElementById('root'));
