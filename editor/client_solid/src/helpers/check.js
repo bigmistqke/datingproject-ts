@@ -1,0 +1,1 @@
+export default check = (bool) => !(!bool && bool !== 0);

@@ -42,7 +42,7 @@ export default function VideoUploader() {
     return new Promise((resolve) => {
       const uploader = new Uploader();
       // addUploader(instruction_id, uploader, resolve);
-      setState
+      // setState
 
 
       uploader.process(`${urls.fetch}/api/uploadVideo/${state.script_id}/mp4`,
