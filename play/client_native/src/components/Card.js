@@ -65,6 +65,8 @@ const Card = React.memo((props) => {
       // setTimeout(() => setRenderToHardware(false), 750)
     })
 
+    actions.addDeltaToStats("wait", props.instruction);
+
     if (
       state.autoswipe &&
       props.instruction.type !== 'video' &&

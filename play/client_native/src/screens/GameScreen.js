@@ -1,37 +1,18 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import Card from "../components/Card";
-// import Card from "../components/Card";
-// import CardComposition from "../components/card/CardComposition";
 
-import { Dimensions, Button, View, Text, Vibration } from 'react-native';
+import { Dimensions, Button, View, Text, Vibration, Pressable } from 'react-native';
 import styled from 'styled-components/native';
 import Swipe from "../components/Swipe";
 import { For, Show } from '../components/solid-like-components';
 import { useStore } from "../store/Store";
 import { measure, useAnimatedRef } from 'react-native-reanimated';
-import { FlatList } from 'react-native-gesture-handler';
 
 import FullScreenAndroid from 'react-native-fullscreen-chz';
 
 import { AppState } from "react-native";
 
-
-function Game({ design, instructions }) {
-  const [state, actions] = useStore();
-
-  let r_overlay = useRef();
-  const aref = useAnimatedRef();
-
-  const waitYourTurn = useCallback((reason) => {
-    if (!reason) {
-      return;
-    }
-    try {
-      Vibration.vibrate(200);
-    } catch (e) { console.error(e) }
-  }, [r_overlay]);
-
-  const Overlay = styled.View`
+const Overlay = styled.View`
         position: absolute;
         top: 25%;
         left: 50%;
@@ -54,7 +35,7 @@ function Game({ design, instructions }) {
         }
     `;
 
-  const End = styled.View`
+const End = styled.View`
         color: #03034e;
         background: transparent;
         border: none;
@@ -69,6 +50,21 @@ function Game({ design, instructions }) {
     `;
 
 
+function Game({ design, instructions }) {
+  const [state, actions] = useStore();
+
+  let r_overlay = useRef();
+  const aref = useAnimatedRef();
+
+  const waitYourTurn = useCallback((reason) => {
+    if (!reason) {
+      return;
+    }
+    try {
+      Vibration.vibrate(200);
+    } catch (e) { console.error(e) }
+  }, [r_overlay]);
+
   const visible_instructions = useMemo(() => {
     if (!state.instructions) return []
     return state.instructions.slice(state.instruction_index,
@@ -79,18 +75,10 @@ function Game({ design, instructions }) {
   )
 
   useEffect(() => {
-
     const subscription = AppState.addEventListener("change", nextAppState => {
-      if (
-        nextAppState === "active" && state.mode === 'play'
-      ) {
-        console.log("App has come to the foreground!");
+      if (nextAppState === "active" && state.mode === 'play')
         FullScreenAndroid.enable()
-      } else {
-        console.log(nextAppState);
-      }
     });
-
     FullScreenAndroid.enable();
   }, [])
 
@@ -105,9 +93,6 @@ function Game({ design, instructions }) {
         <Swipe
           key={instruction.instruction_id}
           margin={index}
-          /* style={{
-            elevation: 5 - index
-          }} */
           pointerEvents={index === 0 ? "auto" : "none"}
           instruction={instruction}
         >
@@ -118,19 +103,29 @@ function Game({ design, instructions }) {
             instruction={instruction}
             flip={instruction.prev_instruction_ids.length === 0}
             prev_instruction_ids={instruction.prev}
-            instruction={instruction}
           />
         </Swipe>
       )}
       <Show when={state.instruction_index >= state.instructions.length - 3}>
         <End>
-          <Text style={{
-            fontSize: 100,
-            width: "75%",
-            fontFamily: "arial_rounded",
-            color: "#03034e",
-            textAlign: "center"
-          }}>The End</Text>
+
+
+          <Pressable
+            onLongPress={actions.endGame}
+            style={{
+              width: "75%",
+              fontFamily: "arial_rounded",
+              color: "#03034e",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 100,
+                fontFamily: "arial_rounded",
+                color: "#03034e",
+                textAlign: "center"
+              }}>The End</Text>
+          </Pressable>
         </End>
       </Show>
 

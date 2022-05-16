@@ -1,3 +1,4 @@
+import { stat } from "react-native-fs";
 import { log, error } from "../helpers/log";
 
 
@@ -13,7 +14,9 @@ export default function PlayActions({ state, ref, actions }) {
       state.instruction_index.set(0);
       state.timers.set({});
       state.received_instruction_ids.set([]);
-      // state.rerender.set(performance.now());
+      if (ref.stats.play_times.length > 0)
+        actions.sendStats();
+      actions.initStats();
       return true;
     } catch (err) {
       error(err);
@@ -94,7 +97,7 @@ export default function PlayActions({ state, ref, actions }) {
       ref.instructions[instruction_index].prev_instruction_ids.length === 0
       && instruction_index === ref.instruction_index
     ) {
-      state.instructions[instruction_index].delta.set(delta)
+      state.instructions[instruction_index].delta.set(delta);
     }
   }
 
@@ -103,7 +106,7 @@ export default function PlayActions({ state, ref, actions }) {
 
   this.swipe = (instruction) => {
     try {
-
+      actions.addDeltaToStats("play", instruction);
       /* setTimeout(() => {
             
           }, 25)
@@ -136,7 +139,12 @@ export default function PlayActions({ state, ref, actions }) {
       // 
 
       setTimeout(() => {
+
         state.instruction_index.set(i => i + 1);
+
+        if (ref.instruction_index >= ref.instructions.length)
+          actions.sendStats();
+
         actions.sendInstructionIndex();
       }, 0)
 

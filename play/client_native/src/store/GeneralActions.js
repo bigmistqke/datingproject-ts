@@ -12,6 +12,7 @@ import { log, error } from "../helpers/log"
 import NetInfo from "@react-native-community/netinfo";
 
 import Sound from "react-native-sound";
+import postData from "../helpers/postData";
 // import { SvgCss } from "react-native-svg";
 
 export default function GeneralActions({ state, ref, actions }) {
@@ -86,7 +87,9 @@ export default function GeneralActions({ state, ref, actions }) {
       });
 
       if (!ref.bools.isInitialized)
-        actions.initSocket()
+        await actions.initSocket();
+
+      actions.initSubscriptions({ role_id, game_id });
 
       // IMPORTANT: both downloadVideos mutate instructions (sets url to local file-path)!
       await Promise.all([
@@ -95,8 +98,7 @@ export default function GeneralActions({ state, ref, actions }) {
         downloadSound(sound),
       ])
 
-
-
+      progresses = {};
 
       state.viewport.loading_percentage.set(false);
 
@@ -108,7 +110,9 @@ export default function GeneralActions({ state, ref, actions }) {
 
       state.bools.isInitialized.set(true);
 
-      this.setMode("play")
+      this.setMode("play");
+
+      this.initStats();
     } catch (err) {
       console.error("ERROR WHILE INITIGAME", err);
       state.viewport.loading_error.set(err);
@@ -320,12 +324,13 @@ export default function GeneralActions({ state, ref, actions }) {
       new Promise(async (resolve, reject) => {
         try {
           console.log("DOWNLOAD VIDEO!!!!!", ignore_cache);
+          console.log(video);
           const filename = video.text.split("/")[(video.text.split("/").length - 1)];
           const postername = filename.replace(filename.split(".").pop(), "jpg");
 
           const to_path = `${base_url}/${filename}`;
 
-          if (await RNFS.exists(to_path)) {
+          /* if (await RNFS.exists(to_path)) {
             let stat = await RNFS.stat(to_path);
 
             console.log('video', video.filesize, stat.size, parseInt(video.filesize) === stat.size)
@@ -337,25 +342,33 @@ export default function GeneralActions({ state, ref, actions }) {
               resolve();
               return;
             }
-          }
+          } */
 
           let video_response = await RNFS.downloadFile({
             fromUrl: `${urls.fetch}${video.text}`,
             toFile: `${base_url}/${filename}`,
             progress: (e) => {
+              // console.log('progress ', filename, e ? parseInt(e.bytesWritten / e.contentLength * 100) : null);
+
               progresses[filename] = [e.bytesWritten, e.contentLength];
+
               updateProgress();
             },
           }).promise;
 
+          console.log("video_response: ", video_response.bytesWritten, video.filesize);
+
           if (video_response.statusCode !== 200) { // Or something else, basically a check for failed responses
-            throw `error while downloading ${filename}`
+            throw `error while downloading ${filename}: statusCode ${video_response.statusCode}`
+          } else if (parseInt(video_response.bytesWritten) !== parseInt(video.filesize)) { // Or something else, basically a check for failed responses
+            throw `error while downloading ${filename}: response.bytesWritten !== video.filesize ${video_response.bytesWritten} ${video.filesize}`
           } else {
             resolve(true);
           }
         } catch (err) {
-          console.error(err);
-          resolve(false);
+          console.error("video-error", err);
+          if (await downloadVideo(video))
+            resolve(true);
         }
 
       })
@@ -374,6 +387,60 @@ export default function GeneralActions({ state, ref, actions }) {
       // alert(err);
       return false;
     }
+
+  }
+
+  this.initStats = async () => {
+    console.log("init_stats");
+    state.stats.start_times.set([new Date().getTime()]);
+    state.stats.deltas.set([]);
+  }
+
+  this.addStartTimeToStats = () => {
+    state.stats.start_times.set(i => [...i, new Date().getTime()]);
+    console.log("start_times: ", ref.stats.start_times);
+  }
+
+  this.addDeltaToStats = (type, instruction, delta) => {
+
+    if (!delta) {
+      let now = new Date().getTime();
+      delta = now - ref.stats.start_times[ref.stats.start_times.length - 1];
+    }
+
+    console.log(instruction);
+    state.stats.deltas.set(deltas => [...deltas,
+    {
+      type,
+      delta,
+      instruction: instruction ? {
+        type: instruction.type,
+        text: Array.isArray(instruction.text) ? instruction.text.map(v => v.content).join(" ") : instruction.text
+      } : null
+    }]);
+    this.addStartTimeToStats();
+  }
+
+  this.sendStats = async () => {
+
+    let res = await postData(
+      `${urls.fetch}/api/room/stats/save/${ref.ids.room}/${ref.ids.role}`,
+      {
+        ...ref.stats.deltas
+      }
+    )
+
+    this.initStats();
+
+    if (!res)
+      console.error('error while posting stats to server')
+
+
+  }
+
+  this.endGame = () => {
+    this.setMode("new");
+    actions.removeSubscriptions({ role_id: state.ids.role, room_id: state.ids.room })
 
   }
 }

@@ -20,102 +20,93 @@ export default function Socket({ state, actions, ref }) {
 
 
   this.initSocket = async () => {
-
-
     try {
       await socket.connect({ url: urls.socket, port: 443 });
-
       this.ping();
-
-      // set up ping-pong for measuring wifi-strength
-      // socket.subscribe(`/${thisPath()}/pong`, ({timestamp}) => {
-      //   try {
-      //     let { timestamp } = JSON.parse(message);
-      //     console.log((this.getNow() - timestamp) / 2);
-      //     // socket.send(`/${thisPath()}/pong`, JSON.stringify({ ...message, time: new Date().getTime() }));
-      //   } catch (error) {
-      //     console.error(error);
-      //   }
-      // })
-
-      socket.subscribe(
-        `/${thisPath()}/restart`,
-        () => {
-          console.log("restart", ref.ids.game);
-          actions.restartGame();
-          unconfirmed_messages = [];
-          socket.send(
-            `/monitor/${thisPath()}/restart/confirmation`,
-            { success: true }
-          );
-        })
-
-      socket.subscribe(
-        `/${thisPath()}/forcedSwipe`,
-        () => {
-          actions.swipeAway(ref.instruction_index);
-          actions.swipe(ref.instructions[ref.instruction_index]);
-          socket.send(
-            `/monitor/${thisPath()}/forcedSwipe/confirmation`,
-            { success: true }
-          );
-        })
-
-      socket.subscribe(
-        `/${thisPath()}/forcedRefresh`,
-        () => {
-          actions.initGame(ref.ids.game);
-        })
-
-
-      socket.subscribe(
-        `/${thisPath()}/swipe`,
-        ({ instruction_id, role_id: sender_role_id, timestamp }) => {
-          let delta = this.getNow() - timestamp;
-
-          // SEND CONFIRMATION-MESSAGE BACK TO SENDER THAT WE RECEIVED THIS MESSAGE
-          setTimeout(
-            () => this.sendConfirmation({ role_id: sender_role_id, instruction_id })
-            , 50
-          )
-          if (sender_role_id === ref.ids.role) return;
-          actions.removeFromPrevInstructionIds(instruction_id, delta);
-        });
-
-      socket.subscribe(
-        `/${thisPath()}/confirmation`,
-        ({ instruction_id, role_id: received_role_id }) => {
-          let message_id = `${received_role_id}_${instruction_id}`;
-          unconfirmed_messages = array_remove_element(unconfirmed_messages, message_id);
-          console.log('confirmation', { unconfirmed_messages });
-        }
-      );
-
-      socket.subscribe(
-        `/${thisPath()}/autoswipe`,
-        ({ autoswipe }) => {
-          state.autoswipe.set(autoswipe);
-        }
-      );
-
-      socket.send(
-        `/${thisPath()}/status`,
-        {
-          status: 'connected'
-        }
-      );
-      // TODO: FIND REPLACEMENT FOR window.onbeforeunload
-      /* window.addEventListener('beforeunload', () => {
-        // when disconnect: publish disconnected-status
-        socket.send(`${room_url}/${role_id}/status`, JSON.stringify({ role_url, status: 'disconnected' }));
-      }) */
+      return true;
     } catch (err) {
       error("ERROR AT initSocket", err);
-
-
       return false;
     }
+  }
 
+  this.initSubscriptions = ({ room_id, role_id }) => {
+    socket.subscribe(
+      `/${room_id}/${role_id}/restart`,
+      () => {
+        console.log("restart", ref.ids.game);
+        actions.restartGame();
+        unconfirmed_messages = [];
+        socket.send(
+          `/monitor/${room_id}/${role_id}}/restart/confirmation`,
+          { success: true }
+        );
+      })
+
+    socket.subscribe(
+      `/${room_id}/${role_id}}/forcedSwipe`,
+      () => {
+        actions.swipeAway(ref.instruction_index);
+        actions.swipe(ref.instructions[ref.instruction_index]);
+        socket.send(
+          `/monitor/${room_id}/${role_id}}/forcedSwipe/confirmation`,
+          { success: true }
+        );
+      })
+
+    socket.subscribe(
+      `/${room_id}/${role_id}}/forcedRefresh`,
+      () => {
+        actions.initGame(ref.ids.game);
+      })
+
+
+    socket.subscribe(
+      `/${room_id}/${role_id}}/swipe`,
+      ({ instruction_id, role_id: sender_role_id, timestamp }) => {
+        let delta = this.getNow() - timestamp;
+
+        // SEND CONFIRMATION-MESSAGE BACK TO SENDER THAT WE RECEIVED THIS MESSAGE
+        setTimeout(
+          () => this.sendConfirmation({ role_id: sender_role_id, instruction_id })
+          , 50
+        )
+        if (sender_role_id === ref.ids.role) return;
+        actions.removeFromPrevInstructionIds(instruction_id, delta);
+      });
+
+    socket.subscribe(
+      `/${room_id}/${role_id}}/confirmation`,
+      ({ instruction_id, role_id: received_role_id }) => {
+        let message_id = `${received_role_id}_${instruction_id}`;
+        unconfirmed_messages = array_remove_element(unconfirmed_messages, message_id);
+        console.log('confirmation', { unconfirmed_messages });
+      }
+    );
+
+    socket.subscribe(
+      `/${room_id}/${role_id}}/autoswipe`,
+      ({ autoswipe }) => {
+        state.autoswipe.set(autoswipe);
+      }
+    );
+
+    socket.send(
+      `/${room_id}/${role_id}}/status`,
+      {
+        status: 'connected'
+      }
+    );
+  }
+
+  this.removeSubscriptions = ({ room_id, role_id }) => {
+    socket.unsubscribe(`/${room_id}/${role_id}/restart`);
+    socket.unsubscribe(`/${room_id}/${role_id}}/forcedSwipe`);
+    socket.unsubscribe(`/${room_id}/${role_id}}/swipe`);
+    socket.unsubscribe(`/${room_id}/${role_id}}/confirmation`);
+    socket.unsubscribe(`/${room_id}/${role_id}}/autoswipe`);
+    socket.unsubscribe(`/${room_id}/${role_id}/restart`);
+    socket.unsubscribe(`/${room_id}/${role_id}}/status`);
   }
 
   this.sendConfirmation = ({ role_id, instruction_id }) => {
@@ -204,4 +195,6 @@ export default function Socket({ state, actions, ref }) {
     console.log("clock_deltas", clock_deltas.reduce((a, b) => a + b) / clock_deltas.length)
     state.clock_delta.set(clock_deltas.reduce((a, b) => a + b) / clock_deltas.length)
   }
+
+
 }

@@ -11,14 +11,17 @@ import KeepAwake from 'react-native-keep-awake';
 
 import { useStore } from "./store/Store"
 import { Show } from './components/solid-like-components';
+import SplashScreen from "react-native-splash-screen";
 
 
 function App() {
   const [state, actions] = useStore();
-  const [initialized, setInitialized] = useState(false);
+
+  // useEffect(() => , [])
+  useEffect(() => SplashScreen.hide(), [])
 
   useEffect(() => {
-    (async () => {
+    async function init() {
       console.log("THIS HAPPENS?")
       actions.syncClock();
       actions.initNetInfo();
@@ -31,9 +34,8 @@ function App() {
       } else {
         actions.setMode("new")
       }
-      Text.defaultProps.style = { fontFamily: 'some_font' }
-    })()
-
+    }
+    init();
   }, []);
 
   return (
