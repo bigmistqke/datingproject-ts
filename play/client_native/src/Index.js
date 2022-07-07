@@ -1,11 +1,9 @@
 
 
-import { Provider } from "./store/Store"
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { } from 'react';
 import App from "./App";
 import { LogBox } from 'react-native';
 import 'react-native-gesture-handler';
-import SplashScreen from 'react-native-splash-screen'
 
 LogBox.ignoreLogs(['new NativeEventEmitter']); // Ignore log notification by message
 LogBox.ignoreAllLogs(); //Ignore all log notifications

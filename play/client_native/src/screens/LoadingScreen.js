@@ -63,9 +63,6 @@ export default function LoadingScreen({ loading_message }) {
           width: "100%",
           height: state.viewport.loading_percentage ? `${state.viewport.loading_percentage}%` : null
         }} />
-
-
-
       </View>
     </View>
 

@@ -42,10 +42,7 @@ const application_state = createState({
       width: null
     },
   },
-  stats: {
-    start_times: [],
-    deltas: [],
-  }
+  stats: []
 });
 
 let actions = {};

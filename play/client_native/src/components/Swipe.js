@@ -14,14 +14,10 @@ import Video from 'react-native-video';
 
 const Swipe = (props) => {
   const [state, actions] = useStore();
-
-  const [tweened_margin, setTweenedMargin] = useState(props.margin);
   const [can_swipe, setCanSwipe] = useState(false);
 
   const MARGIN_SIZE = 60;
-
   const DRAG_TRESHOLD = useRef(150).current;
-
 
   const translationX = useSharedValue(0);
   const translationY = useSharedValue(0);
@@ -91,7 +87,6 @@ const Swipe = (props) => {
 
 
   useEffect(() => {
-    setTweenedMargin(props.margin);
     setTimeout(() => {
       margin.value = withSpring(
         props.margin * MARGIN_SIZE,

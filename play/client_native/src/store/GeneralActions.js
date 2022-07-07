@@ -1,19 +1,17 @@
 import MMKVStorage from "react-native-mmkv-storage";
-const MMKV = new MMKVStorage.Loader().initialize();
 import urls from "../urls";
 import RNFS from "react-native-fs";
-import { useMemo } from "react";
-import isColor from "../helpers/isColor";
-import React from "react";
 
-import { Dimensions, StatusBar, Image } from 'react-native';
-import { log, error } from "../helpers/log"
+import { Image } from 'react-native';
+import { error } from "../helpers/log";
 
 import NetInfo from "@react-native-community/netinfo";
 
 import Sound from "react-native-sound";
 import postData from "../helpers/postData";
-// import { SvgCss } from "react-native-svg";
+
+const MMKV = new MMKVStorage.Loader().initialize();
+
 
 export default function GeneralActions({ state, ref, actions }) {
   Sound.setCategory('Playback');
@@ -42,7 +40,7 @@ export default function GeneralActions({ state, ref, actions }) {
   }
 
   this.setMode = (mode) => {
-    console.log(mode);
+
     state.mode.set(mode)
   }
 
@@ -68,7 +66,7 @@ export default function GeneralActions({ state, ref, actions }) {
         success
       } = await this.joinRoom(game_id);
 
-      console.log(design);
+
 
       if (!success) throw "joinRoom did not succeed "
       if (!instructions) throw "INSTRUCTIONS IS NULL"
@@ -99,22 +97,17 @@ export default function GeneralActions({ state, ref, actions }) {
       ])
 
       progresses = {};
-
       state.viewport.loading_percentage.set(false);
-
       state.instructions.set(instructions);
-
       state._instructions.set(JSON.stringify(_instructions));
-
       state.instruction_index.set(instruction_index);
-
       state.bools.isInitialized.set(true);
 
       this.setMode("play");
 
       this.initStats();
     } catch (err) {
-      console.error("ERROR WHILE INITIGAME", err);
+      error("ERROR WHILE INITIGAME", err);
       state.viewport.loading_error.set(err);
       setTimeout(() => {
         actions.setMode("new")
@@ -137,10 +130,10 @@ export default function GeneralActions({ state, ref, actions }) {
 
 
   this.joinRoom = async (game_id) => {
-    console.log("JOIN ROOM!!", game_id);
+
     let result;
     try {
-      result = await fetch(`${urls.fetch}/api/room/join/${game_id}`).catch(err => log(err));
+      result = await fetch(`${urls.fetch}/api/room/join/${game_id}`).catch(err => error(err));
       if (!result) {
         return { success: false, error: 'could not fetch instructions: double check the url' };
       }
@@ -178,7 +171,7 @@ export default function GeneralActions({ state, ref, actions }) {
 
       state.sound.set(`${base_url}/${filename}`);
       var ping = new Sound(filename, base_url, (error) => {
-        console.log('preloaded sound');
+
         if (error) throw error;
         ping.setVolume(0);
         ping.play(success => {
@@ -188,7 +181,7 @@ export default function GeneralActions({ state, ref, actions }) {
         })
       });
     } catch (error) {
-      console.error('error while downloading sound', error);
+      error('error while downloading sound', error);
       return { error };
     }
 
@@ -216,7 +209,7 @@ export default function GeneralActions({ state, ref, actions }) {
         fromUrl: from_path,
         toFile: to_path,
         progress: (e) => {
-          console.log(e.contentLength);
+
           progresses[to_path] = [e.bytesWritten, e.contentLength];
           updateProgress();
         },
@@ -229,7 +222,7 @@ export default function GeneralActions({ state, ref, actions }) {
 
   const downloadDesignElements = async ({ design, design_id, ignore_cache }) => {
     try {
-      console.log(design);
+
       const base_url = RNFS.DocumentDirectoryPath + '/designs';
 
       if (!(await RNFS.exists(base_url)))
@@ -254,57 +247,10 @@ export default function GeneralActions({ state, ref, actions }) {
           modified: design.modified,
           ignore_cache
         }))
-        /* promises.push(new Promise(async (resolve, reject) => {
-
-
-
-          let filename = `${svg.id}_normal.png`;
-          let to_file = `${base_url}/${filename}`;
-
-          if (await RNFS.exists(to_file)) {
-            let stat = await RNFS.stat(to_file);
-
-            if (
-              !ignore_cache &&
-              (design.modified && new Date(stat.mtime).getTime() > design.modified)
-            ) {
-              resolve();
-              return;
-            }
-          }
-
-          RNFS.downloadFile({
-            fromUrl: `${urls.fetch}/api/designs/${design_id}/${filename}?${new Date().getTime()}`,
-            toFile,
-            progress: (e) => {
-              console.log(e.contentLength);
-              progresses[filename] = [e.bytesWritten, e.contentLength];
-              updateProgress();
-            },
-          }).promise.then((result) => {
-            resolve();
-          });
-        }))
-        promises.push(new Promise((resolve, reject) => {
-          let filename = `${svg.id}_masked.png`;
-          console.log('downloading', filename);
-
-          RNFS.downloadFile({
-            fromUrl: `${urls.fetch}/api/designs/${design_id}/${filename}?${new Date().getTime()}`,
-            toFile: `${base_url}/${filename}`,
-            progress: (e) => {
-              progresses[filename] = [e.bytesWritten, e.contentLength];
-              updateProgress();
-            },
-          }).promise.then(() => {
-            console.log('downloaded', filename);
-            resolve();
-          });
-        })) */
       }
       return Promise.all(promises);
     } catch (err) {
-      console.error(err);
+      error(err);
       return false;
     }
   }
@@ -323,17 +269,17 @@ export default function GeneralActions({ state, ref, actions }) {
     const downloadVideo = (video) =>
       new Promise(async (resolve, reject) => {
         try {
-          console.log("DOWNLOAD VIDEO!!!!!", ignore_cache);
-          console.log(video);
+
+
           const filename = video.text.split("/")[(video.text.split("/").length - 1)];
           const postername = filename.replace(filename.split(".").pop(), "jpg");
 
           const to_path = `${base_url}/${filename}`;
 
-          /* if (await RNFS.exists(to_path)) {
+          if (await RNFS.exists(to_path)) {
             let stat = await RNFS.stat(to_path);
 
-            console.log('video', video.filesize, stat.size, parseInt(video.filesize) === stat.size)
+
             if (
               !ignore_cache &&
               parseInt(video.filesize) === stat.size &&
@@ -342,31 +288,28 @@ export default function GeneralActions({ state, ref, actions }) {
               resolve();
               return;
             }
-          } */
+          }
 
           let video_response = await RNFS.downloadFile({
             fromUrl: `${urls.fetch}${video.text}`,
             toFile: `${base_url}/${filename}`,
             progress: (e) => {
-              // console.log('progress ', filename, e ? parseInt(e.bytesWritten / e.contentLength * 100) : null);
-
               progresses[filename] = [e.bytesWritten, e.contentLength];
-
               updateProgress();
             },
           }).promise;
 
-          console.log("video_response: ", video_response.bytesWritten, video.filesize);
+
 
           if (video_response.statusCode !== 200) { // Or something else, basically a check for failed responses
             throw `error while downloading ${filename}: statusCode ${video_response.statusCode}`
-          } else if (parseInt(video_response.bytesWritten) !== parseInt(video.filesize)) { // Or something else, basically a check for failed responses
+          } else if (video.filesize && parseInt(video_response.bytesWritten) !== parseInt(video.filesize)) { // Or something else, basically a check for failed responses
             throw `error while downloading ${filename}: response.bytesWritten !== video.filesize ${video_response.bytesWritten} ${video.filesize}`
           } else {
             resolve(true);
           }
         } catch (err) {
-          console.error("video-error", err);
+          error("video-error", err);
           if (await downloadVideo(video))
             resolve(true);
         }
@@ -383,42 +326,22 @@ export default function GeneralActions({ state, ref, actions }) {
       let promises = videos.map(video => downloadVideo(video));
       return Promise.all(promises)
     } catch (err) {
-      console.error(err);
-      // alert(err);
+      error(err);
       return false;
     }
 
   }
 
   this.initStats = async () => {
-    console.log("init_stats");
-    state.stats.start_times.set([new Date().getTime()]);
-    state.stats.deltas.set([]);
+    state.stats.set([]);
   }
 
-  this.addStartTimeToStats = () => {
-    state.stats.start_times.set(i => [...i, new Date().getTime()]);
-    console.log("start_times: ", ref.stats.start_times);
-  }
-
-  this.addDeltaToStats = (type, instruction, delta) => {
-
-    if (!delta) {
-      let now = new Date().getTime();
-      delta = now - ref.stats.start_times[ref.stats.start_times.length - 1];
-    }
-
-    console.log(instruction);
-    state.stats.deltas.set(deltas => [...deltas,
-    {
+  this.addToStats = (type, instruction) => {
+    state.stats.set(history => [...history, {
+      time: actions.getNow(),
       type,
-      delta,
-      instruction: instruction ? {
-        type: instruction.type,
-        text: Array.isArray(instruction.text) ? instruction.text.map(v => v.content).join(" ") : instruction.text
-      } : null
-    }]);
-    this.addStartTimeToStats();
+      instruction
+    }])
   }
 
   this.sendStats = async () => {
@@ -426,14 +349,14 @@ export default function GeneralActions({ state, ref, actions }) {
     let res = await postData(
       `${urls.fetch}/api/room/stats/save/${ref.ids.room}/${ref.ids.role}`,
       {
-        ...ref.stats.deltas
+        ...ref.stats
       }
     )
 
     this.initStats();
 
     if (!res)
-      console.error('error while posting stats to server')
+      error('error while posting stats to server')
 
 
   }

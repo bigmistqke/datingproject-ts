@@ -54,7 +54,6 @@ function Game({ design, instructions }) {
   const [state, actions] = useStore();
 
   let r_overlay = useRef();
-  const aref = useAnimatedRef();
 
   const waitYourTurn = useCallback((reason) => {
     if (!reason) {
@@ -76,10 +75,13 @@ function Game({ design, instructions }) {
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", nextAppState => {
-      if (nextAppState === "active" && state.mode === 'play')
+      if (nextAppState === "active" && state.mode === 'play') {
         FullScreenAndroid.enable()
+        actions.syncClock();
+      }
     });
     FullScreenAndroid.enable();
+    actions.syncClock();
   }, [])
 
   const Game = () => <>

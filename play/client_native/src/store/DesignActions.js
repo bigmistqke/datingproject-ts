@@ -1,6 +1,3 @@
-import { Dimensions } from "react-native";
-import isColor from "../helpers/isColor";
-
 export default function DesignActions({ ref, state, actions }) {
   const convert = (value) =>
     parseInt((parseFloat(value) * ref.viewport.card_size.height) / 300)

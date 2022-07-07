@@ -5,7 +5,7 @@ import OpenScreen from './screens/OpenScreen';
 
 import LoadingScreen from './screens/LoadingScreen';
 import Prompt from './components/Prompt';
-import { Button, Text, View } from "react-native";
+import { View } from "react-native";
 
 import KeepAwake from 'react-native-keep-awake';
 
@@ -17,19 +17,15 @@ import SplashScreen from "react-native-splash-screen";
 function App() {
   const [state, actions] = useStore();
 
-  // useEffect(() => , [])
   useEffect(() => SplashScreen.hide(), [])
-
   useEffect(() => {
     async function init() {
-      console.log("THIS HAPPENS?")
       actions.syncClock();
       actions.initNetInfo();
-      let cached_game_id = await actions.checkCachedGameId();
+
       if (state.instructions) {
         actions.setMode("play")
-
-      } else if (cached_game_id) {
+      } else if (await actions.checkCachedGameId()) {
         actions.setMode("open")
       } else {
         actions.setMode("new")
@@ -49,7 +45,6 @@ function App() {
         let { width, height } = event.nativeEvent.layout;
         actions.setWindowSize({ width, height })
       }}>
-
       <Show when={state.mode === 'open'}>
         <OpenScreen
           onRead={actions.initGame}
@@ -64,7 +59,6 @@ function App() {
         <LoadingScreen />
       </Show>
       <Show when={state.mode === 'play'}>
-
         <GameScreen
           game_id={state.ids.game}
           instructions={state.instructions}

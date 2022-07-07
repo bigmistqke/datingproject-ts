@@ -45,27 +45,17 @@ const Card = React.memo((props) => {
       return
     }
 
-    // rotation.value = 0; //withTiming(0, { duration: 200 });
+    actions.addToStats("play", props.instruction);
     Vibration.vibrate();
 
     Animated.spring(flip_value, {
       toValue: 0,
-      // speed: 8,
-      /* stiffness: 0.5,
-      damping: 0.3,
-      mass: 0.004, */
       stiffness: 75,
       mass: 1,
       damping: 15,
-
       useNativeDriver: true // <-- Add this
-    }).start(() => {
+    }).start(() => { })
 
-      // setRenderToHardware(true);
-      // setTimeout(() => setRenderToHardware(false), 750)
-    })
-
-    actions.addDeltaToStats("wait", props.instruction);
 
     if (
       state.autoswipe &&
@@ -79,9 +69,6 @@ const Card = React.memo((props) => {
     }
   }, [flip])
 
-  const [test, setTest] = useState(0);
-  let _test = useRef(0).current;
-
   onMount(() => {
     if (props.index < 3) {
       setInitialized(true)
@@ -90,13 +77,6 @@ const Card = React.memo((props) => {
         () => setInitialized(true),
         1000)
     }
-    /* setInterval(() => {
-      _test = _test + 1;
-      setTest(_test);
-      console.log(_test);
-    },
-      1000
-    ) */
   })
 
   useEffect(() => {
