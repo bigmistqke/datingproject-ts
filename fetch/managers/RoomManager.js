@@ -153,7 +153,7 @@ function Room({ _redis, _mongo, _mqtt }) {
 
   this.getGameCount = async () => {
     let meta = await this.getMeta();
-    return meta.game_count;
+    return meta?.game_count;
   }
 
   this.getPlayer = (player_id) => _redis.get(`${room_id}${player_id}`)
