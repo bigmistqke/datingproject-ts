@@ -72,7 +72,7 @@ function Map(props) {
       type: "options",
       header: "create a new node",
       data: {
-        options: ["instruction", "trigger"],
+        options: ["instruction", "start"],
       },
     });
 

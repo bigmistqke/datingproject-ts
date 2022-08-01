@@ -9,23 +9,25 @@ import Bubble from "./Bubble";
 const PromptTypes = {
   addRole: (props) => (
     <For each={Object.entries(props.data.roles)}>
-      {([role_id, role]) => (
-        <span className={"flexing"}>
-          <button
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              props.resolve(role_id);
-            }}
-            style={{
-              background: getColorFromHue(role.hue),
-              color: "white",
-            }}
-            className="role_id"
-          >
-            {role.name}
-          </button>
-        </span>
-      )}
+      {([role_id, role]) =>
+        !role.hidden ? (
+          <span className={"flexing"}>
+            <button
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                props.resolve(role_id);
+              }}
+              style={{
+                background: getColorFromHue(role.hue),
+                color: "white",
+              }}
+              className="role_id"
+            >
+              {role.name}
+            </button>
+          </span>
+        ) : null
+      }
     </For>
   ),
   confirm: (props) => (

@@ -1,17 +1,29 @@
-import { createMemo, createEffect, For, createSignal } from "solid-js";
+import {
+  createMemo,
+  createEffect,
+  For,
+  createSignal,
+  Switch,
+  onMount,
+  on,
+} from "solid-js";
 import { useStore } from "../managers/Store";
 // components
 import InOuts from "./InOuts";
-import Instruction from "./Instruction";
 import Bubble from "./Bubble";
 import DragBox from "./DragBox";
 // helpers
 import getColorFromHue from "../helpers/getColorFromHue";
 import { overlaps } from "../helpers/collisionDetection";
 
-import { styled } from "solid-styled-components";
+import Instructions from "./Instructions";
+
+import styles from "./InOuts.module.css";
+import { Row } from "./UI_Components";
 
 function Node(props) {
+  let dom;
+
   const [state, actions, q] = useStore();
 
   const [isInitialized, setIsInitialized] = createSignal(false);
@@ -23,25 +35,46 @@ function Node(props) {
     () => state.editor.selection.indexOf(props.node_id) !== -1
   );
 
-  let dom;
+  const isErrored = createMemo(
+    () => state.editor.errored_node_ids.indexOf(props.node_id) != -1,
+    [state.editor.errored_node_ids]
+  );
 
-  createEffect(() => {
-    if (!dom) return;
-    actions.observe({ dom });
-  });
+  const isVisible = createMemo(
+    () => props.visible && state.editor.navigation.zoom > 0.125
+  );
 
-  createEffect(() => {
-    if (isVisible() && !isInitialized()) {
-      setIsInitialized(true);
-      actions.unobserve({ dom });
+  const checkSelectionBox = () => {
+    let selection_box = actions.getSelectionBox();
+
+    if (!dom || !selection_box) return;
+
+    const collision = overlaps(
+      [
+        { ...props.position },
+        {
+          x: props.position.x + dom.offsetWidth,
+          y: props.position.y + dom.offsetHeight,
+        },
+      ],
+      [
+        {
+          x: parseInt(selection_box.left),
+          y: parseInt(selection_box.top),
+        },
+        {
+          x: parseInt(selection_box.left) + parseInt(selection_box.width),
+          y: parseInt(selection_box.top) + parseInt(selection_box.height),
+        },
+      ]
+    );
+
+    if (isSelected() && !collision && !state.editor.bools.isCtrlPressed) {
+      actions.removeFromSelection(props.node_id);
+    } else if (!isSelected() && collision) {
+      actions.addToSelection(props.node_id);
     }
-  });
-
-  createEffect(() => {
-    if (!dom) return;
-    let i = props.instructions;
-    updateNodeDimensions();
-  });
+  };
 
   const updateNodeDimensions = () => {
     actions.setNodeDimensions({
@@ -124,8 +157,6 @@ function Node(props) {
         state.editor.selection.length == 1 ? `adjust node` : `adjust nodes`,
     });
 
-    console.log("result openPrompt");
-    console.log(result);
     switch (result) {
       case "delete":
         let result = await actions.openPrompt({
@@ -134,19 +165,10 @@ function Node(props) {
         });
         if (!result) return;
         var { role_ids } = actions.removeSelectedNodes();
-        role_ids.forEach((role_id) => {
-          {
-            actions.controlRole(role_id);
-          }
-        });
+        role_ids.forEach((role_id) => actions.controlRole(role_id));
         break;
       case "copy":
         actions.duplicateSelectedNodes();
-        /*  role_ids.forEach((role_id) => {
-          {
-            actions.controlRole(role_id);
-          }
-        }); */
         break;
       case "group":
         actions.groupSelectedNodes();
@@ -157,66 +179,58 @@ function Node(props) {
       case "convert roles":
         convertRoles();
         break;
-
       default:
         break;
     }
   };
 
-  const isErrored = createMemo(
-    () => state.editor.errored_node_ids.indexOf(props.node_id) != -1,
-    [state.editor.errored_node_ids]
-  );
-
-  const addRow = () => {
-    let { instruction_id } = actions.addInstruction({
-      role_id: Object.keys(props.in_outs)[0],
-    });
-    actions.addInstructionIdToNode({
-      node_id: props.node_id,
-      instruction_id: instruction_id,
-      prev_instruction_id: props.instruction_id,
-      index: 0,
-    });
-  };
-
-  const isVisible = createMemo(
-    () => props.visible && state.editor.navigation.zoom > 0.125
-  );
-
-  // const isVisible = createMemo(() => true);
+  createEffect(() => {
+    if (!dom) return;
+    actions.observe({ dom });
+  });
 
   createEffect(() => {
-    let selection_box = actions.getSelectionBox();
-
-    if (!dom || !selection_box) return;
-
-    const collision = overlaps(
-      [
-        { ...props.position },
-        {
-          x: props.position.x + dom.offsetWidth,
-          y: props.position.y + dom.offsetHeight,
-        },
-      ],
-      [
-        {
-          x: parseInt(selection_box.left),
-          y: parseInt(selection_box.top),
-        },
-        {
-          x: parseInt(selection_box.left) + parseInt(selection_box.width),
-          y: parseInt(selection_box.top) + parseInt(selection_box.height),
-        },
-      ]
-    );
-
-    if (isSelected() && !collision && !state.editor.bools.isCtrlPressed) {
-      actions.removeFromSelection(props.node_id);
+    if (isVisible() && !isInitialized()) {
+      setIsInitialized(true);
+      actions.unobserve({ dom });
     }
-    if (!isSelected() && collision) {
-      console.log("add to seleciton!!!");
-      actions.addToSelection(props.node_id);
+  });
+
+  createEffect(
+    on(
+      () => props.instructions.length,
+      () => {
+        if (!dom) return;
+        updateNodeDimensions();
+      }
+    )
+  );
+
+  createEffect(checkSelectionBox);
+
+  createEffect(() => {
+    console.log("Instruction", props.node.instructions);
+  });
+
+  onMount(() => {
+    if (props.node.type === "start" && props.instructions.length === 0) {
+      for (let role_id in state.script.roles) {
+        actions.addRoleToNode({
+          node_id: props.node_id,
+          role_id,
+        });
+      }
+
+      const [admin_id] = Object.entries(state.script.roles).find(
+        ([role_id, role]) => role.name === "admin"
+      );
+
+      let { instruction_id } = actions.addInstruction({ role_id: admin_id });
+      console.log("instruction_id", instruction_id, props.node_id);
+      actions.addInstructionIdToNode({
+        node_id: props.node_id,
+        instruction_id,
+      });
     }
   });
 
@@ -244,74 +258,49 @@ function Node(props) {
           height: "100%",
         }}
       >
-        <InOuts
-          node_id={props.node_id}
-          node={props.node}
-          in_outs={props.in_outs}
-          direction="in"
-          isVisible={true}
-          updateRoleOffset={updateRoleOffset()}
-          visible={props.visible}
-        />
-        {
-          <div
-            style={{
-              "pointer-events": isVisible() ? "all" : "none",
-              flex: 1,
-            }}
-          >
-            <div
+        <Switch fallback={<Row class={styles.roles_row}></Row>}>
+          <Match when={!props.node.type || props.node.type !== "start"}>
+            <InOuts
+              node_id={props.node_id}
+              node={props.node}
+              in_outs={props.node.type !== "start" ? props.in_outs : {}}
+              direction="in"
+              isVisible={true}
+              updateRoleOffset={updateRoleOffset()}
+              visible={props.visible}
+            />
+          </Match>
+        </Switch>
+
+        <Switch
+          fallback={
+            <Row
+              class={styles.roles_row}
               style={{
-                visibility: isVisible() ? "" : "hidden",
-                // display: isVisible() ? "" : "none",
+                "align-content": "center",
+                "align-items": "center",
+                "flex-direction": "column",
               }}
             >
-              <Show
-                when={
-                  (props.node.type === "instruction" || !props.node.type) &&
-                  isInitialized()
-                }
-              >
-                <Show when={props.instructions.length === 0}>
-                  <button onClick={addRow}>add new row</button>
-                </Show>
-                <For each={props.instructions}>
-                  {(instruction_id, index) => {
-                    if (!(instruction_id in state.script.instructions)) {
-                      console.error(
-                        `node contains instruction_id ${instruction_id} which is not present in state.script.instructions`
-                      );
-                      return;
-                    }
-                    let instruction = state.script.instructions[instruction_id];
+              <Bubble style={{ color: "black", background: "white" }}>
+                {props.node.type?.toUpperCase()}
+              </Bubble>
+            </Row>
+          }
+        >
+          <Match when={!props.node.type || props.node.type === "instruction"}>
+            <Instructions
+              instructions={props.instructions}
+              isVisible={isVisible()}
+              state={state}
+              updateNodeDimensions={updateNodeDimensions}
+              node_id={props.node_id}
+              node={props.node}
+              in_outs={props.in_outs}
+            />
+          </Match>
+        </Switch>
 
-                    return (
-                      <Instruction
-                        index={index() + 1}
-                        key={instruction_id}
-                        instruction_id={instruction_id}
-                        timespan={instruction.timespan}
-                        text={instruction.text}
-                        type={instruction.type}
-                        role_id={instruction.role_id}
-                        sound={instruction.sound}
-                        filesize={instruction.filesize}
-                        node_id={props.node_id}
-                        role_hue={
-                          state.script.roles[instruction.role_id]
-                            ? state.script.roles[instruction.role_id].hue
-                            : null
-                        }
-                        in_outs={props.in_outs}
-                        updateNodeDimensions={updateNodeDimensions}
-                      />
-                    );
-                  }}
-                </For>
-              </Show>
-            </div>
-          </div>
-        }
         <Show when={props.node.type === "group"}>
           <div style={{ "text-align": "center", padding: "6px" }}>
             <Bubble

@@ -155,7 +155,7 @@ const RoleMenu = function (props) {
           <span className="flexing">role manager</span>
           <Bubble onClick={toggleView}>{getView()}</Bubble>
           <Bubble color="black">
-            # roles: {Object.keys(state.script.roles).length}
+            # roles: {Object.keys(state.script.roles).length - 1}
           </Bubble>
           <div className="bubble-container">
             <Bubble
@@ -177,7 +177,7 @@ const RoleMenu = function (props) {
         {getView() === "list" ? (
           <For each={Object.entries(state.script.roles)}>
             {([role_id, role]) => (
-              <>
+              <Show when={!role.hidden}>
                 <div className="row flex role_row">
                   <div className="bubble-container">
                     <Bubble
@@ -221,7 +221,7 @@ const RoleMenu = function (props) {
                     </Bubble>
                   </div>
                 </div>
-              </>
+              </Show>
             )}
           </For>
         ) : (

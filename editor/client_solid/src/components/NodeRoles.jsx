@@ -93,14 +93,19 @@ const NodeRoles = (props) => {
             </For>
           }
         </Flex>
-        {Object.keys(props.in_outs).length <
-        Object.keys(state.script.roles).length ? (
-          <AddButon id={`add_${props.node_id}`} onClick={addRoleMaybe}>
-            add role
-          </AddButon>
-        ) : (
-          <span></span>
-        )}
+
+        <Switch default={<span></span>}>
+          <Match
+            when={
+              Object.keys(props.in_outs).length <
+              Object.keys(state.script.roles).length - 1
+            }
+          >
+            <AddButon id={`add_${props.node_id}`} onClick={addRoleMaybe}>
+              add role halo
+            </AddButon>
+          </Match>
+        </Switch>
       </Row>
     </Roles>
   );

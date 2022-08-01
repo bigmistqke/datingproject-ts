@@ -60,7 +60,7 @@ function Editor(props) {
           resolve={state.editor.gui.prompt.resolve}
         ></Prompt>
       </Show>
-      <Show when={state.editor.gui.prompt}>
+      <Show when={state.editor.gui.tooltip}>
         <Tooltip
           text={state.editor.gui.tooltip}
           cursor={state.editor.navigation.cursor}

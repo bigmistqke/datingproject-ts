@@ -233,12 +233,8 @@ export default function ScriptActions({ state, setState, actions }) {
 
   // METHODS
 
-  this.addNode = () => {
-    let node = getDefaultNode();
-    const node_id = uniqid();
-    node.type = "instruction";
-    node.instructions = [];
-    node.position = {
+  this.addNode = (pars) => {
+    const position = pars?.position ?? {
       x:
         (state.editor.navigation.cursor.x - state.editor.navigation.origin.x) /
         state.editor.navigation.zoom -
@@ -246,8 +242,17 @@ export default function ScriptActions({ state, setState, actions }) {
       y:
         (state.editor.navigation.cursor.y - state.editor.navigation.origin.y) /
         state.editor.navigation.zoom,
-    };
+    }
+    const type = pars?.type ?? "instruction";
+
+    const node = getDefaultNode();
+    const node_id = uniqid();
+    node.type = type;
+    node.instructions = [];
+    node.position = position;
+
     setState("script", "nodes", node_id, node);
+
     return node_id;
   };
 
@@ -354,15 +359,21 @@ export default function ScriptActions({ state, setState, actions }) {
   };
 
   this.addRoleToNode = ({ node_id, role_id }) => {
-    if (Object.keys(state.script.nodes[node_id].in_outs).length === 0) {
+    const node = state.script.nodes[node_id];
+
+    if (node.type === 'instruction' && Object.keys(node.in_outs).length === 0) {
       let { instruction_id } = this.addInstruction({ role_id });
       this.addInstructionIdToNode({ node_id, instruction_id });
     }
 
+    const role = state.script.roles[role_id];
+
     setState("script", "nodes", node_id, "in_outs", role_id, {
-      role_id,
-      node_id,
+      // role_id,
+      // node_id,
+      hidden: role.hidden
     });
+
     this.controlRole(role_id);
   };
 
@@ -624,19 +635,20 @@ export default function ScriptActions({ state, setState, actions }) {
     });
     return highest_integer + 1;
   };
-  const getDefaultRole = () => {
-    const name = getInitialName();
-    const hue = getRandomHue(name).toString();
+  const getDefaultRole = (props) => {
+    let name = props.name ?? getInitialName();
+    const hue = getRandomHue(+name ? name : 0).toString();
     return {
       instruction_ids: [],
       description: "",
       hue,
       name,
+      ...props
     };
   };
 
-  this.addRoleToScript = () => {
-    setState("script", "roles", uniqid(), getDefaultRole());
+  this.addRoleToScript = (props) => {
+    setState("script", "roles", uniqid(), getDefaultRole(props));
   };
 
   this.removeRoleFromScript = async (role_id) => {
@@ -734,6 +746,8 @@ export default function ScriptActions({ state, setState, actions }) {
   this.controlRole = async (role_id) => {
     // let result = await controlRole(role_id);
 
+    console.log("controlRole", role_id);
+
     let start = performance.now();
     let instruction_ids = [];
     let errors = [];
@@ -742,6 +756,8 @@ export default function ScriptActions({ state, setState, actions }) {
       return Object.keys(node.in_outs).indexOf(role_id) !== -1;
     });
     let node_ids = nodes.map(([node_id, node]) => node_id);
+
+    console.log(node_ids);
 
     // test #1 check for multiple open start/end-nodes for role
     let start_node_ids = nodes
@@ -1376,8 +1392,8 @@ export default function ScriptActions({ state, setState, actions }) {
 
   this.createGame = async () => {
     try {
-
       let roles = await this.processScript();
+
       if (!roles) throw "processScript failed";
 
       const { error } = await postData(
@@ -1412,6 +1428,13 @@ export default function ScriptActions({ state, setState, actions }) {
       this.addRoleToScript();
       return;
     }
+
+    /*   const admin = Object.values(data.roles).find(role => role.name === 'admin')
+      if (!admin) this.addRoleToScript({ name: "admin", hidden: true }) */
+
+    console.log("ROLES: ", state.script.roles);
+
+
 
     batch(() => {
       this.setRoles(data.roles ? data.roles : {});
