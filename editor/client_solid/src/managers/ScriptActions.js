@@ -1429,13 +1429,6 @@ export default function ScriptActions({ state, setState, actions }) {
       return;
     }
 
-    /*   const admin = Object.values(data.roles).find(role => role.name === 'admin')
-      if (!admin) this.addRoleToScript({ name: "admin", hidden: true }) */
-
-    console.log("ROLES: ", state.script.roles);
-
-
-
     batch(() => {
       this.setRoles(data.roles ? data.roles : {});
       this.setNodes(data.nodes);

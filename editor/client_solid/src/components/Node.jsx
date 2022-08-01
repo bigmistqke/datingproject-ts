@@ -212,28 +212,6 @@ function Node(props) {
     console.log("Instruction", props.node.instructions);
   });
 
-  onMount(() => {
-    if (props.node.type === "start" && props.instructions.length === 0) {
-      for (let role_id in state.script.roles) {
-        actions.addRoleToNode({
-          node_id: props.node_id,
-          role_id,
-        });
-      }
-
-      const [admin_id] = Object.entries(state.script.roles).find(
-        ([role_id, role]) => role.name === "admin"
-      );
-
-      let { instruction_id } = actions.addInstruction({ role_id: admin_id });
-      console.log("instruction_id", instruction_id, props.node_id);
-      actions.addInstructionIdToNode({
-        node_id: props.node_id,
-        instruction_id,
-      });
-    }
-  });
-
   return (
     <DragBox
       id={props.node_id}
@@ -259,11 +237,11 @@ function Node(props) {
         }}
       >
         <Switch fallback={<Row class={styles.roles_row}></Row>}>
-          <Match when={!props.node.type || props.node.type !== "start"}>
+          <Match when={!props.node.type}>
             <InOuts
               node_id={props.node_id}
               node={props.node}
-              in_outs={props.node.type !== "start" ? props.in_outs : {}}
+              in_outs={props.in_outs}
               direction="in"
               isVisible={true}
               updateRoleOffset={updateRoleOffset()}
