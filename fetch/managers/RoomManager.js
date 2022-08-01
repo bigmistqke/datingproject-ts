@@ -65,8 +65,8 @@ function RoomManager({ _redis, _mongo, _mqtt }) {
       await _redis.set("rooms", _rooms);
     })
   }
-
-  this.restartRoom = ({ room_id }) => rooms[room_id].restart();
+  this.resetRoom = ({ room_id }) => rooms[room_id].reset();
+  this.startRoom = ({ room_id }) => rooms[room_id].start();
 
   this.updateScriptOfRoom = ({ room_id, script_id }) => rooms[room_id].updateScript(script_id);
 
@@ -157,7 +157,7 @@ function Room({ _redis, _mongo, _mqtt }) {
   }
 
   this.getPlayer = (player_id) => _redis.get(`${room_id}${player_id}`)
-  this.getPlayerRestart = (player_id) => _redis.get(`${room_id}${player_id}_restart`)
+  this.getPlayerReset = (player_id) => _redis.get(`${room_id}${player_id}_reset`)
   this.getScriptId = async () => {
     if (!script_id) {
       let meta = await this.getMeta();
@@ -171,7 +171,7 @@ function Room({ _redis, _mongo, _mqtt }) {
   const setInstructionsMap = (instructions_map) => _redis.set(`${room_id}_instructions_map`, instructions_map)
 
   this.setPlayer = ({ player_id, player }) => _redis.set(`${room_id}${player_id}`, [player])
-  this.setPlayerRestart = ({ player_id, player }) => _redis.set(`${room_id}${player_id}_restart`, [player])
+  this.setPlayerReset = ({ player_id, player }) => _redis.set(`${room_id}${player_id}_reset`, [player])
   this.setRoomId = id => room_id = id
 
   this.setRoomName = room_name => process('meta', async () => {
@@ -230,7 +230,7 @@ function Room({ _redis, _mongo, _mqtt }) {
 
       Object.entries(players_instructions).forEach(([player_id, player]) => {
         this.setPlayer({ player_id, player });
-        this.setPlayerRestart({ player_id, player });
+        this.setPlayerReset({ player_id, player });
       })
 
       this.monitor();
@@ -246,7 +246,7 @@ function Room({ _redis, _mongo, _mqtt }) {
     let meta = await this.getMeta();
     Object.keys(meta.players).forEach(player_id => {
       _redis.del(`${room_id}${player_id}`);
-      _redis.del(`${room_id}${player_id}_restart`);
+      _redis.del(`${room_id}${player_id}_reset`);
     })
 
     _redis.del(room_id);
@@ -270,13 +270,13 @@ function Room({ _redis, _mongo, _mqtt }) {
 
   // this.set = (room) => _redis.set(`r_${room_id}`, room)
 
-  this.restart = async () => {
+  this.reset = async () => {
     // maybe eventually we should make this bit 'smarter':
     // empty the queue, and temporarily prevent adjustments
     // until we get confirmation from all the connected players
-    // that they have restarted the game (to prevent out-of-sync)
+    // that they have reseted the game (to prevent out-of-sync)
 
-    console.log('restart room!');
+    console.log('reset room!');
     let meta = await this.getMeta();
     meta.players = Object.fromEntries(Object.entries(meta.players).map(
       ([player_id, player]) => ([
@@ -290,7 +290,32 @@ function Room({ _redis, _mongo, _mqtt }) {
     Object.keys(meta.players).forEach(async (player_id) => {
       let player = await this.getPlayerRestart(player_id);
       this.setPlayer({ player_id, player });
-      _mqtt.send(`/${room_id}/${meta.players[player_id].role_id}/restart`, true);
+      _mqtt.send(`/${room_id}/${meta.players[player_id].role_id}/reset`, true);
+      received_swipes[player_id] = [];
+    })
+  }
+
+  this.start = async () => {
+    // maybe eventually we should make this bit 'smarter':
+    // empty the queue, and temporarily prevent adjustments
+    // until we get confirmation from all the connected players
+    // that they have reseted the game (to prevent out-of-sync)
+
+    console.log('reset room!');
+    let meta = await this.getMeta();
+    meta.players = Object.fromEntries(Object.entries(meta.players).map(
+      ([player_id, player]) => ([
+        player_id,
+        { ...player, instruction_index: 0 }
+      ])
+    ))
+    meta.count = meta.count + 1;
+    await this.setMeta(meta);
+
+    Object.keys(meta.players).forEach(async (player_id) => {
+      let player = await this.getPlayerRestart(player_id);
+      this.setPlayer({ player_id, player });
+      _mqtt.send(`/${room_id}/${meta.players[player_id].role_id}/start`, true);
       received_swipes[player_id] = [];
     })
   }
@@ -568,7 +593,7 @@ function Room({ _redis, _mongo, _mqtt }) {
       })
     })
 
-    subscribe(`/${room_id}/${player.role_id}/restart/confirmation`, () => {
+    subscribe(`/${room_id}/${player.role_id}/reset/confirmation`, () => {
       console.info('received confirmation from ', player.role_id, 'of room', room_id);
     });
 

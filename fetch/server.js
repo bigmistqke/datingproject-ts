@@ -192,11 +192,23 @@ app.get('/api/room/delete/:room_id', async function (req, res, next) {
   }
 })
 
-// restart room
-app.get('/api/room/restart/:room_id', async function (req, res, next) {
+// reset room
+app.get('/api/room/reset/:room_id', async function (req, res, next) {
   try {
     const room_id = req.params.room_id;
-    let response = await _rooms.restartRoom({ room_id });
+    let response = await _rooms.resetRoom({ room_id });
+
+    res.send(response)
+  } catch (e) {
+    console.error(e);
+  }
+})
+
+// start room
+app.get('/api/room/start/:room_id', async function (req, res, next) {
+  try {
+    const room_id = req.params.room_id;
+    let response = await _rooms.startRoom({ room_id });
 
     res.send(response)
   } catch (e) {
