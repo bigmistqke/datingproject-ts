@@ -9,11 +9,9 @@ import styles from "./Room.module.css";
 import urls from "./urls.js";
 
 export default function Room(props) {
-  const restartRoom = async () => {
-    if (!window.confirm("are you sure you want to restart the game?")) return;
-    let response = await fetch(
-      `${urls.fetch}/api/room/restart/${props.room_id}`
-    );
+  const resetRoom = async () => {
+    if (!window.confirm("are you sure you want to reset the game?")) return;
+    let response = await fetch(`${urls.fetch}/api/room/reset/${props.room_id}`);
     console.log(response);
     if (!response) return;
   };
@@ -61,7 +59,7 @@ export default function Room(props) {
         <Show when={props.mode === "advanced"}>
           <button onClick={props.deleteRoom}>delete</button>
         </Show>
-        <button onClick={restartRoom}>restart</button>
+        <button onClick={resetRoom}>reset</button>
       </div>
 
       <div class={styles.roles}>

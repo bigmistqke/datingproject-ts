@@ -1,6 +1,6 @@
 import qrcode from "qrcode-generator";
 import { createEffect, onMount } from "solid-js";
-import "./QR.css";
+import "./QR.module.css";
 
 export default function QR(props) {
   let qr_dom;
@@ -11,19 +11,17 @@ export default function QR(props) {
     var qr = qrcode(typeNumber, errorCorrectionLevel);
     qr.addData(props.data.game_url);
     qr.make();
-    console.log("qr data", qr.createImgTag(5));
-
     qr_dom.innerHTML = qr.createSvgTag(5);
   });
   return (
     <>
-      <div className="qr">
+      <div className={s.qr}>
         <div style={{ width: "100%", "text-align": "center" }}>
           {props.data.game_url}
         </div>
         <div ref={qr_dom}></div>
       </div>
-      <div onClick={props.closeQR} className="close"></div>
+      <div onClick={props.closeQR} className={s.close}></div>
     </>
   );
 }

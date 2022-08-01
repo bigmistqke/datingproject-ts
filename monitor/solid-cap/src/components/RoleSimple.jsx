@@ -1,17 +1,8 @@
 import copy from "copy-to-clipboard";
 import { createMemo, onMount, Show } from "solid-js";
-import { style } from "solid-js/web";
-// import "./Role.css";
 import styles from "./Role.module.css";
 
-import urls from "./urls";
-
 export default function Role(props) {
-  console.log("STYLES", styles);
-  // let role_url;
-
-  // const openLink = () => window.open(role_url);
-
   const setPlayer = function () {
     props.setRoom("players", props.role_id, ...arguments);
   };
@@ -59,14 +50,6 @@ export default function Role(props) {
     ); */
   });
 
-  const copyLink = (e) => {
-    copy(role_url);
-    e.target.innerHTML = "copied!";
-    setTimeout(() => {
-      e.target.innerHTML = "copy";
-    }, 1000);
-  };
-
   const forcedSwipe = (e) => {
     console.log("ok?");
     let confirm = window.confirm("are you sure u want to force a swipe?");
@@ -85,18 +68,6 @@ export default function Role(props) {
       `/${props.room_id}/${props.role.role_id}/forcedRefresh`,
       "true"
     );
-  };
-
-  const autoswipe = (e) => {
-    console.log("ok?");
-
-    let confirm = window.confirm("are you sure u want to autoswipe?");
-    if (!confirm) return;
-    props.mqtt.send(
-      `/${props.room_id}/${props.role.role_id}/autoswipe`,
-      JSON.stringify({ autoswipe: !props.role.autoswipe })
-    );
-    setPlayer("autoswipe", !props.role.autoswipe);
   };
 
   const prevs_and_roles = createMemo(() =>

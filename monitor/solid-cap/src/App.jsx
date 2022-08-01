@@ -4,13 +4,12 @@ import "./general.css";
 import _Mqtt from "./modules/_Mqtt.js";
 import urls from "./urls";
 
-import { createSignal, createEffect, onMount, For, Show } from "solid-js";
+import { createEffect, For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
-// import { useParams } from "solid-app-router";
 
-import Room from "./Room";
-import QR from "./QR";
-import Settings from "./Settings";
+import Room from "./components/Room";
+import QR from "./components/QR";
+import Settings from "./components/Settings";
 
 import { AndroidFullScreen } from "@awesome-cordova-plugins/android-full-screen";
 

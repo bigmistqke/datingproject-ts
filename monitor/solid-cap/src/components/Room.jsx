@@ -1,20 +1,23 @@
 import { createMemo, For, onMount } from "solid-js";
-import postData from "../../../editor/client_solid/src/helpers/postData";
+import postData from "../helpers/postData";
 
 import Role from "./Role";
 import RoleSimple from "./RoleSimple";
 
 // import "./Room.css";
 import styles from "./Room.module.css";
-import urls from "./urls.js";
+import urls from "../urls.js";
 
 export default function Room(props) {
-  const restartRoom = async () => {
-    if (!window.confirm("are you sure you want to restart the game?")) return;
-    let response = await fetch(
-      `${urls.fetch}/api/room/restart/${props.room_id}`
-    );
-    console.log(response);
+  const resetRoom = async () => {
+    if (!window.confirm("are you sure you want to reset the game?")) return;
+    let response = await fetch(`${urls.fetch}/api/room/reset/${props.room_id}`);
+    if (!response) return;
+  };
+
+  const startRoom = async () => {
+    if (!window.confirm("are you sure you want to start the game?")) return;
+    let response = await fetch(`${urls.fetch}/api/room/start/${props.room_id}`);
     if (!response) return;
   };
 
@@ -60,7 +63,11 @@ export default function Room(props) {
         <Show when={props.mode === "advanced"}>
           <button onClick={props.deleteRoom}>delete</button>
         </Show>
-        <button onClick={restartRoom}>restart</button>
+
+        <div class={styles.topButtons}>
+          <button onClick={resetRoom}>reset</button>
+          <button onClick={startRoom}>start</button>
+        </div>
       </div>
 
       <div class={styles.roles}>

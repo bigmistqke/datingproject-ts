@@ -1,7 +1,7 @@
 import s1 from "./Settings.module.css";
-import s2 from "./UI/Button.module.css";
-import Input from "./UI/Input";
-import Button from "./UI/Button";
+import s2 from "./Button.module.css";
+import Input from "./Input";
+import Button from "./Button";
 
 const Settings = (props) => {
   return (

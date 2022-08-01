@@ -29,8 +29,13 @@
 .room .top > *:first-child {
   flex: 1;
 }
+
+.topButtons {
+  display: flex;
+  gap: 40px;
+}
 .room .top h1,
-.room .top > button {
+.room .top button {
   padding: 5px;
   padding-right: 5px;
   padding-left: 5px;

@@ -1,15 +1,8 @@
 import copy from "copy-to-clipboard";
 import { createMemo, onMount, Show } from "solid-js";
-// import "./Role.css";
 import styles from "./Role.module.css";
 
-import urls from "./urls";
-
 export default function Role(props) {
-  // let role_url;
-
-  // const openLink = () => window.open(role_url);
-
   const setPlayer = function () {
     props.setRoom("players", props.role_id, ...arguments);
   };
