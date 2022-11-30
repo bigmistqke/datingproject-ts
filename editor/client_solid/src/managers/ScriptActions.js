@@ -636,7 +636,7 @@ export default function ScriptActions({ state, setState, actions }) {
     return highest_integer + 1;
   };
   const getDefaultRole = (props) => {
-    let name = props.name ?? getInitialName();
+    let name = props?.name ?? getInitialName();
     const hue = getRandomHue(+name ? name : 0).toString();
     return {
       instruction_ids: [],
@@ -648,6 +648,7 @@ export default function ScriptActions({ state, setState, actions }) {
   };
 
   this.addRoleToScript = (props) => {
+    console.log(uniqid(), getDefaultRole(props))
     setState("script", "roles", uniqid(), getDefaultRole(props));
   };
 

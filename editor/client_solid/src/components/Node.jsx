@@ -236,8 +236,8 @@ function Node(props) {
           height: "100%",
         }}
       >
-        <Switch fallback={<Row class={styles.roles_row}></Row>}>
-          <Match when={!props.node.type}>
+        {/* <Switch fallback={<Row class={styles.roles_row}></Row>}>
+          <Match when={props.node.type}> */}
             <InOuts
               node_id={props.node_id}
               node={props.node}
@@ -247,8 +247,8 @@ function Node(props) {
               updateRoleOffset={updateRoleOffset()}
               visible={props.visible}
             />
-          </Match>
-        </Switch>
+          {/* </Match>
+        </Switch> */}
 
         <Switch
           fallback={

@@ -48,15 +48,9 @@ const NodeRoles = (props) => {
     return "";
   };
 
-  const roles = createMemo(() => {
-    const roles = Object.entries(props.in_outs).map(([role_id, role]) =>
-      console.log(role_id, role)
-    );
-
-    return Object.entries(props.in_outs).sort(
-      ([a], [b]) => state.script.roles[a].name > state.script.roles[b].name
-    );
-  });
+  const roles = createMemo(() => Object.entries(props.in_outs).sort(
+    ([a], [b]) => state.script.roles[a].name > state.script.roles[b].name
+  ));
 
   return (
     <Row class={styles.roles_row}>
@@ -66,28 +60,29 @@ const NodeRoles = (props) => {
             <For each={roles()}>
               {([role_id, role]) => {
                 return (
-                  <Show when={!role.hidden}>
-                    {JSON.stringify(role)}
-                    <Role
-                      node_id={props.node_id}
-                      role_id={role_id}
-                      // role={role}
-                      connected_node_id={role[prevOrNext(props.direction)]}
-                      //
-                      role_hue={state.script.roles[role_id].hue}
-                      name={state.script.roles[role_id].name}
-                      description={state.script.roles[role_id].description}
-                      in_outs={props.in_outs}
-                      direction={props.direction}
-                      hasError={checkErrors(role_id)}
-                      instructions={
-                        props.direction === "out" ? props.instructions : null
-                      }
-                      isVisible={props.isVisible}
-                      updateRoleOffset={props.updateRoleOffset}
-                      visible={props.visible}
-                    />
-                  </Show>
+                  <>
+                    <Show when={!role.hidden}>
+                      <Role
+                        node_id={props.node_id}
+                        role_id={role_id}
+                        // role={role}
+                        connected_node_id={role[prevOrNext(props.direction)]}
+                        //
+                        role_hue={state.script.roles[role_id].hue}
+                        name={state.script.roles[role_id].name}
+                        description={state.script.roles[role_id].description}
+                        in_outs={props.in_outs}
+                        direction={props.direction}
+                        hasError={checkErrors(role_id)}
+                        instructions={
+                          props.direction === "out" ? props.instructions : null
+                        }
+                        isVisible={props.isVisible}
+                        updateRoleOffset={props.updateRoleOffset}
+                        visible={props.visible}
+                      />
+                    </Show>
+                  </>
                 );
               }}
             </For>
@@ -97,7 +92,7 @@ const NodeRoles = (props) => {
           <Match
             when={
               Object.keys(props.in_outs).length <
-              Object.keys(state.script.roles).length - 1
+              Object.keys(state.script.roles).length
             }
           >
             <div

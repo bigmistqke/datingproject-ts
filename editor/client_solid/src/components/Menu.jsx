@@ -88,9 +88,9 @@ const MainMenu = function (props) {
             : "open roles"}
         </button>
 
-        <button className="bubble" onClick={() => actions.testProcessScript()}>
+        {/* <button className="bubble" onClick={() => actions.testProcessScript()}>
           process-test
-        </button>
+        </button> */}
       </MenuBody>
       {props.children}
     </div>
@@ -182,7 +182,7 @@ const RoleMenu = function (props) {
                   <div className="bubble-container">
                     <Bubble
                       onChange={(name) => {
-                        actions.setName({ role_id, name });
+                        actions.setNameRole({ role_id, name });
                       }}
                       contentEditable={true}
                       background_hue={role.hue}
