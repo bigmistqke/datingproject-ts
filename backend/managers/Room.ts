@@ -12,7 +12,7 @@ Object.filter = (obj, predicate) =>
     .filter(key => predicate(key))
     .reduce((res, key) => ((res[key] = obj[key]), res), {})
 
-class RoomManager {
+export default class RoomManager {
   rooms = {}
   queue = new Q()
 
@@ -253,31 +253,33 @@ class Room {
   }
 
   getMeta = async () => (await this.redis.get(this.room_id)) as Meta
+  setMeta = (meta: Meta) => this.redis.set(this.room_id, meta)
+
   getInstructionsMap = () => this.redis.get(`${this.room_id}_instructions_map`)
 
   getGameCount = async () => {
-    let meta = await this.getMeta()
+    const meta = await this.getMeta()
     return meta?.game_count
   }
 
+  setPlayer = ({ player_id, player }) => this.redis.set(`${this.room_id}${player_id}`, [player])
   getPlayer = (player_id: string) => this.redis.get(`${this.room_id}${player_id}`) as Player
+
   getPlayerReset = (player_id: string) => this.redis.get(`${this.room_id}${player_id}_reset`)
+  setPlayerReset = ({ player_id, player }) =>
+    this.redis.set(`${this.room_id}${player_id}_reset`, [player])
+
   getScriptId = async () => {
     if (!this.script_id) {
-      let meta = await this.getMeta()
+      const meta = await this.getMeta()
       this.script_id = meta.script_id
     }
     return this.script_id
   }
 
-  setMeta = (meta: Meta) => this.redis.set(this.room_id, meta)
-
   private setInstructionsMap = instructions_map =>
     this.redis.set(`${this.room_id}_instructions_map`, instructions_map)
 
-  setPlayer = ({ player_id, player }) => this.redis.set(`${this.room_id}${player_id}`, [player])
-  setPlayerReset = ({ player_id, player }) =>
-    this.redis.set(`${this.room_id}${player_id}_reset`, [player])
   setRoomId = (id: string) => (this.room_id = id)
 
   setRoomName = room_name =>
