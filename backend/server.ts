@@ -298,21 +298,6 @@ app.get('api/room/getInstructions/:room_id/:player_id', async function (req, res
 })
 
 // get active rooms with certain script_id (for game-master)
-/* app.get('/api/room/disconnect/:room_id/:player_id', async function (req, res, next) {
-  const { room_id, player_id } = req.params;
-  try {
-    console.info(`${room_id} ${player_id} is disconnected`)
-    const rooms = await _rooms.updateStatusOfRole({ room_id, player_id, status: 'disconnected' });
-
-    mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'disconnected' }));
-
-    res.json(rooms);
-  } catch (e) {
-    res.json({ error: e });
-  }
-}) */
-
-// get active rooms with certain script_id (for game-master)
 app.get('/api/room/update/:room_id/:script_id', async function (req, res, next) {
   const room_id = req.params.room_id
   const script_id = req.params.script_id
