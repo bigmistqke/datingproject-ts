@@ -1,12 +1,12 @@
 // import ResizeHandles from "../viewport/ResizeHandles";
-import CardElement from "./CardElement";
-import CardMask from "./CardMask";
-import { For, Show, createEffect, createSignal } from "solid-js";
+import CardElement from './CardElement'
+import CardMask from './CardMask'
+import { For, Show, createEffect, createSignal } from 'solid-js'
 
-import { useStore } from "../../store/Store";
+import { useStore } from '../../store/Store'
 
-const CardCompositor = (props) => {
-  const [state, actions] = useStore();
+const CardCompositor = props => {
+  const [state, actions] = useStore()
   return (
     <>
       <CardComposition {...props}></CardComposition>
@@ -16,19 +16,19 @@ const CardCompositor = (props) => {
         </CardMask>
       </Show>
     </>
-  );
-};
+  )
+}
 
-const CardComposition = (props) => {
-  const [state, actions] = useStore();
-  const [getSwatches, setSwatches] = createSignal([]);
+const CardComposition = props => {
+  const [state, actions] = useStore()
+  const [getSwatches, setSwatches] = createSignal([])
 
   createEffect(() => {
-    let type = actions.getType(props.instruction.type);
-    if (!type) return;
-    console.log("PROPS.MASKED IS ", props.masked);
-    setSwatches(type.swatches.map((s) => (props.masked ? s.timed : s.normal)));
-  });
+    let type = actions.getType(props.instruction.type)
+    if (!type) return
+
+    setSwatches(type.swatches.map(s => (props.masked ? s.timed : s.normal)))
+  })
 
   return (
     <For each={props.elements}>
@@ -45,7 +45,7 @@ const CardComposition = (props) => {
         </Show>
       )}
     </For>
-  );
-};
+  )
+}
 
-export default CardCompositor;
+export default CardCompositor

@@ -1,4 +1,4 @@
-export default async function postData(url = '', data = {}, type = "json") {
+export default async function postData(url = '', data = {}, type = 'json') {
   const response = await fetch(url, {
     method: 'POST',
     mode: 'cors',
@@ -7,13 +7,10 @@ export default async function postData(url = '', data = {}, type = "json") {
     headers: { 'Content-Type': 'application/json' },
     redirect: 'follow',
     referrerPolicy: 'no-referrer',
-    body: type === 'json' ? JSON.stringify(data) : data
-  });
+    body: type === 'json' ? JSON.stringify(data) : data,
+  })
 
-  console.log("RESPONSE,", response);
+  if (type === 'json') return await response.json()
 
-  if (type === "json")
-    return await response.json();
-
-  return response;
+  return response
 }

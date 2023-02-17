@@ -1,15 +1,15 @@
 // import Color from "./Color";
 
-import { createSignal, createEffect, createMemo, onMount } from "solid-js";
-import { useStore } from "../../store/Store";
+import { createSignal, createEffect, createMemo, onMount } from 'solid-js'
+import { useStore } from '../../store/Store'
 
-import { styled } from "solid-styled-components";
-import isColor from "../../helpers/isColor";
-import isFalse from "../../helpers/isFalse";
+import { styled } from 'solid-styled-components'
+import isColor from '../../helpers/isColor'
+import isFalse from '../../helpers/isFalse'
 
-let dragged_color = undefined;
+let dragged_color = undefined
 
-const Color = styled("div")`
+const Color = styled('div')`
   width: 16px;
   height: 16px;
   border: 1px solid grey;
@@ -18,9 +18,9 @@ const Color = styled("div")`
     width: 12px;
     height: 12px;
   }
-`;
+`
 
-const LongPanel = styled("div")`
+const LongPanel = styled('div')`
   bottom: 0px;
   right: 0px;
   background: white;
@@ -35,9 +35,9 @@ const LongPanel = styled("div")`
   & * {
     font-size: 8pt;
   }
-`;
+`
 
-const Row = styled("div")`
+const Row = styled('div')`
   display: flex;
   flex: 1;
   line-height: 12pt;
@@ -47,9 +47,9 @@ const Row = styled("div")`
   padding: 3px;
   padding-right: 9px;
   box-sizing: border-box;
-`;
+`
 
-const FlexRow = styled("div")`
+const FlexRow = styled('div')`
   display: flex;
   flex-direction: row;
   gap: 6px;
@@ -58,9 +58,9 @@ const FlexRow = styled("div")`
   width: 100%;
   box-sizing: border-box;
   height: auto;
-`;
+`
 
-const GridRow = styled("div")`
+const GridRow = styled('div')`
   display: grid;
   flex-direction: row;
   /* gap: 9px; */
@@ -72,9 +72,9 @@ const GridRow = styled("div")`
   grid-template-columns: repeat(4, 25%);
   & > * {
   }
-`;
+`
 
-const FlexColumn = styled("div")`
+const FlexColumn = styled('div')`
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -85,9 +85,9 @@ const FlexColumn = styled("div")`
   width: 100%;
   box-sizing: border-box;
   height: auto;
-`;
+`
 
-const ColumnContainer = styled("div")`
+const ColumnContainer = styled('div')`
   display: flex;
   line-height: 12pt;
   font-size: 16pt;
@@ -102,9 +102,9 @@ const ColumnContainer = styled("div")`
   & label {
     margin-right: 3px;
   }
-`;
+`
 
-const RowContainer = styled("div")`
+const RowContainer = styled('div')`
   display: flex;
   line-height: 12pt;
   font-size: 16pt;
@@ -119,9 +119,9 @@ const RowContainer = styled("div")`
   & label {
     margin-right: 3px;
   }
-`;
+`
 
-const Label = styled("label")`
+const Label = styled('label')`
   display: inline-block;
   flex: 1;
   height: 100%;
@@ -131,9 +131,9 @@ const Label = styled("label")`
   align-self: center;
   line-height: 16px;
   font-size: 8pt;
-`;
+`
 
-const H1 = styled("h1")`
+const H1 = styled('h1')`
   font-family: inherit;
   font-size: inherit;
   font-weight: inherit;
@@ -148,13 +148,13 @@ const H1 = styled("h1")`
     margin-top: 3px;
     margin-bottom: 3px;
   }
-`;
+`
 
-const Title = styled("span")`
+const Title = styled('span')`
   flex: 1;
-`;
+`
 
-const H2 = styled("h2")`
+const H2 = styled('h2')`
   font-family: inherit;
   font-size: inherit;
   font-weight: inherit;
@@ -163,9 +163,9 @@ const H2 = styled("h2")`
   padding: 3px;
   padding-left: 3px;
   padding-top: 3px;
-`;
+`
 
-const Button = styled("button")`
+const Button = styled('button')`
   border: 0px solid white;
   border-radius: 5px;
   font-size: 6pt !important;
@@ -182,9 +182,9 @@ const Button = styled("button")`
     background: var(--button-focus);
     color: white;
   }
-`;
+`
 
-const Span = styled("button")`
+const Span = styled('button')`
   border: 0px solid white;
   border-radius: 5px;
   font-size: 6pt !important;
@@ -195,9 +195,9 @@ const Span = styled("button")`
   padding-bottom: 2px;
   padding-top: 2px;
   background: var(--light);
-`;
+`
 
-const Input = styled("input")`
+const Input = styled('input')`
   box-sizing: border-box;
   padding-right: 0px;
   padding-left: 6px;
@@ -208,13 +208,13 @@ const Input = styled("input")`
   border: none;
   background: var(--light);
   height: 16px;
-  &[type="checkbox"] {
+  &[type='checkbox'] {
     flex: 0 10px !important;
     margin-right: 6px;
   }
-`;
+`
 
-const Select = styled("select")`
+const Select = styled('select')`
   box-sizing: border-box;
   padding-right: 0px;
   padding-left: 3px;
@@ -225,15 +225,15 @@ const Select = styled("select")`
   border: none;
   height: 16px;
   background: var(--light);
-`;
+`
 
-const FullScreen = styled("div")`
+const FullScreen = styled('div')`
   width: 100%;
   height: 100%;
   position: fixed;
   z-index: 50;
-`;
-const Overlay = styled("div")`
+`
+const Overlay = styled('div')`
   position: absolute;
   z-index: 50;
   background: white;
@@ -245,97 +245,87 @@ const Overlay = styled("div")`
   & > * {
     padding: 15px;
   }
-`;
+`
 
-const LabeledSelect = (
-  props /* { label, value, data, type = "number", onChange } */
-) => {
-  const handleChange = (event) => {
-    props.onChange(event.target.value);
-  };
+const LabeledSelect = (props /* { label, value, data, type = "number", onChange } */) => {
+  const handleChange = event => {
+    props.onChange(event.target.value)
+  }
 
   return (
-    <GridRow
-      style={{ "grid-template-columns": "repeat(2, 50%)", ...props.style }}
-    >
+    <GridRow style={{ 'grid-template-columns': 'repeat(2, 50%)', ...props.style }}>
       <Label>{props.label} </Label>
-      <Select
-        key={props.label}
-        value={props.value}
-        type={props.type}
-        onChange={handleChange}
-      >
+      <Select key={props.label} value={props.value} type={props.type} onChange={handleChange}>
         <For each={props.data}>
-          {(value) => (
-            <option value={typeof value === "string" ? value : value.value}>
-              {typeof value === "string" ? value : value.label}
+          {value => (
+            <option value={typeof value === 'string' ? value : value.value}>
+              {typeof value === 'string' ? value : value.label}
             </option>
           )}
         </For>
       </Select>
     </GridRow>
-  );
-};
+  )
+}
 
-const LabeledCheckbox = (props) => {
+const LabeledCheckbox = props => {
   return (
     <>
       <LabeledColor
         className="small"
         label={props.label}
-        value={props.checked ? "var(--green)" : "var(--red)"}
+        value={props.checked ? 'var(--green)' : 'var(--red)'}
         onClick={props.onClick}
         style={{
-          "padding-top": "0px",
-          "padding-bottom": "0px",
+          'padding-top': '0px',
+          'padding-bottom': '0px',
         }}
       ></LabeledColor>
     </>
-  );
-};
+  )
+}
 
-const LabeledColor = (props) => {
-  let swatch_ref;
+const LabeledColor = props => {
+  let swatch_ref
 
-  const [getLastValue, setLastValue] = createSignal();
+  const [getLastValue, setLastValue] = createSignal()
 
-  const onDrop = (e) => {
-    e.preventDefault();
+  const onDrop = e => {
+    e.preventDefault()
 
-    setLastValue(false);
-  };
+    setLastValue(false)
+  }
 
-  const onDragEnter = (e) => {
-    e.preventDefault();
-    setLastValue(props.value);
+  const onDragEnter = e => {
+    e.preventDefault()
+    setLastValue(props.value)
 
-    if (props.onDragEnter) props.onDragEnter(e);
-  };
+    if (props.onDragEnter) props.onDragEnter(e)
+  }
 
-  const onDragOver = (e) => {
-    e.preventDefault();
+  const onDragOver = e => {
+    e.preventDefault()
     // e.stopPropagation();
-    console.log("drag_over");
 
-    let swatch_index = dragged_color;
+    let swatch_index = dragged_color
 
-    if (swatch_index === props.value) return;
+    if (swatch_index === props.value) return
 
-    if (!swatch_index && swatch_index !== 0) return;
+    if (!swatch_index && swatch_index !== 0) return
 
-    props.onChange(parseInt(swatch_index));
-  };
+    props.onChange(parseInt(swatch_index))
+  }
 
-  const revertColor = (e) => props.onChange(getLastValue());
+  const revertColor = e => props.onChange(getLastValue())
 
   const getColor = createMemo(() => {
-    if (props.value === "none" || isFalse(props.value)) return "#FFFFFF";
-    if (typeof props.value === "number") {
-      return props.swatches[props.value];
+    if (props.value === 'none' || isFalse(props.value)) return '#FFFFFF'
+    if (typeof props.value === 'number') {
+      return props.swatches[props.value]
     } else {
-      return props.value;
+      return props.value
     }
-  });
+  })
 
   return (
     <FlexRow style={{ ...props.style }}>
@@ -355,40 +345,39 @@ const LabeledColor = (props) => {
         className={props.className}
       ></Color>
     </FlexRow>
-  );
-};
+  )
+}
 
-const ColorPicker = (props) => {
-  const [state, { archiveStateChanges }] = useStore();
-  let input;
+const ColorPicker = props => {
+  const [state, { archiveStateChanges }] = useStore()
+  let input
 
-  let old_value;
-  let last_time = performance.now();
+  let old_value
+  let last_time = performance.now()
 
-  const onInput = (e) => {
-    if (performance.now() - last_time < 1000 / 30) return;
-    last_time = performance.now();
-    props.onInput(e.target.value);
-  };
+  const onInput = e => {
+    if (performance.now() - last_time < 1000 / 30) return
+    last_time = performance.now()
+    props.onInput(e.target.value)
+  }
 
-  const onFocus = (e) => {
-    old_value = JSON.parse(JSON.stringify(props.value));
-  };
+  const onFocus = e => {
+    old_value = JSON.parse(JSON.stringify(props.value))
+  }
 
-  const onChange = (e) => {
-    let result = props.onInput(e.target.value);
+  const onChange = e => {
+    let result = props.onInput(e.target.value)
     if (old_value !== e.target.value) {
       // archiveStateChanges([{ ...result, old_value }]);
     }
-  };
+  }
 
-  const onDragStart = (e) => {
-    dragged_color = props.index;
+  const onDragStart = e => {
+    dragged_color = props.index
     // e.dataTransfer.setData("text", props.index);
-    // console.log("ONDRAGSTART ", e.dataTransfer.getData("text/plain"));
-  };
+  }
 
-  const onDrop = (e) => {};
+  const onDrop = e => {}
 
   return (
     <>
@@ -396,7 +385,7 @@ const ColorPicker = (props) => {
         ref={input}
         type="color"
         value={props.value}
-        style={{ display: "none" }}
+        style={{ display: 'none' }}
         onInput={onInput}
         onChange={onChange}
         onClick={onFocus}
@@ -407,80 +396,71 @@ const ColorPicker = (props) => {
         onDrop={onDrop}
         draggable={props.draggable}
         onClick={() => {
-          input.click();
-          props.onClick();
+          input.click()
+          props.onClick()
         }}
       ></Color>
     </>
-  );
-};
+  )
+}
 
-const LabeledColorPicker = (props) => {
+const LabeledColorPicker = props => {
   return (
     <>
       <FlexRow>
         <Label className="main">{props.label} </Label>
-        <ColorPicker
-          value={props.value}
-          onChange={props.onChange}
-        ></ColorPicker>
+        <ColorPicker value={props.value} onChange={props.onChange}></ColorPicker>
       </FlexRow>
     </>
-  );
-};
+  )
+}
 
-const LabeledInput = (props) => {
-  const handleChange = (event) => {
-    let value;
-    if (props.type === "number") {
-      value = parseInt(event.target.value);
-    } else if (props.type === "checkbox") {
-      value = event.target.checked;
+const LabeledInput = props => {
+  const handleChange = event => {
+    let value
+    if (props.type === 'number') {
+      value = parseInt(event.target.value)
+    } else if (props.type === 'checkbox') {
+      value = event.target.checked
     } else {
-      value = event.target.value;
+      value = event.target.value
     }
-    props.onChange(value);
-  };
+    props.onChange(value)
+  }
 
   return (
-    <GridRow
-      style={{ "grid-template-columns": "repeat(2, 50%)", ...props.style }}
-    >
+    <GridRow style={{ 'grid-template-columns': 'repeat(2, 50%)', ...props.style }}>
       <Label className="main">{props.label} </Label>
       <Input
         key={props.label}
         checked={props.checked}
         value={props.value}
-        type={props.type ? props.type : "number"}
-        min={!props.type || props.type === "number" ? 0 : null}
+        type={props.type ? props.type : 'number'}
+        min={!props.type || props.type === 'number' ? 0 : null}
         onChange={handleChange}
       ></Input>
     </GridRow>
-  );
-};
+  )
+}
 
 const HeaderCategory = (props /* { label, data, onChange, children } */) => {
-  const [getMode, setMode] = createSignal(
-    props.visible ? props.visible : false
-  );
+  const [getMode, setMode] = createSignal(props.visible ? props.visible : false)
 
-  const toggleMode = () => setMode(!getMode());
+  const toggleMode = () => setMode(!getMode())
   return (
     <div>
       <H2 onClick={toggleMode}>{props.label}</H2>
-      <div style={{ display: getMode() ? "" : "none" }}>{props.children}</div>
+      <div style={{ display: getMode() ? '' : 'none' }}>{props.children}</div>
     </div>
-  );
-};
+  )
+}
 
-const HeaderPanel = (props) => {
+const HeaderPanel = props => {
   const [getMode, setMode] = createSignal(
-    props.visible || props.always_visible
-      ? props.visible || props.always_visible
-      : false
-  );
+    props.visible || props.always_visible ? props.visible || props.always_visible : false,
+  )
 
-  const toggleMode = () => setMode(!getMode());
+  const toggleMode = () => setMode(!getMode())
 
   return (
     <>
@@ -488,20 +468,20 @@ const HeaderPanel = (props) => {
         <Title>{props.label}</Title>
         {props.extra}
       </H1>
-      <div style={{ display: getMode() ? "" : "none" }}>{props.children}</div>
+      <div style={{ display: getMode() ? '' : 'none' }}>{props.children}</div>
       {/* <Show when={getMode()}>{props.children}</Show> */}
     </>
-  );
-};
+  )
+}
 
-const HeaderContainer = (props) => {
+const HeaderContainer = props => {
   return (
     <>
       <H1>{props.label}</H1>
       {props.children}
     </>
-  );
-};
+  )
+}
 
 export {
   Color,
@@ -525,4 +505,4 @@ export {
   LabeledColor,
   LabeledColorPicker,
   LongPanel,
-};
+}
