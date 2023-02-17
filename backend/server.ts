@@ -26,10 +26,8 @@ const mongo = new Mongo({ url: 'mongodb://localhost:27017' })
 const redis = new Redis()
 const mqtt = new Mqtt()
 
-// const _db, _rooms, monitor;
-
-const _db = new DatabaseManager({ mongo, redis })
-const _rooms = new RoomManager({ mongo, redis, mqtt })
+const db = new DatabaseManager({ mongo, redis })
+const rooms = new RoomManager({ mongo, redis, mqtt })
 
 const isDev = true
 const mqtt_url = isDev ? 'localhost:8883' : 'socket.datingproject.net/mqtt'
@@ -37,7 +35,7 @@ const mqtt_url = isDev ? 'localhost:8883' : 'socket.datingproject.net/mqtt'
 mongo
   .connect('datingProject')
   .then(() => mqtt.connect(mqtt_url, true))
-  .then(() => _rooms.init())
+  .then(() => rooms.init())
   .catch(e => console.error('error while connecting to mongo:', e))
 
 app.use(
@@ -100,7 +98,7 @@ app.post('/api/script/save/:script_id', async function (req, res, next) {
   console.log('/api/script/save/:script_id')
   const script = req.body
   const script_id = req.params.script_id
-  const result = await _db.saveScript({ script_id, script })
+  const result = await db.saveScript({ script_id, script })
   res.json(result)
 })
 
@@ -109,7 +107,7 @@ app.get('/api/script/get/:script_id/:mode', async function (req, res) {
   const { mode, script_id } = req.params
   const start = new Date().getTime()
 
-  const results = await _db.getScript(script_id)
+  const results = await db.getScript(script_id)
 
   if (results) {
     res.status(200).send(mode in results ? results[mode] : results)
@@ -122,7 +120,7 @@ app.get('/api/script/get/:script_id/:mode', async function (req, res) {
 app.get('/api/script/delete/:script_id', async function (req, res, next) {
   try {
     const script_id = req.params.script_id
-    const response = await _db.deleteScript({ script_id })
+    const response = await db.deleteScript({ script_id })
     res.send(response)
   } catch (e) {
     console.error(e)
@@ -131,7 +129,7 @@ app.get('/api/script/delete/:script_id', async function (req, res, next) {
 
 // get all scripts
 app.get('/api/script/get_all', async function (req, res) {
-  const results = await _db.getAllScripts()
+  const results = await db.getAllScripts()
   const script_ids = results.map(r => r.script_id)
 
   if (script_ids) {
@@ -147,8 +145,8 @@ app.get('/api/script/get_all', async function (req, res) {
 app.post('/api/script/test/:script_id', async function (req, res, next) {
   const { script_id } = req.params
   const script = req.body
-  const { room, room_id, role_ids } = await _rooms.createRoom({ script_id, script })
-  _db.initStats({ script_id, room_id, role_ids })
+  const { room, room_id, role_ids } = await rooms.createRoom({ script_id, script })
+  db.initStats({ script_id, room_id, role_ids })
   // _rooms.monitor({ room_id });
   res.json({ room_id })
 })
@@ -167,7 +165,7 @@ app.post('/api/room/create/:script_id', async function (req, res, next) {
 app.get('/api/room/delete/:room_id', async function (req, res, next) {
   try {
     const room_id = req.params.room_id
-    const response = await _rooms.deleteRoom({ room_id })
+    const response = await rooms.deleteRoom({ room_id })
     res.send(response)
   } catch (e) {
     console.error(e)
@@ -178,7 +176,7 @@ app.get('/api/room/delete/:room_id', async function (req, res, next) {
 app.get('/api/room/reset/:room_id', async function (req, res, next) {
   try {
     const room_id = req.params.room_id
-    const response = await _rooms.resetRoom({ room_id })
+    const response = await rooms.resetRoom({ room_id })
 
     res.send(response)
   } catch (e) {
@@ -190,7 +188,7 @@ app.get('/api/room/reset/:room_id', async function (req, res, next) {
 app.get('/api/room/start/:room_id', async function (req, res, next) {
   try {
     const room_id = req.params.room_id
-    const response = await _rooms.startRoom({ room_id })
+    const response = await rooms.startRoom({ room_id })
 
     res.send(response)
   } catch (e) {
@@ -204,7 +202,7 @@ app.post('/api/room/rename/:room_id', async function (req, res, next) {
     const room_id = req.params.room_id
     const { room_name, script_id } = req.body
 
-    const response = await _rooms.renameRoom({ script_id, room_id, room_name })
+    const response = await rooms.renameRoom({ script_id, room_id, room_name })
     res.send(response)
   } catch (e) {
     console.error(e)
@@ -225,7 +223,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
   const room_id = url.slice(0, 6)
   const player_id = url.slice(6)
 
-  const join_result = await _rooms.joinRoom({ room_id, player_id })
+  const join_result = await rooms.joinRoom({ room_id, player_id })
   if (join_result.error) {
     console.error(join_result.error)
     res.status(404).send(join_result.error)
@@ -234,7 +232,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
 
   if (!join_result.sound) join_result.sound = 'ping.mp3'
   if (!join_result.design_id) join_result.design_id = 'europalia3_mikey'
-  const { design, modified } = await _db.getDesign({ design_id: join_result.design_id })
+  const { design, modified } = await db.getDesign({ design_id: join_result.design_id })
 
   mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'connected' }))
 
@@ -251,7 +249,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
 app.get('/api/room/getRoleUrls/:room_id', async function (req, res, next) {
   const room_id = req.params.room_id
   try {
-    const { player_ids } = await _rooms.getRoleUrlsOfRoom({ room_id })
+    const { player_ids } = await rooms.getRoleUrlsOfRoom({ room_id })
     if (!player_ids) res.send(false)
     else res.json({ player_ids, room_id })
   } catch (e) {
@@ -264,7 +262,7 @@ app.get('/api/room/getRooms/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id
   try {
     const start = new Date().getTime()
-    const rooms = await _rooms.getRooms({ script_id })
+    const rooms = await rooms.getRooms({ script_id })
 
     res.json(rooms)
   } catch (e) {
@@ -276,7 +274,7 @@ app.get('/api/room/getRooms/:script_id', async function (req, res, next) {
 app.get('/api/room/metadata/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id
   try {
-    const rooms = await _rooms.getAllMetas({ script_id })
+    const rooms = await rooms.getAllMetas({ script_id })
 
     res.json(rooms)
   } catch (e) {
@@ -287,7 +285,7 @@ app.get('/api/room/metadata/:script_id', async function (req, res, next) {
 app.get('api/room/getInstructions/:room_id/:player_id', async function (req, res, next) {
   const { room_id, player_id } = req.params
 
-  const { instructions, error } = await _rooms.getInstructions({ room_id, player_id })
+  const { instructions, error } = await rooms.getInstructions({ room_id, player_id })
 
   if (error) {
     console.error(error)
@@ -303,7 +301,7 @@ app.get('/api/room/update/:room_id/:script_id', async function (req, res, next) 
   const script_id = req.params.script_id
 
   try {
-    const result = await _rooms.updateScriptOfRoom({ room_id, script_id })
+    const result = await rooms.updateScriptOfRoom({ room_id, script_id })
     res.json(result)
   } catch (error) {
     res.json({ error })
@@ -315,8 +313,8 @@ app.post('/api/room/stats/save/:room_id/:role_id', async function (req, res, nex
   const { room_id, role_id } = req.params
 
   const stats = req.body
-  const game_count = await _rooms.getGameCount({ room_id })
-  _db.saveStats({ room_id, role_id, stats })
+  const game_count = await rooms.getGameCount({ room_id })
+  db.saveStats({ room_id, role_id, stats })
   res.sendStatus(200)
 })
 // CARD
@@ -383,7 +381,7 @@ app.post('/api/design/save/:design_id', async function (req, res, next) {
 
     await uploadSvgsAsPng({ design_id, design })
 
-    const saved = await _db.saveDesign({ design_id, design })
+    const saved = await db.saveDesign({ design_id, design })
     res.status(200).send(saved)
   } catch (err) {
     console.error(`error ${err}`)
@@ -392,7 +390,7 @@ app.post('/api/design/save/:design_id', async function (req, res, next) {
 })
 
 app.get('/api/design/get_all', async (req, res, next) => {
-  const data = await _db.getAllDesigns()
+  const data = await db.getAllDesigns()
   if (!data) res.status(500).send('error while querying database')
   else res.status(200).json(data)
 })
@@ -400,7 +398,7 @@ app.get('/api/design/get_all', async (req, res, next) => {
 app.get('/api/design/get/:design_id/:mode', async function (req, res, next) {
   try {
     const { design_id, mode } = req.params
-    const data = await _db.getDesign({ design_id })
+    const data = await db.getDesign({ design_id })
     if (!data) {
       res.status(404).send('could not find design')
       return
