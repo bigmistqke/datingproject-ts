@@ -442,17 +442,13 @@ app.get('/api/design/get/:design_id/:mode', async function (req, res, next) {
   }
 })
 
-app.get('/api/convertAllScripts', async function (req, res, next) {
-  res.json(await _db.convertAllScripts())
-})
-
 app.use('/api/uploads', express.static(__dirname + '/uploads'))
 app.use('/api/designs', express.static(__dirname + '/designs'))
 app.use('/api/sounds', express.static(__dirname + '/sounds'))
 
 app.use('/api/system', express.static('system'))
 
-app.get('/api/video/:script_id/:file_id', () => {
+app.get('/api/video/:script_id/:file_id', req => {
   const { script_id, file_id } = req.params
   console.info('get video', script_id, file_id)
 })
