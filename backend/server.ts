@@ -6,6 +6,7 @@ import fileUpload from 'express-fileupload'
 import fs from 'fs'
 import path from 'path'
 import sharp from 'sharp'
+import { Design } from '../types'
 
 import DatabaseManager from './managers/Database'
 import RoomManager from './managers/Room'
@@ -359,10 +360,10 @@ app.post('/api/design/uploadImage/:card_id/:image_id', async function (req, res,
   })
 })
 
-const uploadSvgsAsPng = ({ design_id, design }) => {
+const uploadSvgsAsPng = ({ design_id, design }: { design_id: string; design: Design }) => {
   const base_url = `./designs/${design_id}`
   const card_dimensions = design.production.card_dimensions
-  let promises = []
+  const promises: Promise<void>[] = []
 
   if (!fs.existsSync(base_url)) {
     fs.mkdirSync(base_url)
