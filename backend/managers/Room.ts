@@ -7,10 +7,31 @@ var crypto = require('crypto')
 const { array_remove_element } = require('../utils/pure-array.js')
 var Q = require('../utils/Q.js')
 
-Object.filter = (obj, predicate) =>
+// TODO: refactor to something less hacky
+Object.prototype.filter = (obj, predicate) =>
   Object.keys(obj)
     .filter(key => predicate(key))
     .reduce((res, key) => ((res[key] = obj[key]), res), {})
+
+type PlayerMeta = {
+  status: 'uninitialized' | 'connected' | 'disconnected'
+  instruction_index: 0
+  instructions_length: number
+  instruction: Instruction
+  autoswipe: boolean
+  role_id: string
+  name: string
+  last_interaction: number
+}
+
+type RoomMeta = {
+  design_id: string
+  players: Record<string, PlayerMeta>
+  room_name: string
+  game_count: number
+  script_id: string
+  count: number
+}
 
 export default class RoomManager {
   rooms = {}
@@ -29,7 +50,7 @@ export default class RoomManager {
   process = func => this.queue.add(func)
 
   init = async () => {
-    let room_ids = await this.getAllRoomIds()
+    const room_ids = await this.getAllRoomIds()
 
     room_ids.forEach(room_id => {
       if (!this.rooms[room_id]) {
@@ -85,34 +106,37 @@ export default class RoomManager {
   updateScriptOfRoom = ({ room_id, script_id }) => this.rooms[room_id].updateScript(script_id)
 
   getAllRoomIds = async () => {
-    let room_categories = await this.redis.get('rooms')
+    // TODO: is there a more typesafe way to interface with redis?
+    let room_categories = (await this.redis.get('rooms')) as Record<string, string[]>
     if (Object.values(room_categories).length === 0) return []
     return Object.values(room_categories).reduce((a, b) => a.concat(b), [])
   }
 
   getRooms = async ({ script_id }) => {
-    let { [script_id]: room_ids } = await this.redis.get('rooms')
-    return Object.fromEntries(
-      await Promise.all(room_ids.map(async room_id => [room_id, await rooms[room_id].getMeta()])),
+    // TODO: is there a more typesafe way to interface with redis?
+    const { [script_id]: room_ids } = (await this.redis.get('rooms')) as Record<string, string[]>
+    const entries = await Promise.all(
+      room_ids.map(async room_id => [room_id, await this.rooms[room_id].getMeta()]),
     )
+    return Object.fromEntries(entries)
   }
 
   getAllMetas = async ({ script_id }) => {
-    let { [script_id]: room_ids } = await this.redis.get('rooms')
+    const { [script_id]: room_ids } = await this.redis.get('rooms')
 
     if (!room_ids) return {}
 
-    return Object.fromEntries(
-      await Promise.all(
-        room_ids.map(async room_id => [
-          room_id,
-          {
-            ...(await this.rooms[room_id].getMeta()),
-            instructions_map: await this.rooms[room_id].getInstructionsMap(),
-          },
-        ]),
-      ),
+    const entries = await Promise.all(
+      room_ids.map(async room_id => [
+        room_id,
+        {
+          ...(await this.rooms[room_id].getMeta()),
+          instructions_map: await this.rooms[room_id].getInstructionsMap(),
+        },
+      ]),
     )
+
+    return Object.fromEntries(entries)
   }
 
   getInstructions = async ({ room_id, player_id }) =>
@@ -122,37 +146,7 @@ export default class RoomManager {
 
   getRoleUrlsOfRoom = ({ room_id }) => this.rooms[room_id].getRoleUrls()
 
-  updateStatusOfRole = ({ player_id, status }) =>
-    this.process(async () => {
-      let room = await this.get()
-      if (!room) return
-      let role = Object.entries(room.players).find(([_url]) => _url === player_id)[1]
-      role.status = status
-      room.players = { ...room.players, [player_id]: role }
-      this.set(room)
-    })
-
-  getGameCount = ({ room_id }) => rooms[room_id].getGameCount()
-}
-
-type Player = {
-  status: 'uninitialized' | 'connected' | 'disconnected'
-  instruction_index: 0
-  instructions_length: number
-  instruction: Instruction
-  autoswipe: boolean
-  role_id: string
-  name: string
-  last_interaction: number
-}
-
-type Meta = {
-  design_id: string
-  players: Record<string, Player>
-  room_name: string
-  game_count: number
-  script_id: string
-  count: number
+  getGameCount = ({ room_id }) => this.rooms[room_id].getGameCount()
 }
 
 class Room {
@@ -176,7 +170,7 @@ class Room {
   }
 
   playersFromScript = (script: Script) => {
-    const players_meta: Record<string, Player> = {}
+    const players_meta: Record<string, PlayerMeta> = {}
     const players_instructions: Record<string, Instruction[]> = {}
     const instructions_map: Record<string, string> = {}
 
@@ -252,9 +246,11 @@ class Room {
     this.subscribed_topics.add(topic)
   }
 
-  getMeta = async () => (await this.redis.get(this.room_id)) as Meta
-  setMeta = (meta: Meta) => this.redis.set(this.room_id, meta)
+  getMeta = async () => (await this.redis.get(this.room_id)) as RoomMeta
+  setMeta = (meta: RoomMeta) => this.redis.set(this.room_id, meta)
 
+  private setInstructionsMap = instructions_map =>
+    this.redis.set(`${this.room_id}_instructions_map`, instructions_map)
   getInstructionsMap = () => this.redis.get(`${this.room_id}_instructions_map`)
 
   getGameCount = async () => {
@@ -263,7 +259,8 @@ class Room {
   }
 
   setPlayer = ({ player_id, player }) => this.redis.set(`${this.room_id}${player_id}`, [player])
-  getPlayer = (player_id: string) => this.redis.get(`${this.room_id}${player_id}`) as Player
+  getPlayer = async (player_id: string) =>
+    this.redis.get(`${this.room_id}${player_id}`) as Instruction[]
 
   getPlayerReset = (player_id: string) => this.redis.get(`${this.room_id}${player_id}_reset`)
   setPlayerReset = ({ player_id, player }) =>
@@ -277,28 +274,24 @@ class Room {
     return this.script_id
   }
 
-  private setInstructionsMap = instructions_map =>
-    this.redis.set(`${this.room_id}_instructions_map`, instructions_map)
-
   setRoomId = (id: string) => (this.room_id = id)
-
   setRoomName = room_name =>
     this.process('meta', async () => {
-      let meta = await this.getMeta()
+      const meta = await this.getMeta()
       meta.room_name = room_name
       await this.setMeta(meta)
       return true
     })
 
-  private updateMeta = func =>
+  private updateMeta = (callback: (meta: RoomMeta) => Promise<RoomMeta>) =>
     this.process('meta', async () => {
-      let meta = await this.getMeta()
-      meta = await func(meta)
+      const meta = await callback(await this.getMeta())
       await this.setMeta(meta)
     })
 
   delete = async () => {
-    let meta = await this.getMeta()
+    const meta = await this.getMeta()
+
     Object.keys(meta.players).forEach(player_id => {
       this.redis.del(`${this.room_id}${player_id}`)
       this.redis.del(`${this.room_id}${player_id}_reset`)
@@ -357,7 +350,7 @@ class Room {
     })
   }
 
-  join = player_id =>
+  join = (player_id: string) =>
     this.process('meta', async () => {
       try {
         const meta = await this.getMeta()
@@ -390,27 +383,30 @@ class Room {
       }
     })
 
-  getRoleUrls = async () => {
+  privategetRoleUrls = async () => {
     let meta = await this.getMeta()
     return { player_ids: Object.keys(meta.players) }
   }
 
-  updateInstructionIndexOfPlayer = ({ player_id, instruction_index }) =>
-    this.updateMeta(meta => {
+  private updateInstructionIndexOfPlayer = ({ player_id, instruction_index }) =>
+    this.updateMeta(async meta => {
       meta.players[player_id].instruction_index = instruction_index
       return meta
     })
 
-  updateCurrentInstructionOfPlayer = ({ player_id, instruction_index }) =>
+  private updateCurrentInstructionOfPlayer = ({ player_id, instruction_index }) =>
     this.updateMeta(async meta => {
       // update current_card for the monitor
       const instructions = await this.getPlayer(player_id)
       const instruction = instructions[instruction_index]
+
       meta.players[player_id].instruction = instruction
+
       this.mqtt.send(
         `/monitor/${this.room_id}/${meta.players[player_id].role_id}/current_instruction`,
         instruction,
       )
+
       return meta
     })
 
@@ -438,7 +434,7 @@ class Room {
     })
 
   updateLastInteractionPlayer = player_id =>
-    this.updateMeta(meta => {
+    this.updateMeta(async meta => {
       meta.players[player_id].last_interaction = new Date().getTime()
       return meta
     })
@@ -446,9 +442,12 @@ class Room {
   checkLastInteractions = () =>
     this.process('meta', async () => {
       let meta = await this.getMeta()
+
       if (!meta) return
+
       const now = new Date().getTime()
       let meta_has_changed = false
+
       Object.entries(meta.players).forEach(([player_id, player]) => {
         if (player.status === 'connected' && now - player.last_interaction > 5000) {
           player.status = 'disconnected'
@@ -476,6 +475,7 @@ class Room {
 
         const now = new Date().getTime()
         const ping = Math.floor(now - timestamp)
+
         this.mqtt.send(`/monitor/${this.room_id}/${player.role_id}/ping`, { ping })
         this.mqtt.send(`/${this.room_id}/${player.role_id}/pong`, { timestamp })
 
@@ -503,7 +503,6 @@ class Room {
         let { instruction_id } = JSON.parse(message)
 
         if (!this.received_swipes[player_id]) this.received_swipes[player_id] = []
-
         if (this.received_swipes[player_id].indexOf(instruction_id) !== -1) return
 
         this.received_swipes[player_id].push(instruction_id)
@@ -543,9 +542,9 @@ class Room {
     this.subscribe(`/${this.room_id}/${player.role_id}/autoswipe`, message => {
       let { autoswipe } = JSON.parse(message)
 
-      this.updateMeta(meta => {
+      this.updateMeta(async meta => {
         let player_meta = meta.players[player_id]
-        if (autoswipe === player_meta.autoswipe) return
+        if (autoswipe === player_meta.autoswipe) return meta
         player_meta.autoswipe = autoswipe
         return meta
       })
