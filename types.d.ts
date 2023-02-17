@@ -10,6 +10,8 @@ export type Role = {
 
 export type Instruction = {
   instruction_id: string
+  prev_instruction_ids: string[]
+  next_role_ids: string[]
 }
 
 type DesignElementGeneral = {
@@ -20,7 +22,7 @@ type DesignElementGeneral = {
   }
 }
 
-type DesignElementSvg = DesignElementGeneral & {
+export type DesignElementSvg = DesignElementGeneral & {
   type: 'svg'
   svg: {
     normal: any
@@ -28,11 +30,11 @@ type DesignElementSvg = DesignElementGeneral & {
   }
 }
 
-type DesignElementText = DesignElementGeneral & {
+export type DesignElementText = DesignElementGeneral & {
   type: 'text'
 }
 
-type DesignElement = DesignElementSvg | DesignElementText
+export type DesignElement = DesignElementSvg | DesignElementText
 
 export type Design = {
   production: {
