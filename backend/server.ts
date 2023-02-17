@@ -17,7 +17,7 @@ import Mongo from './wrappers/Mongo'
 import Mqtt from './wrappers/Mqtt'
 import Redis from './wrappers/Redis'
 
-var app = express()
+const app = express()
 app.use(cors())
 app.use(compression())
 app.listen(8079)
@@ -26,13 +26,13 @@ const _mongo = new Mongo({ url: 'mongodb://localhost:27017' })
 const _redis = new Redis()
 const _mqtt = new Mqtt()
 
-// let _db, _rooms, monitor;
+// const _db, _rooms, monitor;
 
-let _db = new DatabaseManager({ _mongo, _redis })
-let _rooms = new RoomManager({ _mongo, _redis, _mqtt })
+const _db = new DatabaseManager({ _mongo, _redis })
+const _rooms = new RoomManager({ _mongo, _redis, _mqtt })
 
 const isDev = true
-let mqtt_url = isDev ? 'localhost:8883' : 'socket.datingproject.net/mqtt'
+const mqtt_url = isDev ? 'localhost:8883' : 'socket.datingproject.net/mqtt'
 
 _mongo
   .connect('datingProject')
@@ -55,12 +55,12 @@ app.get('/api/getServerTime', (req, res) => res.json({ timestamp: new Date().get
 // upload video
 app.post('/api/uploadVideo/:script_id/:type', async function (req, res) {
   try {
-    let script_path = `./uploads/${req.params.script_id}`
+    const script_path = `./uploads/${req.params.script_id}`
     if (!fs.existsSync(script_path)) {
       fs.mkdirSync(script_path)
     }
-    let new_filename = `${req.body.instruction_id}${path.extname(req.files.file.name)}`
-    let new_path = `${script_path}/${new_filename}`
+    const new_filename = `${req.body.instruction_id}${path.extname(req.files.file.name)}`
+    const new_path = `${script_path}/${new_filename}`
 
     fs.writeFile(new_path, req.files.file.data, async err => {
       if (!err) {
@@ -78,7 +78,7 @@ app.post('/api/uploadVideo/:script_id/:type', async function (req, res) {
 })
 
 app.post('/api/video/createPoster', function (req, res, next) {
-  let file_path = req.body.file_path
+  const file_path = req.body.file_path
   if (!file_path) res.status(400).send('did not include file_path in the body')
 
   createPoster(file_path)
@@ -88,7 +88,7 @@ app.post('/api/video/createPoster', function (req, res, next) {
 
 // access point to download video
 app.get('/api/downloadVideo/:file_name', async (req, res, next) => {
-  let file_name = req.params.file_name
+  const file_name = req.params.file_name
   res.attachment(`/api/uploads/${file_name}`)
 })
 
@@ -98,7 +98,7 @@ app.get('/api/downloadVideo/:file_name', async (req, res, next) => {
 app.post('/api/script/save/:script_id', async function (req, res, next) {
   // TODO:  sanitize content
   console.log('/api/script/save/:script_id')
-  let script = req.body
+  const script = req.body
   const script_id = req.params.script_id
   const result = await _db.saveScript({ script_id, script })
   res.json(result)
@@ -109,7 +109,7 @@ app.get('/api/script/get/:script_id/:mode', async function (req, res) {
   const { mode, script_id } = req.params
   const start = new Date().getTime()
 
-  let results = await _db.getScript(script_id)
+  const results = await _db.getScript(script_id)
 
   console.info('get script', script_id, new Date().getTime() - start)
 
@@ -124,7 +124,7 @@ app.get('/api/script/get/:script_id/:mode', async function (req, res) {
 app.get('/api/script/delete/:script_id', async function (req, res, next) {
   try {
     const script_id = req.params.script_id
-    let response = await _db.deleteScript({ script_id })
+    const response = await _db.deleteScript({ script_id })
     res.send(response)
   } catch (e) {
     console.error(e)
@@ -133,13 +133,11 @@ app.get('/api/script/delete/:script_id', async function (req, res, next) {
 
 // get all scripts
 app.get('/api/script/get_all', async function (req, res) {
-  const { mode, script_id } = req.params
+  const results = await _db.getAllScripts()
+  const script_ids = results.map(r => r.script_id)
 
-  let results = await _db.getAllScripts(script_id)
-  results = results.map(r => r.script_id)
-
-  if (results) {
-    res.status(200).json(results)
+  if (script_ids) {
+    res.status(200).json(script_ids)
   } else {
     res.sendStatus(404)
   }
@@ -150,8 +148,8 @@ app.get('/api/script/get_all', async function (req, res) {
 // test script
 app.post('/api/script/test/:script_id', async function (req, res, next) {
   const { script_id } = req.params
-  let script = req.body
-  let { room, room_id, role_ids } = await _rooms.createRoom({ script_id, script })
+  const script = req.body
+  const { room, room_id, role_ids } = await _rooms.createRoom({ script_id, script })
   _db.initStats({ script_id, room_id, role_ids })
   // _rooms.monitor({ room_id });
   res.json({ room_id })
@@ -171,7 +169,7 @@ app.post('/api/room/create/:script_id', async function (req, res, next) {
 app.get('/api/room/delete/:room_id', async function (req, res, next) {
   try {
     const room_id = req.params.room_id
-    let response = await _rooms.deleteRoom({ room_id })
+    const response = await _rooms.deleteRoom({ room_id })
     res.send(response)
   } catch (e) {
     console.error(e)
@@ -182,7 +180,7 @@ app.get('/api/room/delete/:room_id', async function (req, res, next) {
 app.get('/api/room/reset/:room_id', async function (req, res, next) {
   try {
     const room_id = req.params.room_id
-    let response = await _rooms.resetRoom({ room_id })
+    const response = await _rooms.resetRoom({ room_id })
 
     res.send(response)
   } catch (e) {
@@ -194,7 +192,7 @@ app.get('/api/room/reset/:room_id', async function (req, res, next) {
 app.get('/api/room/start/:room_id', async function (req, res, next) {
   try {
     const room_id = req.params.room_id
-    let response = await _rooms.startRoom({ room_id })
+    const response = await _rooms.startRoom({ room_id })
 
     res.send(response)
   } catch (e) {
@@ -206,9 +204,9 @@ app.get('/api/room/start/:room_id', async function (req, res, next) {
 app.post('/api/room/rename/:room_id', async function (req, res, next) {
   try {
     const room_id = req.params.room_id
-    let { room_name, script_id } = req.body
+    const { room_name, script_id } = req.body
 
-    let response = await _rooms.renameRoom({ script_id, room_id, room_name })
+    const response = await _rooms.renameRoom({ script_id, room_id, room_name })
     res.send(response)
   } catch (e) {
     console.error(e)
@@ -231,7 +229,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
   const player_id = url.slice(6)
   console.info('joining room', new Date(), room_id, player_id)
 
-  let join_result = await _rooms.joinRoom({ room_id, player_id })
+  const join_result = await _rooms.joinRoom({ room_id, player_id })
   if (join_result.error) {
     console.error(join_result.error)
     res.status(404).send(join_result.error)
@@ -240,7 +238,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
 
   if (!join_result.sound) join_result.sound = 'ping.mp3'
   if (!join_result.design_id) join_result.design_id = 'europalia3_mikey'
-  let { design, modified } = await _db.getDesign({ design_id: join_result.design_id })
+  const { design, modified } = await _db.getDesign({ design_id: join_result.design_id })
 
   _mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'connected' }))
 
@@ -257,7 +255,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
 app.get('/api/room/getRoleUrls/:room_id', async function (req, res, next) {
   const room_id = req.params.room_id
   try {
-    let { player_ids } = await _rooms.getRoleUrlsOfRoom({ room_id })
+    const { player_ids } = await _rooms.getRoleUrlsOfRoom({ room_id })
     if (!player_ids) res.send(false)
     else res.json({ player_ids, room_id })
   } catch (e) {
@@ -269,8 +267,8 @@ app.get('/api/room/getRoleUrls/:room_id', async function (req, res, next) {
 app.get('/api/room/getRooms/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id
   try {
-    let start = new Date().getTime()
-    let rooms = await _rooms.getRooms({ script_id })
+    const start = new Date().getTime()
+    const rooms = await _rooms.getRooms({ script_id })
     console.info('get rooms of script_id ', script_id, ' took ', new Date().getTime() - start, 'ms')
 
     res.json(rooms)
@@ -283,8 +281,7 @@ app.get('/api/room/getRooms/:script_id', async function (req, res, next) {
 app.get('/api/room/metadata/:script_id', async function (req, res, next) {
   const script_id = req.params.script_id
   try {
-    let start = new Date().getTime()
-    let rooms = await _rooms.getAllMetas({ script_id })
+    const rooms = await _rooms.getAllMetas({ script_id })
 
     res.json(rooms)
   } catch (e) {
@@ -295,7 +292,7 @@ app.get('/api/room/metadata/:script_id', async function (req, res, next) {
 app.get('api/room/getInstructions/:room_id/:player_id', async function (req, res, next) {
   const { room_id, player_id } = req.params
 
-  let { instructions, error } = await _rooms.getInstructions({ room_id, player_id })
+  const { instructions, error } = await _rooms.getInstructions({ room_id, player_id })
 
   if (error) {
     console.error(error)
@@ -310,7 +307,7 @@ app.get('api/room/getInstructions/:room_id/:player_id', async function (req, res
   const { room_id, player_id } = req.params;
   try {
     console.info(`${room_id} ${player_id} is disconnected`)
-    let rooms = await _rooms.updateStatusOfRole({ room_id, player_id, status: 'disconnected' });
+    const rooms = await _rooms.updateStatusOfRole({ room_id, player_id, status: 'disconnected' });
 
     _mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'disconnected' }));
 
@@ -326,7 +323,7 @@ app.get('/api/room/update/:room_id/:script_id', async function (req, res, next) 
   const script_id = req.params.script_id
 
   try {
-    let result = await _rooms.updateScriptOfRoom({ room_id, script_id })
+    const result = await _rooms.updateScriptOfRoom({ room_id, script_id })
     res.json(result)
   } catch (error) {
     res.json({ error })
@@ -406,7 +403,7 @@ app.post('/api/design/save/:design_id', async function (req, res, next) {
 
     console.info(design)
 
-    let saved = await _db.saveDesign({ design_id, design })
+    const saved = await _db.saveDesign({ design_id, design })
     res.status(200).send(saved)
   } catch (err) {
     console.error(`error ${err}`)
@@ -415,7 +412,7 @@ app.post('/api/design/save/:design_id', async function (req, res, next) {
 })
 
 app.get('/api/design/get_all', async (req, res, next) => {
-  let data = await _db.getAllDesigns()
+  const data = await _db.getAllDesigns()
   if (!data) res.status(500).send('error while querying database')
   else res.status(200).json(data)
 })
@@ -424,7 +421,7 @@ app.get('/api/design/get/:design_id/:mode', async function (req, res, next) {
   try {
     const { design_id, mode } = req.params
     console.info('get design with card_id ', design_id)
-    let data = await _db.getDesign({ design_id })
+    const data = await _db.getDesign({ design_id })
     console.info(data)
     if (!data) {
       res.status(404).send('could not find design')
