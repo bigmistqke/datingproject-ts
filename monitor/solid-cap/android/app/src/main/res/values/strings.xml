@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">monitor</string>
-    <string name="title_activity_main">monitor</string>
-    <string name="package_name">com.bigmistqke.monitor</string>
-    <string name="custom_url_scheme">com.bigmistqke.monitor</string>
-</resources>
