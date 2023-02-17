@@ -343,6 +343,14 @@ app.post('/api/room/stats/save/:room_id/:role_id', async function (req, res, nex
 // CARD
 
 app.post('/api/design/uploadImage/:card_id/:image_id', async function (req, res, next) {
+  if (!req.files) {
+    res.status(500).send('no image included')
+    return
+  }
+  if (Array.isArray(req.files.file)) {
+    res.status(500).send('only one image allowed')
+    return
+  }
   const { card_id, image_id } = req.params
   const card_path = `./designs/${card_id}`
   !fs.existsSync(card_path) ? fs.mkdirSync(card_path) : null
