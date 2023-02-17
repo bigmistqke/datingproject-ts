@@ -3,9 +3,9 @@ import Mongo from '../wrappers/Mongo'
 import Mqtt from '../wrappers/Mqtt'
 import Redis from '../wrappers/Redis'
 
-var crypto = require('crypto')
-const { array_remove_element } = require('../utils/pure-array.js')
-var Q = require('../utils/Q.js')
+import crypto from 'crypto'
+import { array_remove_element } from '../utils/pure-array'
+import Q from 'qquuee'
 
 // TODO: refactor to something less hacky
 Object.prototype.filter = (obj, predicate) =>
@@ -31,6 +31,7 @@ type RoomMeta = {
   game_count: number
   script_id: string
   count: number
+  sound: string
 }
 
 export default class RoomManager {
@@ -47,7 +48,7 @@ export default class RoomManager {
     this.mongo = mongo
   }
 
-  process = func => this.queue.add(func)
+  process = <T>(func: () => T) => this.queue.add(func)
 
   init = async () => {
     const room_ids = await this.getAllRoomIds()
@@ -81,10 +82,11 @@ export default class RoomManager {
 
   renameRoom = ({ script_id, room_id, room_name }) => this.rooms[room_id].setRoomName(room_name)
 
-  joinRoom = ({ room_id, player_id }) =>
-    this.rooms[room_id]
-      ? this.rooms[room_id].join(player_id)
-      : { error: [this.rooms, `could not join room ${room_id} with player_id ${player_id}`] }
+  joinRoom = ({ room_id, player_id }) => {
+    const room = this.rooms[room_id]
+    if (room instanceof Room) return room.join(player_id)
+    return { error: [this.rooms, `could not join room ${room_id} with player_id ${player_id}`] }
+  }
 
   deleteRoom = async ({ room_id }) => {
     if (!this.rooms[room_id]) return
@@ -236,9 +238,9 @@ class Room {
     }
   }
 
-  private process = (key, func) => {
+  private process = <T>(key: string, func: () => T) => {
     if (!this.queue[key]) this.queue[key] = new Q()
-    return this.queue[key].add(func)
+    return (this.queue[key] as Q).add(func)
   }
 
   private subscribe = (topic: string, callback: (message: string, topic: string) => void) => {

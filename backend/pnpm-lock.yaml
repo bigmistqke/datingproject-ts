@@ -7,6 +7,7 @@ specifiers:
   '@types/express': ^4.17.17
   '@types/express-fileupload': ^1.4.1
   '@types/flat': ^5.0.2
+  '@types/fluent-ffmpeg': ^2.1.20
   '@types/mongodb': ^4.0.7
   '@types/node': ^18.13.0
   '@types/sharp': ^0.31.1
@@ -30,6 +31,7 @@ specifiers:
   node-fetch: ^2.6.1
   nodemon: ^2.0.20
   promise-mysql: ^5.0.1
+  qquuee: ^0.0.3
   redis: ^4.6.4
   redis-jsonify: ^1.2.0
   safe-flat: ^2.0.2
@@ -59,6 +61,7 @@ dependencies:
   mysql: 2.18.1
   node-fetch: 2.6.9
   promise-mysql: 5.2.0
+  qquuee: 0.0.3
   redis: 4.6.4
   redis-jsonify: 1.2.0
   safe-flat: 2.0.2
@@ -73,6 +76,7 @@ devDependencies:
   '@types/express': 4.17.17
   '@types/express-fileupload': 1.4.1
   '@types/flat': 5.0.2
+  '@types/fluent-ffmpeg': 2.1.20
   '@types/mongodb': 4.0.7
   '@types/node': 18.13.0
   '@types/sharp': 0.31.1
@@ -237,6 +241,12 @@ packages:
 
   /@types/flat/5.0.2:
     resolution: {integrity: sha512-3zsplnP2djeps5P9OyarTxwRpMLoe5Ash8aL9iprw0JxB+FAHjY+ifn4yZUuW4/9hqtnmor6uvjSRzJhiVbrEQ==}
+    dev: true
+
+  /@types/fluent-ffmpeg/2.1.20:
+    resolution: {integrity: sha512-B+OvhCdJ3LgEq2PhvWNOiB/EfwnXLElfMCgc4Z1K5zXgSfo9I6uGKwR/lqmNPFQuebNnes7re3gqkV77SyypLg==}
+    dependencies:
+      '@types/node': 18.13.0
     dev: true
 
   /@types/mime/3.0.1:
@@ -1704,6 +1714,10 @@ packages:
       - bufferutil
       - supports-color
       - utf-8-validate
+    dev: false
+
+  /qquuee/0.0.3:
+    resolution: {integrity: sha512-DFpGzMRqZCcut+ORarDpYuR1ABPocq+dSDpprPAunkK6Bu6h8IPDnXarDEYtLsA4W/hDoKcRx2PYu4kLUcwfOw==}
     dev: false
 
   /qs/6.11.0:
