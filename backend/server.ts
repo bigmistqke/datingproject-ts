@@ -22,21 +22,21 @@ app.use(cors())
 app.use(compression())
 app.listen(8079)
 
-const _mongo = new Mongo({ url: 'mongodb://localhost:27017' })
-const _redis = new Redis()
-const _mqtt = new Mqtt()
+const mongo = new Mongo({ url: 'mongodb://localhost:27017' })
+const redis = new Redis()
+const mqtt = new Mqtt()
 
 // const _db, _rooms, monitor;
 
-const _db = new DatabaseManager({ _mongo, _redis })
-const _rooms = new RoomManager({ _mongo, _redis, _mqtt })
+const _db = new DatabaseManager({ mongo, redis })
+const _rooms = new RoomManager({ mongo, redis, mqtt })
 
 const isDev = true
 const mqtt_url = isDev ? 'localhost:8883' : 'socket.datingproject.net/mqtt'
 
-_mongo
+mongo
   .connect('datingProject')
-  .then(() => _mqtt.connect(mqtt_url, true))
+  .then(() => mqtt.connect(mqtt_url, true))
   .then(() => _rooms.init())
   .catch(e => console.error('error while connecting to mongo:', e))
 
@@ -110,8 +110,6 @@ app.get('/api/script/get/:script_id/:mode', async function (req, res) {
   const start = new Date().getTime()
 
   const results = await _db.getScript(script_id)
-
-  console.info('get script', script_id, new Date().getTime() - start)
 
   if (results) {
     res.status(200).send(mode in results ? results[mode] : results)
@@ -223,11 +221,9 @@ app.get('/api/room/status', async function (req, res, next) {
 
 // join room + fetch role
 app.get('/api/room/join/:url', async function (req, res, next) {
-  console.info('/api/room/join/:url')
   const { url } = req.params
   const room_id = url.slice(0, 6)
   const player_id = url.slice(6)
-  console.info('joining room', new Date(), room_id, player_id)
 
   const join_result = await _rooms.joinRoom({ room_id, player_id })
   if (join_result.error) {
@@ -240,7 +236,7 @@ app.get('/api/room/join/:url', async function (req, res, next) {
   if (!join_result.design_id) join_result.design_id = 'europalia3_mikey'
   const { design, modified } = await _db.getDesign({ design_id: join_result.design_id })
 
-  _mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'connected' }))
+  mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'connected' }))
 
   res.json({
     success: true,
@@ -269,7 +265,6 @@ app.get('/api/room/getRooms/:script_id', async function (req, res, next) {
   try {
     const start = new Date().getTime()
     const rooms = await _rooms.getRooms({ script_id })
-    console.info('get rooms of script_id ', script_id, ' took ', new Date().getTime() - start, 'ms')
 
     res.json(rooms)
   } catch (e) {
@@ -309,7 +304,7 @@ app.get('api/room/getInstructions/:room_id/:player_id', async function (req, res
     console.info(`${room_id} ${player_id} is disconnected`)
     const rooms = await _rooms.updateStatusOfRole({ room_id, player_id, status: 'disconnected' });
 
-    _mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'disconnected' }));
+    mqtt.send(`/monitor/${room_id}/${player_id}/status`, JSON.stringify({ status: 'disconnected' }));
 
     res.json(rooms);
   } catch (e) {
@@ -333,7 +328,6 @@ app.get('/api/room/update/:room_id/:script_id', async function (req, res, next) 
 // get stats from a player regarding time it took to perform a swipe
 app.post('/api/room/stats/save/:room_id/:role_id', async function (req, res, next) {
   const { room_id, role_id } = req.params
-  console.info('save stats room', room_id, role_id)
 
   const stats = req.body
   const game_count = await _rooms.getGameCount({ room_id })
@@ -404,8 +398,6 @@ app.post('/api/design/save/:design_id', async function (req, res, next) {
 
     await uploadSvgsAsPng({ design_id, design })
 
-    console.info(design)
-
     const saved = await _db.saveDesign({ design_id, design })
     res.status(200).send(saved)
   } catch (err) {
@@ -423,9 +415,7 @@ app.get('/api/design/get_all', async (req, res, next) => {
 app.get('/api/design/get/:design_id/:mode', async function (req, res, next) {
   try {
     const { design_id, mode } = req.params
-    console.info('get design with card_id ', design_id)
     const data = await _db.getDesign({ design_id })
-    console.info(data)
     if (!data) {
       res.status(404).send('could not find design')
       return
@@ -445,5 +435,4 @@ app.use('/api/system', express.static('system'))
 
 app.get('/api/video/:script_id/:file_id', req => {
   const { script_id, file_id } = req.params
-  console.info('get video', script_id, file_id)
 })
