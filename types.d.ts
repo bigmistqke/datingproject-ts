@@ -19,7 +19,7 @@ export type TextChoice = {
 
 export type Text = TextNormal | TextChoice
 
-export type InstructionProgress =
+export type InstructionEditor =
   | {
       role_id: string
       text: string
@@ -40,19 +40,30 @@ export type InstructionProgress =
         }
     )
 
-export type Instruction =
-  | {
-      role_id: string
-      type: 'do' | 'say'
-      text: Text[]
-      timespan: number | undefined
-    }
-  | {
-      role_id: string
-      type: 'video'
-      text: string
-      timespan: number | undefined
-    }
+type GeneralInstruction = {
+  role_id: string
+  timespan: number | undefined
+  prev_instruction_ids: string[]
+  next_role_ids: string[]
+  sound?: undefined
+  delta?: number
+  swiped: boolean
+  instruction_id: string
+}
+
+export type VideoInstruction = GeneralInstruction & {
+  type: 'video'
+  text: string
+  modified: number
+  filesize: number
+}
+
+export type TextInstruction = GeneralInstruction & {
+  type: 'do' | 'say' | 'think' | 'narrate'
+  text: Text[]
+}
+
+export type Instruction = TextInstruction | VideoInstruction
 
 type DesignElementGeneral = {
   id: number
@@ -60,6 +71,9 @@ type DesignElementGeneral = {
     width: number
     height: number
   }
+  modes: Record<string, number>
+  styles: Record<string, any>
+  highlight_styles: Record<string, any>
 }
 
 export type DesignElementSvg = DesignElementGeneral & {
@@ -78,10 +92,16 @@ export type DesignElement = DesignElementSvg | DesignElementText
 
 export type Design = {
   production: {
+    modified: number
     types: Record<string, DesignElement[]>
+    border_radius: number
     card_dimensions: {
       width: number
       height: number
     }
   }
 }
+
+export type Stats = {
+  // play_times: number[]
+}[]
