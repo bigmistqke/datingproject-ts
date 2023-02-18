@@ -26,5 +26,4 @@ export default class Redis {
       console.error(e, data)
     }
   }
-  init = () => {}
 }

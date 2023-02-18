@@ -1,6 +1,28 @@
 import { Db, Filter, MongoClient } from 'mongodb'
 import type { Collection, Document } from 'mongodb'
 
+export default class Mongo {
+  db: Db
+  client: MongoClient
+
+  constructor({ url }) {
+    this.client = new MongoClient(url, {})
+  }
+
+  connect = async (dbName: string) => {
+    try {
+      await this.client.connect()
+      this.db = this.client.db(dbName)
+    } catch (err) {
+      console.error('error while connecting to mongodb', err)
+    }
+  }
+
+  close = () => this.client.close()
+
+  getCollection = (collection_name: string) => new MongoCollection(this.db, collection_name)
+}
+
 class MongoCollection {
   collection: Collection<Document>
 
@@ -28,26 +50,4 @@ class MongoCollection {
   insertDocument = (content: Document) => this.collection.insertOne(content)
 
   dump = () => this.collection.find().toArray()
-}
-
-export default class Mongo {
-  db: Db
-  client: MongoClient
-
-  constructor({ url }) {
-    this.client = new MongoClient(url, {})
-  }
-
-  connect = async (dbName: string) => {
-    try {
-      await this.client.connect()
-      this.db = this.client.db(dbName)
-    } catch (err) {
-      console.error('error while connecting to mongodb', err)
-    }
-  }
-
-  close = () => this.client.close()
-
-  getCollection = (collection_name: string) => new MongoCollection(this.db, collection_name)
 }

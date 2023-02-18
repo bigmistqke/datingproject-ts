@@ -1,4 +1,5 @@
 import { unflatten } from 'flat'
+import { Design } from '../../types'
 import Mongo from '../wrappers/Mongo'
 import Redis from '../wrappers/Redis'
 
@@ -7,8 +8,8 @@ export default class Database {
   redis: Redis
 
   constructor({ mongo, redis }) {
-    this.mongo = mongo.init()
-    this.redis = redis.init()
+    this.mongo = mongo
+    this.redis = redis
   }
 
   // SCRIPT
@@ -25,6 +26,7 @@ export default class Database {
 
   // CARD
 
+  // TODO: set type design to something else then any
   saveDesign = async ({ design, design_id }: { design: any; design_id: string }) => {
     this.mongo
       .getCollection('cards')
@@ -35,7 +37,7 @@ export default class Database {
     // TODO: check cache
     let data = await this.mongo.getCollection('cards').findDocument({ card_id: design_id })
     if (!data) return false
-    return data
+    return data as any as { design: Design; modified: number }
   }
 
   getAllDesigns = async () => this.mongo.getCollection('cards')

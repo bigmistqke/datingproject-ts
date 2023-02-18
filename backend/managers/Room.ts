@@ -4,7 +4,7 @@ import Mqtt from '../wrappers/Mqtt'
 import Redis from '../wrappers/Redis'
 
 import crypto from 'crypto'
-import { array_remove_element } from '../utils/pure-array'
+import { array_remove_element } from '../../card_editor/src/helpers/pure-array'
 import Q from 'qquuee'
 
 // TODO: refactor to something less hacky
@@ -35,7 +35,7 @@ type RoomMeta = {
 }
 
 export default class RoomManager {
-  rooms = {}
+  rooms: Record<string, Room> = {}
   queue = new Q()
 
   redis: Redis
@@ -201,41 +201,35 @@ class Room {
   }
 
   create = async ({ script, script_id }: { script: Script; script_id: string }) => {
-    try {
-      this.room_id = crypto.randomBytes(3).toString('hex')
+    this.room_id = crypto.randomBytes(3).toString('hex')
 
-      const { players_meta, players_instructions, instructions_map } =
-        this.playersFromScript(script)
+    const { players_meta, players_instructions, instructions_map } = this.playersFromScript(script)
 
-      // init received_swipes
-      this.received_swipes = {}
-      Object.keys(players_meta).forEach(player_id => (this.received_swipes[player_id] = []))
+    // init received_swipes
+    this.received_swipes = {}
+    Object.keys(players_meta).forEach(player_id => (this.received_swipes[player_id] = []))
 
-      Object.entries(players_instructions).forEach(([player_id, player]) => {
-        this.setPlayer({ player_id, player })
-        this.setPlayerReset({ player_id, player })
-      })
+    Object.entries(players_instructions).forEach(([player_id, player]) => {
+      this.setPlayer({ player_id, player })
+      this.setPlayerReset({ player_id, player })
+    })
 
-      await Promise.all([
-        // init meta
-        this.setMeta({
-          design_id: script.design_id ? script.design_id : 'europalia3_mikey',
-          players: players_meta,
-          room_name: this.room_id,
-          game_count: 0,
-          script_id,
-          count: 0,
-        }),
-        this.setInstructionsMap(instructions_map),
-      ])
+    await Promise.all([
+      // init meta
+      this.setMeta({
+        design_id: script.design_id ? script.design_id : 'europalia3_mikey',
+        players: players_meta,
+        room_name: this.room_id,
+        game_count: 0,
+        script_id,
+        count: 0,
+      }),
+      this.setInstructionsMap(instructions_map),
+    ])
 
-      this.monitor()
+    this.monitor()
 
-      return { room_id: this.room_id, role_ids: Object.keys(script.roles) }
-    } catch (error) {
-      console.error(error)
-      return { error }
-    }
+    return { room_id: this.room_id, role_ids: Object.keys(script.roles) }
   }
 
   private process = <T>(key: string, func: () => T) => {
@@ -248,7 +242,7 @@ class Room {
     this.subscribed_topics.add(topic)
   }
 
-  getMeta = async () => (await this.redis.get(this.room_id)) as RoomMeta
+  getMeta = async () => (await this.redis.get(this.room_id)) as RoomMeta | undefined
   setMeta = (meta: RoomMeta) => this.redis.set(this.room_id, meta)
 
   private setInstructionsMap = instructions_map =>
@@ -385,9 +379,10 @@ class Room {
       }
     })
 
-  privategetRoleUrls = async () => {
+  getRoleUrls = async () => {
     let meta = await this.getMeta()
-    return { player_ids: Object.keys(meta.players) }
+    const roleUrls = { player_ids: Object.keys(meta.players) }
+    return roleUrls
   }
 
   private updateInstructionIndexOfPlayer = ({ player_id, instruction_index }) =>
