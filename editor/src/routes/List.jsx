@@ -1,4 +1,4 @@
-import getData from '../helpers/getData'
+import getData from '../utils/getData'
 
 import { createSignal, For, onMount } from 'solid-js'
 import urls from '../urls'
@@ -16,7 +16,9 @@ function List() {
   }
 
   const removeScript = async script_name => {
-    let result = await getData(`${urls.fetch}/api/script/delete/${script_name}`)
+    let result = await getData(
+      `${urls.fetch}/api/script/delete/${script_name}`,
+    )
   }
 
   onMount(() => fetchScripts())
@@ -27,7 +29,11 @@ function List() {
         <For each={scripts()}>
           {script_name => (
             <div style={{ display: 'flex', width: '100%' }}>
-              <a href={`/${script_name}`} target="_blank" style={{ flex: 1 }}>
+              <a
+                href={`/${script_name}`}
+                target="_blank"
+                style={{ flex: 1 }}
+              >
                 {script_name}
               </a>
               {/* <button onClick={() => removeScript(script_name)}>delete </button> */}
