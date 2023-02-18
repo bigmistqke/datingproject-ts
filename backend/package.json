@@ -25,6 +25,7 @@
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "express-fileupload": "^1.2.1",
+    "file-type": "^18.2.0",
     "flat": "^5.0.2",
     "fluent-ffmpeg": "^2.1.2",
     "formidable": "^1.2.2",
