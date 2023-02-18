@@ -8,11 +8,51 @@ export type Role = {
   name: string
 }
 
-export type Instruction = {
-  instruction_id: string
-  prev_instruction_ids: string[]
-  next_role_ids: string[]
+export type TextNormal = {
+  type: 'normal'
+  content: string
 }
+export type TextChoice = {
+  type: 'choice'
+  content: string[]
+}
+
+export type Text = TextNormal | TextChoice
+
+export type InstructionProgress =
+  | {
+      role_id: string
+      text: string
+    } & (
+      | {
+          role_id: string
+          type: 'do' | 'say'
+          timespan: number | undefined
+          sound: boolean
+          filesize?: undefined
+        }
+      | {
+          type: 'video'
+          modified: number
+          filesize: number
+          timespan?: undefined
+          sound?: undefined
+        }
+    )
+
+export type Instruction =
+  | {
+      role_id: string
+      type: 'do' | 'say'
+      text: Text[]
+      timespan: number | undefined
+    }
+  | {
+      role_id: string
+      type: 'video'
+      text: string
+      timespan: number | undefined
+    }
 
 type DesignElementGeneral = {
   id: number
