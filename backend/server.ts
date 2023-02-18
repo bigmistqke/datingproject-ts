@@ -5,8 +5,6 @@ import express from 'express'
 import fileUpload from 'express-fileupload'
 import fs from 'fs'
 import path from 'path'
-import sharp from 'sharp'
-import { Design, DesignElementSvg } from '../types'
 
 import DatabaseManager from './managers/Database'
 import RoomManager from './managers/Room'
@@ -19,35 +17,7 @@ import Redis from './wrappers/Redis'
 
 import { fileTypeFromBuffer } from 'file-type'
 import ErrorWithStatus from './utils/ErrorWithStatus'
-
-const uploadSvgsAsPng = ({ design_id, design }: { design_id: string; design: Design }) => {
-  const base_url = `./designs/${design_id}`
-  const card_dimensions = design.production.card_dimensions
-
-  if (!fs.existsSync(base_url)) {
-    fs.mkdirSync(base_url)
-  }
-
-  const svgs = Object.values(design.production.types)
-    .flat()
-    .filter(element => element.type === 'svg') as DesignElementSvg[]
-
-  const promises = svgs.map(async element => {
-    const CONSTANT = 10
-    const dim = {
-      width: Math.floor(element.dimensions.width * (card_dimensions.width / 100) * CONSTANT),
-      height: Math.floor(element.dimensions.height * (card_dimensions.height / 100) * CONSTANT),
-    }
-    await sharp(Buffer.from(element.svg.normal))
-      .resize(dim)
-      .toFile(`${base_url}/${element.id}_normal.png`)
-    await sharp(Buffer.from(element.svg.masked))
-      .resize(dim)
-      .toFile(`${base_url}/${element.id}_masked.png`)
-  })
-
-  return Promise.all(promises)
-}
+import uploadSvgsAsPng from './utils/uploadSvgsAsPng'
 
 const app = express()
 app.use(cors())
@@ -82,141 +52,74 @@ app.use(fileUpload())
 
 app.get('/api/getServerTime', (req, res) => res.json({ timestamp: new Date().getTime() }))
 
-// upload video
-app.post('/api/uploadVideo/:script_id/:type', async function (req, res) {
-  try {
-    console.info('/api/uploadVideo/:script_id/:type')
-
-    if (!req.files) throw [406, 'should include one video-file']
-
-    if (Array.isArray(req.files.file)) throw [406, 'should only include one video-file']
-
-    const filetype = await fileTypeFromBuffer(req.files.file.data)
-
-    if (!filetype || filetype?.mime !== 'video/mp4') throw [406, 'should include valid video-file']
-
-    const script_path = `./uploads/${req.params.script_id}`
-    if (!fs.existsSync(script_path)) fs.mkdirSync(script_path)
-
-    const new_filename = `${req.body.instruction_id}${path.extname(req.files.file.name)}`
-    const new_path = `${script_path}/${new_filename}`
-
-    fs.writeFile(new_path, req.files.file.data, async err => {
-      if (err) throw [500, err]
-      createPoster(new_path)
-      setTimeout(() => res.send(new_path), 1000)
-    })
-    res.sendStatus(200)
-  } catch (err) {
-    if (Array.isArray(err)) {
-      const [server, error] = err
-      console.error('error while uploading video', err)
-      res.status(server).send(error)
-      return
-    }
-
-    console.error('unhandled error while uploading video', err)
-    res.status(500).send(err)
-  }
-})
-
-// create poster for video
-app.post('/api/video/createPoster', function (req, res, next) {
-  try {
-    console.info('/api/video/createPoster')
-
-    const file_path = req.body.file_path
-
-    if (!file_path) throw 'did not include file_path in the body'
-
-    createPoster(file_path)
-    res.sendStatus(200)
-  } catch (err) {
-    console.error('error while creating poster of video', err)
-    res.status(400).send(err)
-  }
-})
-
-// end-point to download video
-app.get('/api/downloadVideo/:file_name', async (req, res, next) => {
-  try {
-    console.info('/api/downloadVideo/:file_name')
-
-    const file_name = req.params.file_name
-
-    res.attachment(`/api/uploads/${file_name}`)
-  } catch (err) {
-    console.error('error while deleting script ' + err)
-    res.status(500).json(err)
-  }
-})
-
 // SCRIPT
 
 // save script
 app.post('/api/script/save/:script_id', async function (req, res, next) {
-  try {
-    console.info('/api/script/save/:script_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     // TODO:  sanitize content
 
     const script = req.body
     const script_id = req.params.script_id
+
     const result = await db.saveScript({ script_id, script })
 
-    res.status(200).json(result)
+    res.json(result)
   } catch (err) {
-    console.error('error while saving script ' + err)
-    res.status(500).send(err)
+    console.error('error while saving script: ' + err.message)
+    res.status(err.code).send('error while saving script: ' + err.message)
   }
 })
 
 // fetch script
 app.get('/api/script/get/:script_id/:mode', async function (req, res) {
+  console.info(req.path, JSON.stringify(req.params))
+
   try {
-    console.info('/api/script/get/:script_id/:mode')
-
     const { mode, script_id } = req.params
+
     const results = await db.getScript(script_id)
+    if (!results) throw ErrorWithStatus('could not find script in database', 404)
 
-    if (!results) throw 'could not find script in database'
-
-    res.status(200).send(mode in results ? results[mode] : results)
+    res.send(mode in results ? results[mode] : results)
   } catch (err) {
     console.error('error while fetching script: ', err)
-    res.status(404).send(err)
+    res.status(err.code).send('error while fetching script: ' + err.message)
   }
 })
 
 // delete script
 app.get('/api/script/delete/:script_id', async function (req, res, next) {
-  try {
-    console.info('/api/script/delete/:script_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const script_id = req.params.script_id
+
     const response = await db.deleteScript({ script_id })
 
-    res.status(200).send(response)
+    res.send(response)
   } catch (err) {
     console.error('error while deleting script: ', err)
-    res.status(500).send('error while deleting script: ' + err)
+    res.status(err.code).send('error while deleting script: ' + err.message)
   }
 })
 
 // fetch all scripts
 app.get('/api/script/get_all', async function (req, res) {
-  try {
-    console.info('/api/script/get_all')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const results = await db.getAllScripts()
     const script_ids = results.map(r => r.script_id)
 
-    if (!script_ids) throw 'error while fetching all scripts'
+    if (!script_ids) throw ErrorWithStatus('error while fetching all scripts', 500)
 
-    res.status(200).json(script_ids)
+    res.json(script_ids)
   } catch (err) {
-    console.error('error fetching all scripts ' + err)
-    res.status(500).send('error while fetching all scripts')
+    console.error('error fetching all scripts: ' + err.message)
+    res.status(err.code).send('error while fetching all scripts: ' + err.message)
   }
 })
 
@@ -224,19 +127,20 @@ app.get('/api/script/get_all', async function (req, res) {
 
 // test script
 app.post('/api/script/test/:script_id', async function (req, res, next) {
-  try {
-    console.info('/api/script/test/:script_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const { script_id } = req.params
     const script = req.body
+
     const { room_id, role_ids } = await rooms.createRoom({ script_id, script })
 
     db.initStats({ script_id, room_id, role_ids })
 
-    res.status(200).json({ room_id })
+    res.json({ room_id })
   } catch (err) {
-    console.error('error while testing script ' + err)
-    res.status(500).json(err)
+    console.error('error while testing script: ' + err.message)
+    res.status(err.code).send('error while testing script: ' + err.message)
   }
 })
 
@@ -252,77 +156,81 @@ app.post('/api/room/create/:script_id', async function (req, res, next) {
 
 // delete room
 app.get('/api/room/delete/:room_id', async function (req, res, next) {
-  try {
-    console.info('/api/room/delete/:room_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const room_id = req.params.room_id
+
     const response = await rooms.deleteRoom({ room_id })
-    res.status(200).send(response)
+
+    res.send(response)
   } catch (err) {
-    console.error('error while deleting room ' + err)
-    res.status(500).send('error while deleting room ' + err)
+    console.error('error while deleting room: ' + err.message)
+    res.status(err.code).send('error while deleting room: ' + err.message)
   }
 })
 
 // reset room
 app.get('/api/room/reset/:room_id', async function (req, res, next) {
-  try {
-    console.info('/api/room/reset/:room_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const room_id = req.params.room_id
+
     const response = await rooms.resetRoom({ room_id })
 
-    res.status(200).send(response)
+    res.send(response)
   } catch (err) {
-    console.error('error while resetting room ' + err)
-    res.status(500).send('error while resetting room ' + err)
+    console.error('error while resetting room: ' + err.message)
+    res.status(err.code).send('error while resetting room: ' + err.message)
   }
 })
 
 // start room
 app.get('/api/room/start/:room_id', async function (req, res, next) {
-  console.info('/api/room/start/:room_id')
+  console.info(req.path, JSON.stringify(req.params))
 
   try {
     const room_id = req.params.room_id
+
     const response = await rooms.startRoom({ room_id })
 
-    res.status(200).send(response)
+    res.send(response)
   } catch (err) {
-    console.error('error while starting room ' + err)
-    res.status(500).send('error while starting room ' + err)
+    console.error('error while starting room: ' + err.message)
+    res.status(err.code).send('error while starting room: ' + err.message)
   }
 })
 
 // rename room
 app.post('/api/room/rename/:room_id', async function (req, res, next) {
-  console.info('/api/room/rename/:room_id')
+  console.info(req.path, JSON.stringify(req.params))
 
   try {
     const room_id = req.params.room_id
     const { room_name, script_id } = req.body
 
     const response = await rooms.renameRoom({ script_id, room_id, room_name })
-    res.status(200).send(response)
+
+    res.send(response)
   } catch (err) {
-    console.error('error while renaming room ' + err)
-    res.status(500).send('error while renaming room ' + err)
+    console.error('error while renaming room: ' + err.message)
+    res.status(err.code).send('error while renaming room: ' + err.message)
   }
 })
 
 // join room
 app.get('/api/room/join/:url', async function (req, res, next) {
-  try {
-    console.info('/api/room/join/:url')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const { url } = req.params
     const room_id = url.slice(0, 6)
     const player_id = url.slice(6)
 
     const join_result = await rooms.joinRoom({ room_id, player_id })
     if ('error' in join_result) {
-      console.error(join_result.error)
-      throw 'error while joining room ' + join_result.error
+      throw ErrorWithStatus('error while joining room ' + join_result.error, 500)
     }
 
     if (!join_result.design_id) join_result.design_id = 'europalia3_mikey'
@@ -331,9 +239,8 @@ app.get('/api/room/join/:url', async function (req, res, next) {
       design_id: join_result.design_id,
     })
 
-    if (!result) {
-      throw 'error while fetching design with id ' + join_result.design_id
-    }
+    if (!result)
+      throw ErrorWithStatus('error while fetching design with id ' + join_result.design_id, 404)
 
     const { design, modified } = result
 
@@ -346,115 +253,117 @@ app.get('/api/room/join/:url', async function (req, res, next) {
       sound: 'ping.mp3',
     })
   } catch (err) {
-    console.error('error while joining room ' + err)
-    res.status(404).send('error while fetching design with id ' + err)
+    console.error('error while joining room: ' + err.message)
+    res.status(err.code).send('error while fetching design with id: ' + err.message)
   }
 })
 
 // fetch all role_urls/player_ids of room
 app.get('/api/room/getRoleUrls/:room_id', async function (req, res, next) {
-  try {
-    console.info('/api/room/getRoleUrls/:room_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const room_id = req.params.room_id
     const { player_ids } = await rooms.getRoleUrlsOfRoom({ room_id })
-    if (!player_ids) res.send(false)
-    else res.json({ player_ids, room_id })
+    if (!player_ids) throw ErrorWithStatus('player_ids is undefined', 404)
+
+    res.json({ player_ids, room_id })
   } catch (err) {
-    console.error('error while fetching all role_urls ' + err)
-    res.status(500).send(err)
+    console.error('error while fetching all role_urls: ' + err.message)
+    res.status(err.code).send('error while fetching all role_urls: ' + err.message)
   }
 })
 
 // get active rooms with certain script_id (for game-master)
 app.get('/api/room/getRooms/:script_id', async function (req, res, next) {
-  try {
-    console.info('/api/room/getRooms/:script_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const script_id = req.params.script_id
     const result = await rooms.getRooms({ script_id })
 
     res.json(result)
   } catch (err) {
-    console.error('error while fetching all rooms ' + err)
-    res.status(500).json(err)
+    console.error('error while fetching all rooms: ' + err.message)
+    res.status(err.code).send('error while fetching all rooms: ' + err.message)
   }
 })
 
 // fetch active rooms with certain script_id (for game-master)
 app.get('/api/room/metadata/:script_id', async function (req, res, next) {
-  try {
-    console.info('/api/room/metadata/:script_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const script_id = req.params.script_id
     const result = await rooms.getAllMetas({ script_id })
 
     res.json(result)
   } catch (err) {
-    console.error('error while fetching all rooms ' + err)
-    res.status(500).json(err)
+    console.error('error while fetching all rooms: ' + err.message)
+    res.status(err.code).send('error while fetching all rooms: ' + err.message)
   }
 })
 
 // fetch all instructions of room with room_id for player with player_id
 app.get('api/room/getInstructions/:room_id/:player_id', async function (req, res, next) {
+  console.info(req.path, JSON.stringify(req.params))
+
   try {
-    console.info('api/room/getInstructions/:room_id/:player_id')
-
     const { room_id, player_id } = req.params
-    const { instructions, error } = await rooms.getInstructions({ room_id, player_id })
-    if (error) throw error
 
-    res.status(200).json({ instructions })
+    const { instructions, error } = await rooms.getInstructions({ room_id, player_id })
+    if (error) throw ErrorWithStatus(error, 500)
+
+    res.json({ instructions })
   } catch (err) {
-    console.error('error while fetching all rooms ' + err)
-    res.status(500).json(err)
+    console.error('error while fetching all rooms: ' + err.message)
+    res.status(err.code).send('error while fetching all rooms: ' + err.message)
   }
 })
 
 // fetch active rooms with certain script_id
 app.get('/api/room/update/:room_id/:script_id', async function (req, res, next) {
-  try {
-    console.info('/api/room/update/:room_id/:script_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const { room_id } = req.params
     const script_id = req.params.script_id
+
     const result = await rooms.updateScriptOfRoom({ room_id, script_id })
 
-    res.status(200).json(result)
+    res.json(result)
   } catch (err) {
-    console.error('error while fetching active rooms ' + err)
-    res.status(500).json(err)
+    console.error('error while fetching active rooms: ' + err.message)
+    res.status(err.code).send('error while fetching active rooms: ' + err.message)
   }
 })
 
 // get stats from a player regarding time it took to perform a swipe
 app.post('/api/room/stats/save/:room_id/:role_id', async function (req, res, next) {
-  try {
-    console.info('/api/room/stats/save/:room_id/:role_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     const { room_id, role_id } = req.params
     const stats = req.body
-    //const game_count = await rooms.getGameCount({ room_id })
     db.saveStats({ room_id, role_id, stats })
 
     res.sendStatus(200)
   } catch (err) {
-    console.error('error while fetching active rooms ' + err)
-    res.status(err.code).json(err)
+    console.error('error while fetching stats: ' + err.message)
+    res.status(err.code).send('error while fetching stats: ' + err.message)
   }
 })
 
-// CARD
+// CARD-DESIGN
 
 // upload image to design
 app.post('/api/design/uploadImage/:card_id/:image_id', async function (req, res, next) {
+  console.info(req.path, JSON.stringify(req.params))
+
   try {
-    console.info('/api/design/uploadImage/:card_id/:image_id')
+    if (!req.files) throw ErrorWithStatus('no image included', 400)
 
-    if (!req.files) throw 'no image included'
-
-    if (Array.isArray(req.files.file)) throw 'only one image allowed'
+    if (Array.isArray(req.files.file)) throw ErrorWithStatus('only one image allowed', 500)
 
     const { card_id, image_id } = req.params
     const card_path = `./designs/${card_id}`
@@ -463,62 +372,125 @@ app.post('/api/design/uploadImage/:card_id/:image_id', async function (req, res,
     const new_path = `${card_path}/${new_filename}`
 
     fs.writeFile(new_path, req.files.file.data, async err => {
-      if (err) throw 'error while writing file' + err
+      if (err) next(err)
       res.send(new_path)
     })
   } catch (err) {
     console.error('error while uploading image to design', err)
-    res.status(500).json(err)
+    res.status(err.code).send('error while uploading image to design: ' + err.message)
   }
 })
 
 // save design
 app.post('/api/design/save/:design_id', async function (req, res, next) {
-  try {
-    console.info('/api/design/save/:design_id')
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
     // TODO:  sanitize content
     const { design_id } = req.params
 
     const design = req.body
-
     await uploadSvgsAsPng({ design_id, design })
-
     const saved = await db.saveDesign({ design_id, design })
-    res.status(200).send(saved)
+
+    res.send(saved)
   } catch (err) {
     console.error('error while saving design', err)
-    res.status(500).send(err)
+    res.status(err.code).send('error while saving design: ' + err.message)
   }
 })
 
 // error while fetching all scripts
 app.get('/api/design/get_all', async (req, res, next) => {
+  console.info(req.path, JSON.stringify(req.params))
+
   try {
-    console.info('/api/design/get_all')
-
     const data = await db.getAllDesigns()
-    if (!data) throw 'error while querying database'
+    if (!data) throw ErrorWithStatus('error while querying database', 500)
 
-    res.status(200).json(data)
+    res.json(data)
   } catch (err) {
     console.error('error while fetching all scripts', err)
-    res.status(500).send(err)
+    res.status(err.code).send('error while fetching all scripts: ' + err.message)
   }
 })
 
-app.get('/api/design/get/:design_id/:mode', async function (req, res, next) {
-  try {
-    console.info('/api/design/get/:design_id/:mode')
+// upload video
+app.post('/api/uploadVideo/:script_id/:type', async function (req, res, next) {
+  console.info(req.path, JSON.stringify(req.params))
 
+  try {
+    if (!req.files) throw ErrorWithStatus('should include one video-file', 406)
+
+    if (Array.isArray(req.files.file))
+      throw ErrorWithStatus('should only include one video-file', 406)
+
+    const filetype = await fileTypeFromBuffer(req.files.file.data)
+
+    if (!filetype || filetype?.mime !== 'video/mp4')
+      throw ErrorWithStatus('should include valid video-file', 406)
+
+    const script_path = `./uploads/${req.params.script_id}`
+    if (!fs.existsSync(script_path)) fs.mkdirSync(script_path)
+
+    const new_filename = `${req.body.instruction_id}${path.extname(req.files.file.name)}`
+    const new_path = `${script_path}/${new_filename}`
+
+    fs.writeFile(new_path, req.files.file.data, async err => {
+      if (err) next(err)
+      createPoster(new_path)
+      setTimeout(() => res.send(new_path), 1000)
+    })
+  } catch (err) {
+    console.error('error while uploading video', err)
+    res.status(err.code).send('error while uploading video' + err.message)
+  }
+})
+
+// create poster for video
+app.post('/api/video/createPoster', function (req, res, next) {
+  console.info(req.path, JSON.stringify(req.params))
+
+  try {
+    const file_path = req.body.file_path
+
+    if (!file_path) throw ErrorWithStatus('did not include file_path in the body', 400)
+
+    createPoster(file_path)
+    res.sendStatus(200)
+  } catch (err) {
+    console.error('error while creating poster of video', err)
+    res.status(err.code).send('error while creating poster of video: ' + err.message)
+  }
+})
+
+// end-point to download video
+app.get('/api/downloadVideo/:file_name', async (req, res, next) => {
+  console.info(req.path, JSON.stringify(req.params))
+
+  try {
+    const file_name = req.params.file_name
+
+    res.attachment(`/api/uploads/${file_name}`)
+  } catch (err) {
+    console.error('error while deleting script: ' + err.message)
+    res.status(err.code).send('error while deleting script: ' + err.message)
+  }
+})
+
+// fetch design
+app.get('/api/design/get/:design_id/:mode', async function (req, res, next) {
+  console.info(req.path, JSON.stringify(req.params))
+
+  try {
     const { design_id, mode } = req.params
     const data = await db.getDesign({ design_id })
     if (!data) throw ErrorWithStatus('could not fetch design', 404)
 
     res.json({ design: data.design[mode], modified: data.modified })
   } catch (err) {
-    console.error('error while fetching design', 'could not find design')
-    res.status(err.status).send(err)
+    console.error('error while fetching design', err.message)
+    res.status(err.status).send('error while fetching design: ' + err.message)
   }
 })
 
