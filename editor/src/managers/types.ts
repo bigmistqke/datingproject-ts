@@ -1,4 +1,5 @@
 import { JSXElement } from 'solid-js'
+import { UploaderResponse } from '../utils/Uploader'
 
 export type UnboxPromise<T extends Promise<any>> = T extends Promise<
   infer U
@@ -11,7 +12,7 @@ export type InOuts = Record<
   {
     in_node_id: string | undefined
     out_node_id: string | undefined
-    hidden: boolean
+    hidden?: boolean
   }
 >
 
@@ -63,52 +64,6 @@ export type Role = {
   hidden?: boolean
 }
 
-export type TextNormal = {
-  type: 'normal'
-  content: string
-}
-export type TextChoice = {
-  type: 'choice'
-  content: string[]
-}
-
-export type Text = TextNormal | TextChoice
-
-export type Instruction =
-  | {
-      role_id: string
-      text: string
-    } & (
-      | {
-          role_id: string
-          type: 'do' | 'say'
-          timespan: number | undefined
-          sound: boolean
-          filesize?: undefined
-        }
-      | {
-          type: 'video'
-          modified: number
-          filesize: number
-          timespan?: undefined
-          sound?: undefined
-        }
-    )
-
-export type ProcessedInstruction =
-  | {
-      role_id: string
-      type: 'do' | 'say'
-      text: Text[]
-      timespan: number | undefined
-    }
-  | {
-      role_id: string
-      type: 'video'
-      text: string
-      timespan: number | undefined
-    }
-
 type PromptGeneral = {
   header: JSXElement
   position?: Vector
@@ -122,8 +77,9 @@ export type PromptAddRole = PromptGeneral & {
 
 export type PromptConfirm = PromptGeneral & {
   type: 'confirm'
-  data: JSXElement
-  resolve: (confirm: boolean) => void
+  header?: JSXElement
+  data?: JSXElement
+  resolve?: (confirm: boolean) => void
 }
 
 export type PromptOptions = PromptGeneral & {
@@ -188,11 +144,11 @@ export type State = {
       grid_size: number
     }
     gui: {
-      prompt: false | Prompt
-      selectionBox: false | SelectionBox
-      role_admin: false | unknown
-      tooltip: false | string
-      sub_menu: false | unknown
+      prompt?: Prompt
+      selectionBox?: SelectionBox
+      role_admin?: unknown
+      tooltip?: string
+      sub_menu?: unknown
     }
     bools: {
       isConnecting: boolean
@@ -227,7 +183,7 @@ export type Actions = {
   getCursor: () => Vector
 
   setSelectionBox: (selection_box?: SelectionBox) => void
-  getSelectionBox: () => SelectionBox
+  getSelectionBox: () => SelectionBox | undefined
 
   getOrigin: () => Vector
 
@@ -257,7 +213,7 @@ export type Actions = {
 
   closePrompt: () => void
 
-  setTooltip: (tooltip: string | false) => void
+  setTooltip: (tooltip?: string) => void
 
   closeRoleAdmin: () => void
 
@@ -495,7 +451,7 @@ export type Actions = {
   }: {
     node_id: string
     instruction_id: string
-    prev_instruction_id: string
+    prev_instruction_id?: string
     index?: number
   }) => void
 
@@ -634,16 +590,7 @@ export type Actions = {
   processVideo: (
     file: File,
     instruction_id: string,
-  ) => Promise<
-    | {
-        success: true
-        response: string
-      }
-    | {
-        success: false
-        error: string
-      }
-  >
+  ) => Promise<UploaderResponse>
 
   groupSelectedNodes: () => void
 

@@ -3,15 +3,13 @@ import { createStore, produce } from 'solid-js/store'
 
 import { useNavigate } from 'solid-app-router'
 
-// import check from "./helpers/check";
-
 import uniqid from 'uniqid'
 import { array_insert } from '../utils/pure-array'
 
 import getRandomHue from '../utils/getRandomHue'
 
 import urls from '../urls'
-import Uploader from '../utils/Uploader'
+import Uploader, { UploaderResponse } from '../utils/Uploader'
 
 import clone from '../utils/clone'
 import getData from '../utils/getData'
@@ -26,9 +24,7 @@ import {
   ConnectionDirection,
   Group,
   InOuts,
-  Instruction,
   Node,
-  ProcessedInstruction,
   ProcessedNode,
   Prompt,
   Role,
@@ -36,7 +32,13 @@ import {
   State,
   UnboxPromise,
   Vector,
+  Error,
 } from './types'
+
+import {
+  Instruction as ProcessedInstruction,
+  InstructionProgress as Instruction,
+} from '../../../types'
 
 type Context = [State, Actions, Q]
 const StoreContext = createContext<Context>()
@@ -243,24 +245,24 @@ export function Provider(props: ProviderProps) {
     },
 
     //// PUBLIC FUNCTIONS
-    setCursor: (cursor: Vector) =>
+    setCursor: cursor =>
       setState('editor', 'navigation', 'cursor', cursor),
 
     getCursor: () => state.editor.navigation.cursor,
 
-    setSelectionBox: (selection_box: SelectionBox) =>
+    setSelectionBox: selection_box =>
       setState('editor', 'gui', 'selectionBox', selection_box),
     getSelectionBox: () => state.editor.gui.selectionBox,
 
     getOrigin: () => state.editor.navigation.origin,
     getOriginGrid: () => state.editor.navigation.origin_grid,
 
-    setOrigin: (origin: Vector) => {
+    setOrigin: origin => {
       setState('editor', 'navigation', 'origin', origin)
       actions.updateOriginGrid()
     },
 
-    offsetOrigin: (delta: Vector) => {
+    offsetOrigin: delta => {
       setState('editor', 'navigation', 'origin', origin => {
         return {
           x: origin.x + delta.x,
@@ -318,22 +320,14 @@ export function Provider(props: ProviderProps) {
     },
     getZoom: () => state.editor.navigation.zoom,
 
-    setErrorsRoleId: ({
-      role_id,
-      errors,
-    }: {
-      role_id: string
-      errors: Error[]
-    }) => {
+    setErrorsRoleId: ({ role_id, errors }) => {
       setState('editor', 'errors', role_id, errors)
       actions.updateErroredNodeIds()
     },
 
-    openGui: (type: keyof State['editor']['gui']) =>
-      setState('editor', 'gui', type, true),
-    closeGui: (type: keyof State['editor']['gui']) =>
-      setState('editor', 'gui', type, false),
-    toggleGui: (type: keyof State['editor']['gui']) =>
+    openGui: type => setState('editor', 'gui', type, true),
+    closeGui: type => setState('editor', 'gui', type, false),
+    toggleGui: type =>
       setState('editor', 'gui', type, (bool: any) => !bool),
 
     openPrompt: async ({ type, header, data, position }) =>
@@ -356,9 +350,7 @@ export function Provider(props: ProviderProps) {
 
     closePrompt: () => setState('editor', 'gui', 'prompt', false),
 
-    setTooltip: (tooltip: string) => {
-      setState('editor', 'gui', 'tooltip', tooltip)
-    },
+    setTooltip: tooltip => setState('editor', 'gui', 'tooltip', tooltip),
 
     closeRoleAdmin: () => setState('editor', 'gui', 'role_admin', false),
 
@@ -376,9 +368,9 @@ export function Provider(props: ProviderProps) {
       }
     },
 
-    limitZoom: (zoom: number) => Math.min(1, Math.max(0.0125, zoom)),
+    limitZoom: zoom => Math.min(1, Math.max(0.0125, zoom)),
 
-    updateZoomState: (zoom: number, delta: number) => {
+    updateZoomState: (zoom, delta) => {
       const new_zoom = actions.limitZoom(zoom + delta)
       if (new_zoom !== zoom) {
         setState('editor', 'navigation', 'origin', origin => ({
@@ -397,7 +389,7 @@ export function Provider(props: ProviderProps) {
       return new_zoom
     },
 
-    offsetZoom: (delta: number) => {
+    offsetZoom: delta => {
       setState('editor', 'navigation', 'zoom', zoom =>
         actions.updateZoomState(zoom, delta),
       )
@@ -415,7 +407,7 @@ export function Provider(props: ProviderProps) {
       )
     },
 
-    addToSelection: (node_ids: string | string[]) => {
+    addToSelection: node_ids => {
       const n = Array.isArray(node_ids) ? node_ids : [node_ids]
       setState('editor', 'selection', selection => [
         ...selection,
@@ -435,17 +427,7 @@ export function Provider(props: ProviderProps) {
 
     emptyRoleOffset: () => setState('editor', 'role_offsets', {}),
 
-    updateRoleOffset: ({
-      node_id,
-      role_id,
-      direction,
-      offset,
-    }: {
-      node_id: string
-      role_id: string
-      direction: ConnectionDirection
-      offset: Vector
-    }) => {
+    updateRoleOffset: ({ node_id, role_id, direction, offset }) => {
       if (!(node_id in state.editor.role_offsets)) {
         setState('editor', 'role_offsets', node_id, {})
       }
@@ -462,7 +444,7 @@ export function Provider(props: ProviderProps) {
       )
     },
 
-    setConnecting: (bool: boolean) =>
+    setConnecting: bool =>
       setState('editor', 'bools', 'isConnecting', bool),
 
     addTemporaryConnection: ({
@@ -471,12 +453,6 @@ export function Provider(props: ProviderProps) {
       out_node_id,
       direction,
       cursor,
-    }: {
-      node_id: string
-      role_id: string
-      out_node_id?: string
-      direction: ConnectionDirection
-      cursor: Vector
     }) => {
       if (out_node_id) {
         setState(
@@ -508,15 +484,7 @@ export function Provider(props: ProviderProps) {
       }
     },
 
-    removeTemporaryConnection: ({
-      node_id,
-      role_id,
-      direction,
-    }: {
-      node_id: string
-      role_id: string
-      direction: ConnectionDirection
-    }) => {
+    removeTemporaryConnection: ({ node_id, role_id, direction }) => {
       setState('editor', 'temporary_connections', temporary_connections =>
         temporary_connections.filter(
           t =>
@@ -529,7 +497,7 @@ export function Provider(props: ProviderProps) {
       )
     },
 
-    navigateToNodeId: (node_id: string) => {
+    navigateToNodeId: node_id => {
       const position = state.script.nodes[node_id].position
       setState('editor', 'navigation', 'origin', {
         x: position.x * -1 + window.innerWidth / 2 - 900 / 2,
@@ -540,27 +508,18 @@ export function Provider(props: ProviderProps) {
       actions.addToSelection(node_id)
     },
 
-    setBool: (bool_type: keyof State['editor']['bools'], bool: boolean) =>
+    setBool: (bool_type, bool) =>
       setState('editor', 'bools', bool_type, bool),
 
-    setSubMenu: (type: State['editor']['gui']['sub_menu']) =>
-      setState('editor', 'gui', 'sub_menu', type),
+    setSubMenu: type => setState('editor', 'gui', 'sub_menu', type),
 
-    toggleSubMenu: (type: State['editor']['gui']['sub_menu']) => {
+    toggleSubMenu: type => {
       setState('editor', 'gui', 'sub_menu', prev =>
         prev !== type ? type : false,
       )
     },
 
-    getRoleOffset: ({
-      node_id,
-      role_id,
-      direction,
-    }: {
-      node_id: string
-      role_id: string
-      direction: ConnectionDirection
-    }) => {
+    getRoleOffset: ({ node_id, role_id, direction }) => {
       return state.editor.role_offsets[node_id] &&
         state.editor.role_offsets[node_id][role_id] &&
         state.editor.role_offsets[node_id][role_id][direction]
@@ -583,13 +542,7 @@ export function Provider(props: ProviderProps) {
       actions.emptyRoleOffset()
     },
 
-    enterVisitedGroup: ({
-      group_id,
-      index,
-    }: {
-      group_id: string
-      index: number
-    }) => {
+    enterVisitedGroup: ({ group_id, index }) => {
       setState('editor', 'visited_parent_ids', ids => ids.slice(0, index))
 
       const url = group_id
@@ -704,7 +657,7 @@ export function Provider(props: ProviderProps) {
 
     //
 
-    iterateNodes: (nodes: [string, Node][]) => {
+    iterateNodes: nodes => {
       const start = new Date().getTime()
       batch(() => {
         for (let i = 0; i < 50; i++) {
@@ -723,15 +676,7 @@ export function Provider(props: ProviderProps) {
 
     //// INSTRUCTIONS
 
-    addInstruction: ({
-      role_id,
-      instruction,
-      instruction_id,
-    }: {
-      role_id: string
-      instruction?: Instruction
-      instruction_id?: string
-    }) => {
+    addInstruction: ({ role_id, instruction, instruction_id }) => {
       if (!instruction)
         instruction = actions.getDefaultInstruction(role_id)
       if (!instruction_id) instruction_id = uniqid()
@@ -739,29 +684,17 @@ export function Provider(props: ProviderProps) {
       return { instruction, instruction_id }
     },
 
-    removeInstruction: ({
-      instruction_id,
-      node_id,
-    }: {
-      instruction_id: string
-      node_id: string
-    }) => {
+    removeInstruction: ({ instruction_id, node_id }) => {
       setState('script', 'nodes', node_id, 'instructions', instructions =>
         instructions.filter(i => i !== instruction_id),
       )
       setState('script', 'instructions', instruction_id, undefined)
     },
 
-    setInstruction: (instruction_id: string, data: Instruction) =>
+    setInstruction: (instruction_id, data) =>
       setState('script', 'instructions', instruction_id, data),
 
-    setFilesize: ({
-      instruction_id,
-      filesize,
-    }: {
-      instruction_id: string
-      filesize: number
-    }) =>
+    setFilesize: ({ instruction_id, filesize }) =>
       setState(
         'script',
         'instructions',
@@ -783,22 +716,14 @@ export function Provider(props: ProviderProps) {
 
     // INTERNAL FUNCTIONS
 
-    setNodeDimensions: ({
-      node_id,
-      width,
-      height,
-    }: {
-      node_id: string
-      width: number
-      height: number
-    }) => {
+    setNodeDimensions: ({ node_id, width, height }) => {
       setState('script', 'nodes', node_id, 'dimensions', { width, height })
     },
 
-    observe: ({ dom }: { dom: HTMLElement }) => observer.observe(dom),
-    unobserve: ({ dom }: { dom: HTMLElement }) => observer.unobserve(dom),
+    observe: ({ dom }) => observer.observe(dom),
+    unobserve: ({ dom }) => observer.unobserve(dom),
 
-    removeNode: (node_id: string) => {
+    removeNode: node_id => {
       return batch(() => {
         const node = state.script.nodes[node_id]
 
@@ -866,10 +791,7 @@ export function Provider(props: ProviderProps) {
 
     // METHODS
 
-    addNode: (pars: {
-      position: Vector
-      type: 'instruction' | 'trigger'
-    }) => {
+    addNode: pars => {
       const position = pars?.position ?? {
         x:
           (state.editor.navigation.cursor.x -
@@ -1091,15 +1013,7 @@ export function Provider(props: ProviderProps) {
       }, 1000)
     },
 
-    convertRole: ({
-      node_ids,
-      source_role_id,
-      target_role_id,
-    }: {
-      node_ids: string[]
-      source_role_id: string
-      target_role_id: string
-    }) => {
+    convertRole: ({ node_ids, source_role_id, target_role_id }) => {
       const reconnections: {
         node_id: string
         connecting_node_id: string
@@ -1183,10 +1097,6 @@ export function Provider(props: ProviderProps) {
       node_id,
       instruction_id,
       index = false,
-    }: {
-      node_id: string
-      instruction_id: string
-      index?: boolean
     }) => {
       const instruction_ids = [...state.script.nodes[node_id].instructions]
       if (index) {
@@ -1217,7 +1127,7 @@ export function Provider(props: ProviderProps) {
       );
     }; */
 
-    translateSelectedNodes: ({ offset }: { offset: Vector }) => {
+    translateSelectedNodes: ({ offset }) => {
       state.editor.selection.forEach(node_id => {
         setState('script', 'nodes', node_id, 'position', position => {
           return {
@@ -1233,11 +1143,6 @@ export function Provider(props: ProviderProps) {
       connecting_node_id,
       role_id,
       direction,
-    }: {
-      node_id: string
-      connecting_node_id: string
-      role_id: string
-      direction: ConnectionDirection
     }) => {
       // check if connecting_node_id.in_outs[role_id][opposite_direction] is already connected to a node_id
       // if yes: remove reference to connecting_node_id from connecting_node_id.in_outs[role_id][opposite_direction]
@@ -1274,15 +1179,7 @@ export function Provider(props: ProviderProps) {
       })
     },
 
-    removeConnectionBothWays: ({
-      node_id,
-      role_id,
-      direction,
-    }: {
-      node_id: string
-      role_id: string
-      direction: ConnectionDirection
-    }) => {
+    removeConnectionBothWays: ({ node_id, role_id, direction }) => {
       const connecting_node_id =
         state.script.nodes[node_id].in_outs[role_id][prevOrNext(direction)]
 
@@ -1329,7 +1226,7 @@ export function Provider(props: ProviderProps) {
     },
     getDefaultRole: () => {
       const name = actions.getInitialName()
-      const hue = getRandomHue(+name ? name : 0).toString()
+      const hue = getRandomHue(+name ?? 0)
       return {
         instruction_ids: [],
         description: '',
@@ -1375,13 +1272,7 @@ export function Provider(props: ProviderProps) {
       })
     },
 
-    setNameRole: ({
-      role_id,
-      name,
-    }: {
-      role_id: string
-      name: string
-    }) => {
+    setNameRole: ({ role_id, name }) => {
       if (name === '') return
       setState('script', 'roles', role_id, 'name', name)
     },
@@ -1389,34 +1280,17 @@ export function Provider(props: ProviderProps) {
     /*      let role_id = getRoleLength() + 1;
                setState("script", "roles", role_id, getDefaultRole()); */
 
-    setDescriptionRole: ({
-      role_id,
-      description,
-    }: {
-      role_id: string
-      description: string
-    }) => {
+    setDescriptionRole: ({ role_id, description }) => {
       setState('script', 'roles', role_id, 'description', description)
     },
 
     setDescriptionScript: (description: string) =>
       setState('script', 'description', description),
 
-    getEndNodeId: async ({
-      node_id,
-      role_id,
-    }: {
-      node_id: string
-      role_id: string
-    }) => actions.getEndNode({ node_id, role_id }),
+    getEndNodeId: async ({ node_id, role_id }) =>
+      actions.getEndNode({ node_id, role_id }),
 
-    traverseRole: ({
-      role_id,
-      node_id,
-    }: {
-      role_id: string
-      node_id: string
-    }) =>
+    traverseRole: ({ role_id, node_id }) =>
       new Promise<
         | {
             success: false
@@ -1465,7 +1339,7 @@ export function Provider(props: ProviderProps) {
         iterateRole(node_id)
       }),
 
-    controlRole: async (role_id: string) => {
+    controlRole: async role_id => {
       const errors = []
       // get nodes per role
       const nodes = Object.entries(state.script.nodes).filter(
@@ -1617,7 +1491,7 @@ export function Provider(props: ProviderProps) {
           }
     },
 
-    dedupArray: function (array: string[]) {
+    dedupArray: function (array) {
       const seen: Record<string, boolean> = {}
       const duplicates: Record<string, boolean> = {}
 
@@ -1667,7 +1541,7 @@ export function Provider(props: ProviderProps) {
       return traversed_node_ids[traversed_node_ids.length - 1]
     },
 
-    getNextRoleIdsOfLast: (node: Node) =>
+    getNextRoleIdsOfLast: node =>
       Object.values(node.in_outs)
         .filter(role => role.out_node_id)
         .map(role => {
@@ -1680,7 +1554,7 @@ export function Provider(props: ProviderProps) {
         })
         .filter((value, index, self) => self.indexOf(value) === index),
 
-    getPrevInstructionIdsOfFirst: (node: Node) =>
+    getPrevInstructionIdsOfFirst: node =>
       Object.values(node.in_outs)
         .filter(role => role.in_node_id)
         .map(role => {
@@ -1791,8 +1665,8 @@ export function Provider(props: ProviderProps) {
       }
       iterate()
     },
-    processVideo: (file: File, instruction_id: string) =>
-      new Promise(async resolve => {
+    processVideo: (file, instruction_id) =>
+      new Promise<UploaderResponse>(async resolve => {
         const uploader = new Uploader()
         const start_time = new Date().getTime()
         setState('editor', 'uploaders', start_time, {
@@ -1800,7 +1674,7 @@ export function Provider(props: ProviderProps) {
           progress: { percentage: 0 },
           instruction_id,
         })
-        uploader.onProgress = (progress: { percentage: number }) => {
+        uploader.onProgress(progress => {
           setState('editor', 'uploaders', start_time, 'progress', progress)
 
           if (progress.percentage === 100) {
@@ -1812,7 +1686,7 @@ export function Provider(props: ProviderProps) {
               'processing',
             )
           }
-        }
+        })
         const result = await uploader.process({
           url: `${urls.fetch}/api/video/upload/${state.script.script_id}/mp4`,
           data: {
