@@ -4,7 +4,7 @@ export default async function postData(url = '', data = {}, type = 'json') {
     mode: 'cors',
     cache: 'no-cache',
     credentials: 'same-origin',
-    headers: {'Content-Type': 'application/json'},
+    headers: { 'Content-Type': 'application/json' },
     redirect: 'follow',
     referrerPolicy: 'no-referrer',
     body: type === 'json' ? JSON.stringify(data) : data,

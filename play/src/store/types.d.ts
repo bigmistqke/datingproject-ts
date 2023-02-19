@@ -61,7 +61,7 @@ export type State = {
   instruction_index: number;
   instructions: Instruction[];
   _instructions: string;
-  design?: Design['production'];
+  design?: Design;
   bools: {
     isInitialized: boolean;
   };
@@ -112,12 +112,11 @@ type RoomResponse =
 export type Actions = {
   // SOCKET
 
-  thisPath: () => string;
   disconnectSocket: () => void;
   reconnectSocket: () => void;
   getNow: () => number;
   initSocket: () => Promise<boolean>;
-  initSubscriptions: ({ room_id, role_id }: { room_id?: string; role_id?: string }) => void;
+  initSubscriptions: ({ room_id, role_id }: { room_id: string; role_id: string }) => void;
   removeSubscriptions: ({
     room_id,
     role_id,
@@ -149,7 +148,16 @@ export type Actions = {
   convert: (value: number) => number;
   getBorderRadius: () => number;
   updateCardSize: () => void;
-  isElementVisible: ({ element, modes }: { element: DesignElement; modes: string }) => boolean;
+  isElementVisible: ({
+    element,
+    modes,
+  }: {
+    element: DesignElement;
+    modes: {
+      timed: boolean;
+      choice: boolean;
+    };
+  }) => boolean;
   getStyles: ({
     element,
     highlight,

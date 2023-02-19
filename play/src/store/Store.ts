@@ -6,7 +6,7 @@ import { Image } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 
 import { createState, useState } from '@hookstate/core';
-import MQTTManager from '../utils/MQTTManager';
+import TypedMqtt from '../utils/TypedMqtt';
 
 import MMKVStorage from 'react-native-mmkv-storage';
 import Sound from 'react-native-sound';
@@ -15,7 +15,39 @@ import postData from '../utils/postData';
 import { array_remove_element } from '../utils/pure-array';
 import { Actions, Progress, State } from './types';
 
-const socket = new MQTTManager();
+const socket = new TypedMqtt<{
+  '/monitor/*/*/restart/confirmation': { success: true };
+  '/monitor/*/*/forcedSwipe/confirmation': { success: true };
+  '/*/*/status':
+    | {
+        status: 'connected';
+      }
+    | {
+        status: 'finished';
+        game_id: string;
+      };
+  '/*/*/confirmation': {
+    instruction_id: string;
+    role_id: string;
+  };
+  '/*/*/instruction_index': {
+    instruction_index: number;
+  };
+  '/*/*/swipe': {
+    instruction_id: string;
+    role_id: string;
+    timestamp: number;
+  };
+  '/*/*/ping': {
+    timestamp: number;
+  };
+  '/*/*/restart': {};
+  '/*/*/forcedSwipe': {};
+  '/*/*/autoswipe': {
+    autoswipe: boolean;
+  };
+}>();
+
 const MMKV = new MMKVStorage.Loader().initialize();
 
 let progresses: Record<string, Progress> = {};
@@ -63,7 +95,6 @@ let unconfirmed_messages: string[] = [];
 const actions: Actions = {
   // SOCKET
 
-  thisPath: () => `${application_state.value.ids.room}/${application_state.value.ids.role}`,
   disconnectSocket: () => socket.disconnect(),
   reconnectSocket: () => socket.reconnect(),
   getNow: () => new Date().getTime() + (application_state.value.clock_delta ?? 0),
@@ -78,24 +109,24 @@ const actions: Actions = {
     }
   },
   initSubscriptions: ({ room_id, role_id }) => {
-    socket.subscribe(`/${room_id}/${role_id}/restart`, () => {
+    socket.subscribe(`/${room_id}/${role_id}/restart` as const, () => {
       actions.restartGame();
       unconfirmed_messages = [];
-      socket.send(`/monitor/${room_id}/${role_id}}/restart/confirmation`, {
+      socket.send(`/monitor/${room_id}/${role_id}/restart/confirmation` as const, {
         success: true,
       });
     });
-    socket.subscribe(`/${room_id}/${role_id}}/forcedSwipe`, () => {
+    socket.subscribe(`/${room_id}/${role_id}/forcedSwipe` as const, () => {
       actions.swipeAway(application_state.value.instruction_index);
       actions.swipe(
         application_state.value.instructions[application_state.value.instruction_index],
       );
-      socket.send(`/monitor/${room_id}/${role_id}}/forcedSwipe/confirmation`, {
+      socket.send(`/monitor/${room_id}/${role_id}/forcedSwipe/confirmation` as const, {
         success: true,
       });
     });
 
-    socket.subscribe(`/${room_id}/${role_id}}/swipe`, message => {
+    socket.subscribe(`/${room_id}/${role_id}/swipe` as const, message => {
       const { instruction_id, role_id: sender_role_id, timestamp } = message;
       const delta = actions.getNow() - timestamp;
 
@@ -105,33 +136,33 @@ const actions: Actions = {
       actions.removeFromPrevInstructionIds(instruction_id, delta);
     });
 
-    socket.subscribe(`/${room_id}/${role_id}}/confirmation`, message => {
+    socket.subscribe(`/${room_id}/${role_id}/confirmation` as const, message => {
       const { instruction_id, role_id: received_role_id } = message;
       const message_id = `${received_role_id}_${instruction_id}`;
       unconfirmed_messages = array_remove_element(unconfirmed_messages, message_id);
     });
 
-    socket.subscribe(`/${room_id}/${role_id}}/autoswipe`, ({ autoswipe }) => {
+    socket.subscribe(`/${room_id}/${role_id}/autoswipe` as const, ({ autoswipe }) => {
       application_state.autoswipe.set(autoswipe);
     });
 
-    socket.send(`/${room_id}/${role_id}}/status`, {
+    socket.send(`/${room_id}/${role_id}/status` as const, {
       status: 'connected',
     });
   },
 
   removeSubscriptions: ({ room_id, role_id }) => {
-    socket.unsubscribe(`/${room_id}/${role_id}/restart`);
-    socket.unsubscribe(`/${room_id}/${role_id}}/forcedSwipe`);
-    socket.unsubscribe(`/${room_id}/${role_id}}/swipe`);
-    socket.unsubscribe(`/${room_id}/${role_id}}/confirmation`);
-    socket.unsubscribe(`/${room_id}/${role_id}}/autoswipe`);
-    socket.unsubscribe(`/${room_id}/${role_id}/restart`);
-    socket.unsubscribe(`/${room_id}/${role_id}}/status`);
+    socket.unsubscribe(`/${room_id}/${role_id}/restart` as const);
+    socket.unsubscribe(`/${room_id}/${role_id}/forcedSwipe` as const);
+    socket.unsubscribe(`/${room_id}/${role_id}/swipe` as const);
+    socket.unsubscribe(`/${room_id}/${role_id}/confirmation` as const);
+    socket.unsubscribe(`/${room_id}/${role_id}/autoswipe` as const);
+    socket.unsubscribe(`/${room_id}/${role_id}/restart` as const);
+    socket.unsubscribe(`/${room_id}/${role_id}/status` as const);
   },
 
   sendConfirmation: ({ role_id, instruction_id }) => {
-    socket.send(`/${application_state.value.ids.room}/${role_id}/confirmation`, {
+    socket.send(`/${application_state.value.ids.room}/${role_id}/confirmation` as const, {
       instruction_id,
       role_id: application_state.value.ids.role,
     });
@@ -139,7 +170,7 @@ const actions: Actions = {
 
   sendInstructionIndex: () => {
     socket.send(
-      `/${application_state.value.ids.room}/${application_state.value.ids.role}/instruction_index`,
+      `/${application_state.value.ids.room}/${application_state.value.ids.role}/instruction_index` as const,
       {
         instruction_index: application_state.value.instruction_index,
       },
@@ -148,7 +179,7 @@ const actions: Actions = {
   sendSwipe: ({ next_role_id, instruction_id }) => {
     try {
       const swipe_id = `${next_role_id}_${instruction_id}`;
-      socket.send(`/${application_state.value.ids.room}/${next_role_id}/swipe`, {
+      socket.send(`/${application_state.value.ids.room}/${next_role_id}/swipe` as const, {
         role_id: application_state.value.ids.role,
         instruction_id,
         timestamp: actions.getNow(),
@@ -166,15 +197,18 @@ const actions: Actions = {
     }
   },
   sendFinished: () =>
-    socket.send(`/${actions.thisPath()}/status`, {
+    socket.send(`/${actions.thisPath()}/status` as const, {
       status: 'finished',
       game_id: application_state.value.ids.game,
     }),
 
   ping: () => {
-    socket.send(`/${application_state.value.ids.room}/${application_state.value.ids.role}/ping`, {
-      timestamp: actions.getNow(),
-    });
+    socket.send(
+      `/${application_state.value.ids.room}/${application_state.value.ids.role}/ping` as const,
+      {
+        timestamp: actions.getNow(),
+      },
+    );
     setTimeout(() => actions.ping(), 2000);
   },
 

@@ -1,9 +1,6 @@
-import React, {useEffect, useState, useCallback, useRef} from 'react';
-import {Dimensions, View} from 'react-native';
-
-import check from '../helpers/check.js';
-
-import {useStore} from '../store/Store.js';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Dimensions, View } from 'react-native';
+import { PanGestureHandler } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
   useAnimatedGestureHandler,
@@ -12,10 +9,19 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import {PanGestureHandler} from 'react-native-gesture-handler';
-import Video from 'react-native-video';
 
-const Swipe = props => {
+import { useStore } from '../store/Store.js';
+import { Instruction } from '../../../types.js';
+
+import check from '../utils/check.js';
+
+type SwipeProps = {
+  margin: number;
+  instruction: Instruction;
+  children: JSX.Element | JSX.Element[];
+};
+
+const Swipe = (props: SwipeProps) => {
   const [state, actions] = useStore();
   const [can_swipe, setCanSwipe] = useState(false);
 
@@ -26,17 +32,18 @@ const Swipe = props => {
   const translationY = useSharedValue(0);
   const rotationZ = useSharedValue(0);
   const margin = useSharedValue((props.margin + 1) * MARGIN_SIZE);
+
   const screen = Dimensions.get('screen');
 
-  const swipe = () => actions.swipe(props.instruction);
+  const swipe = useCallback(() => actions.swipe(props.instruction), [actions, props.instruction]);
 
   useEffect(() => {
     translationX.value = 0;
     translationY.value = 0;
     rotationZ.value = 0;
-  }, [props.margin]);
+  }, [props.margin, rotationZ, translationX, translationY]);
 
-  const swipeAway = (delta = 25) => {
+  const swipeAway = useCallback(() => {
     let angle;
     if (translationY.value === 0 && translationX.value === 0) {
       angle = Math.random() * Math.PI * 2;
@@ -47,41 +54,39 @@ const Swipe = props => {
           : Math.atan2(translationY.value, translationX.value);
     }
 
-    translationX.value = withTiming(
-      Dimensions.get('screen').width * 3 * Math.cos(angle),
-      {duration: 200},
-    );
-    translationY.value = withTiming(
-      Dimensions.get('screen').height * 3 * Math.sin(angle),
-      {duration: 200},
-    );
+    translationX.value = withTiming(Dimensions.get('screen').width * 3 * Math.cos(angle), {
+      duration: 200,
+    });
+    translationY.value = withTiming(Dimensions.get('screen').height * 3 * Math.sin(angle), {
+      duration: 200,
+    });
 
-    rotationZ.value = withTiming(0, {duration: 200});
-  };
+    rotationZ.value = withTiming(0, { duration: 200 });
+  }, [rotationZ, translationX, translationY]);
 
   const PanGestureEvent = useAnimatedGestureHandler({
-    onStart: (e, ctx) => {
+    onStart: (e, ctx: { translationX: number; translationY: number }) => {
       ctx.translationX = e.translationX;
       ctx.translationY = e.translationY;
     },
     onActive: (e, ctx) => {
-      if (props.margin !== 0) return;
+      if (props.margin !== 0) {
+        return;
+      }
       translationX.value = e.translationX + ctx.translationX;
       translationY.value = e.translationY + ctx.translationY;
       rotationZ.value = (translationX.value / screen.width) * 25;
     },
-    onEnd: e => {
+    onEnd: () => {
       if (
         !can_swipe ||
         props.instruction.type === 'video' ||
-        +props.instruction.timespan ||
-        Math.sqrt(
-          Math.pow(translationX.value, 2) + Math.pow(translationY.value, 2),
-        ) < DRAG_TRESHOLD
+        typeof props.instruction.timespan === 'number' ||
+        Math.sqrt(Math.pow(translationX.value, 2) + Math.pow(translationY.value, 2)) < DRAG_TRESHOLD
       ) {
-        translationX.value = withSpring(0, {mass: 0.5});
-        translationY.value = withSpring(0, {mass: 0.5});
-        rotationZ.value = withSpring(0, {mass: 0.5});
+        translationX.value = withSpring(0, { mass: 0.5 });
+        translationY.value = withSpring(0, { mass: 0.5 });
+        rotationZ.value = withSpring(0, { mass: 0.5 });
       } else {
         const angle = Math.atan2(translationY.value, translationX.value);
         translationX.value = withTiming(screen.width * 3 * Math.cos(angle), {
@@ -96,9 +101,12 @@ const Swipe = props => {
   });
 
   useEffect(() => {
-    if (!props.instruction.swiped) return;
-    swipeAway(500);
-  }, [props.instruction.swiped]);
+    if (!props.instruction.swiped) {
+      return;
+    }
+    props.instruction.swiped;
+    swipeAway();
+  }, [swipeAway, props.instruction.swiped]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -107,15 +115,28 @@ const Swipe = props => {
         damping: 15,
       });
     }, props.margin * 200);
-  }, [props.margin]);
+  }, [margin, props.margin]);
 
   useEffect(() => {
-    if (!check(state.timers[props.instruction.instruction_id])) return;
-    if (state.timers[props.instruction.instruction_id] !== 0) return;
-    swipeAway(500);
+    if (!check(state.timers[props.instruction.instruction_id])) {
+      return;
+    }
+    if (state.timers[props.instruction.instruction_id] !== 0) {
+      return;
+    }
+    swipeAway();
     swipe();
-    if (props.instruction.sound) state.sound.play();
-  }, [state.timers[props.instruction.instruction_id]]);
+    if (props.instruction.sound) {
+      state.sound.play();
+    }
+  }, [
+    props.instruction.instruction_id,
+    props.instruction.sound,
+    state.sound,
+    state.timers,
+    swipe,
+    swipeAway,
+  ]);
 
   useEffect(() => {
     if (props.instruction.prev_instruction_ids.length === 0) {
@@ -127,9 +148,9 @@ const Swipe = props => {
 
   const aStyle = useAnimatedStyle(() => ({
     transform: [
-      {translateX: translationX.value},
-      {translateY: translationY.value},
-      {rotateZ: rotationZ.value + 'deg'},
+      { translateX: translationX.value },
+      { translateY: translationY.value },
+      { rotateZ: rotationZ.value + 'deg' },
     ],
     left: margin.value,
     top: margin.value,
@@ -149,7 +170,8 @@ const Swipe = props => {
               ...props.style,
             },
           ]}
-          pointerEvents={'box-only'}>
+          pointerEvents={'box-only'}
+        >
           {props.children}
         </Animated.View>
       </PanGestureHandler>
