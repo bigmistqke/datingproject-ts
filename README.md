@@ -1,6 +1,6 @@
 ﻿# datingproject
 
-The Dating Project was an art-project I was involved with from 2019-2022. It was a collaborative performance which uses smartphones to give instructions. A team was responsible for writing the scenarios and I was responsible for the tech. During my time with the project I steered the project from a very lo-fi, artistic approach to a multi-player mobile app-experience.
+`The Dating Project` is an art-project I was involved with from 2019-2022. `The Dating Project` is a collaborative performance which uses smartphones to give instructions. A team was responsible for writing the scenarios and I was responsible for the tech. During my time with the project I steered the project from a very lo-fi art-project to a multi-player mobile app-experience.
 
 The apps I developed to support the project:
 
