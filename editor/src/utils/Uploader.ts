@@ -1,18 +1,29 @@
+type Progress = {
+  loaded: number
+  total: number
+  percentage: number
+}
+
+type ProgressCallback = (progress: Progress) => void
+
+export type UploaderResponse =
+  | {
+      success: true
+      response: string
+    }
+  | {
+      success: false
+    }
+
 export default class Uploader {
-  process = ({
-    url,
-    data,
-    onProgress,
-  }: {
-    url: string
-    data: any
-    onProgress?: (progress: {
-      loaded: number
-      total: number
-      percentage: number
-    }) => void
-  }) =>
-    new Promise(resolve => {
+  progressEventHandlers: Set<ProgressCallback> = new Set()
+  onProgress = (callback: ProgressCallback) =>
+    this.progressEventHandlers.add(callback)
+  dispatchProgressEvent = (progress: Progress) =>
+    this.progressEventHandlers.forEach(callback => callback(progress))
+
+  process = ({ url, data }: { url: string; data: any }) =>
+    new Promise<UploaderResponse>(resolve => {
       const formData = new FormData()
       for (let key in data) {
         formData.append(key, data[key])
@@ -39,13 +50,12 @@ export default class Uploader {
         resolve({ success: false })
       }
       xhr.upload.onprogress = e => {
-        console.log((e.loaded / e.total) * 100)
-        if (onProgress)
-          onProgress({
-            loaded: e.loaded,
-            total: e.total,
-            percentage: (e.loaded / e.total) * 100,
-          })
+        const progress = {
+          loaded: e.loaded,
+          total: e.total,
+          percentage: (e.loaded / e.total) * 100,
+        }
+        this.dispatchProgressEvent(progress)
       }
       xhr.open('POST', url, true)
       xhr.send(formData)

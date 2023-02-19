@@ -1,4 +1,5 @@
 import { JSXElement } from 'solid-js'
+import { Dimensions, Vector } from '../../../types'
 import { UploaderResponse } from '../utils/Uploader'
 
 export type UnboxPromise<T extends Promise<any>> = T extends Promise<
@@ -20,11 +21,6 @@ export type Group = {
   parent_id: string
   description: string
   in_outs: InOuts
-}
-
-export type Dimensions = {
-  width: number
-  height: number
 }
 
 export type Node = {
@@ -103,8 +99,6 @@ export type SelectionBox = {
   top: number
   left: number
 }
-
-export type Vector = { x: number; y: number }
 
 export type Connection = {
   in_node_id: string

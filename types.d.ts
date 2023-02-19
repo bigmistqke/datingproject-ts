@@ -1,3 +1,10 @@
+export type Vector = { x: number; y: number }
+
+export type Dimensions = {
+  width: number
+  height: number
+}
+
 export type Script = {
   roles: Record<string, Role>
   design_id: string
@@ -67,11 +74,17 @@ export type Instruction = TextInstruction | VideoInstruction
 
 type DesignElementGeneral = {
   id: number
+  position: Vector
+  masked?: boolean
   dimensions: {
     width: number
     height: number
   }
-  modes: Record<string, number>
+  modes: {
+    timed: boolean
+    choice: boolean
+  }
+  type: 'svg' | 'instruction' | 'countdown' | 'text'
   styles: Record<string, any>
   highlight_styles: Record<string, any>
 }

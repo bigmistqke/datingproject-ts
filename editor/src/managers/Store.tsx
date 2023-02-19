@@ -1,25 +1,23 @@
 import { batch, createContext, JSXElement, useContext } from 'solid-js'
 import { createStore, produce } from 'solid-js/store'
 
+import Q from 'qquuee'
 import { useNavigate } from 'solid-app-router'
-
 import uniqid from 'uniqid'
-import { array_insert } from '../utils/pure-array'
-
-import getRandomHue from '../utils/getRandomHue'
-
-import urls from '../urls'
-import Uploader, { UploaderResponse } from '../utils/Uploader'
 
 import clone from '../utils/clone'
+import formatText from '../utils/formatText'
 import getData from '../utils/getData'
+import getRandomHue from '../utils/getRandomHue'
 import postData from '../utils/postData'
 import prevOrNext from '../utils/prevOrNext'
+import { array_insert } from '../utils/pure-array'
 import reverseDirection from '../utils/reverseDirection'
+import Uploader, { UploaderResponse } from '../utils/Uploader'
 
-import Q from 'qquuee'
-import formatText from '../utils/formatText'
-import {
+import urls from '../urls'
+
+import type {
   Actions,
   ConnectionDirection,
   Group,
@@ -28,16 +26,13 @@ import {
   ProcessedNode,
   Prompt,
   Role,
-  SelectionBox,
   State,
   UnboxPromise,
-  Vector,
-  Error,
 } from './types'
 
 import {
   Instruction as ProcessedInstruction,
-  InstructionProgress as Instruction,
+  InstructionEditor as Instruction,
 } from '../../../types'
 
 type Context = [State, Actions, Q]
