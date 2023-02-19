@@ -23,4 +23,4 @@ I have re-written and re-factored `backend`, `play` (react-native mobile app) an
 
 In the process I wrote [typed-mqtt](https://github.com/bigmistqke/typed-mqtt), a typesafe wrapper around the mqtt-client I was using.
 
-The Dating Project was very formative and I elevated my practice a lot in the process. If I would re-do it, I would do it in typescript and use `trpc`.
+The Dating Project was very formative and I elevated my practice a lot in the process. If I would re-do it, I would do it in typescript, use `trpc` as a typesafe way to communicate with the server from `react native` and `solid-js`, use `jest` as testing environment and deploy it serverless.
